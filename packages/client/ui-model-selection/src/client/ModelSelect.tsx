@@ -12,7 +12,7 @@
  * card; the in-menu strip with Retry remains the catalog-load surface.
  */
 import {
-  useEffect, useId, useMemo, useRef, useState, useSyncExternalStore,
+  useEffect, useId, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore,
   type KeyboardEvent, type FocusEvent,
 } from 'react'
 import clsx from 'clsx'
@@ -62,6 +62,9 @@ export function ModelSelect(
   const rootRef = useRef<HTMLDivElement | null>(null)
   const triggerRef = useRef<HTMLButtonElement | null>(null)
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([])
+  const pendingFocusEdge = useRef<1 | -1 | null>(null)
+  const typeahead = useRef('')
+  const typeaheadTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const id = useId()
 
   const choices = useMemo(() => state.groups.flatMap(group =>
@@ -124,9 +127,12 @@ export function ModelSelect(
     return () => { document.removeEventListener('mousedown', closeOutside) }
   }, [open])
 
-  if (!available) return null
+  useEffect(() => () => {
+    if (typeaheadTimer.current !== null) clearTimeout(typeaheadTimer.current)
+  }, [])
 
-  const show = (): void => {
+  const show = (edge: 1 | -1 = 1): void => {
+    pendingFocusEdge.current = edge
     setPane('root')
     setOpen(true)
     reload()
@@ -142,22 +148,80 @@ export function ModelSelect(
     const items = itemRefs.current.filter(item => item !== null)
     if (items.length === 0) return
     const active = items.findIndex(item => item === document.activeElement)
-    const next = (Math.max(active, 0) + offset + items.length) % items.length
+    const next = active < 0
+      ? offset < 0 ? items.length - 1 : 0
+      : (active + offset + items.length) % items.length
     items[next]?.focus()
+  }
+
+  const focusEdge = (edge: 1 | -1): void => {
+    const items = itemRefs.current.filter(item => item !== null)
+    items[edge === 1 ? 0 : items.length - 1]?.focus()
+  }
+
+  useLayoutEffect(() => {
+    const edge = pendingFocusEdge.current
+    if (!open || edge === null) return
+    pendingFocusEdge.current = null
+    const items = itemRefs.current.filter(item => item !== null)
+    items[edge === 1 ? 0 : items.length - 1]?.focus()
+  }, [open, pane, state.status, state.groups, effortChoices])
+
+  const openPane = (nextPane: Exclude<Pane, 'root'>): void => {
+    pendingFocusEdge.current = 1
+    setPane(nextPane)
   }
 
   const onRootKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
     if (event.key === 'Escape' && open) {
       event.preventDefault()
       // Escape backs out of a drilled pane first, then closes.
-      if (pane !== 'root') setPane('root')
+      if (pane !== 'root') {
+        pendingFocusEdge.current = 1
+        setPane('root')
+      }
       else close(true)
       return
     }
-    if (!open) return
+    if (!open) {
+      if (event.target === triggerRef.current && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+        event.preventDefault()
+        show(event.key === 'ArrowDown' ? 1 : -1)
+      }
+      return
+    }
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault()
       moveFocus(event.key === 'ArrowDown' ? 1 : -1)
+      return
+    }
+    if (event.key === 'Home' || event.key === 'End') {
+      event.preventDefault()
+      focusEdge(event.key === 'Home' ? 1 : -1)
+      return
+    }
+    if (event.key === 'ArrowLeft' && pane !== 'root') {
+      event.preventDefault()
+      pendingFocusEdge.current = 1
+      setPane('root')
+      return
+    }
+    if (event.key === 'ArrowRight' && pane === 'root' && document.activeElement instanceof HTMLButtonElement) {
+      event.preventDefault()
+      document.activeElement.click()
+      return
+    }
+    if (event.key.length !== 1 || event.ctrlKey || event.metaKey || event.altKey) return
+    typeahead.current += event.key.toLocaleLowerCase()
+    if (typeaheadTimer.current !== null) clearTimeout(typeaheadTimer.current)
+    typeaheadTimer.current = setTimeout(() => { typeahead.current = '' }, 500)
+    const items = itemRefs.current.filter(item => item !== null)
+    const active = items.indexOf(document.activeElement as HTMLButtonElement)
+    const ordered = [...items.slice(active + 1), ...items.slice(0, active + 1)]
+    const match = ordered.find(item => item.textContent.trim().toLocaleLowerCase().startsWith(typeahead.current))
+    if (match !== undefined) {
+      event.preventDefault()
+      match.focus()
     }
   }
 
@@ -201,6 +265,8 @@ export function ModelSelect(
     lastActionRef.current = 'select'
     void select(selection).then(settleSelection)
   }
+
+  if (!available) return null
 
   const modelLabel = currentChoice?.model.name ?? t('trigger.fallback')
   const triggerLabel = effortLabel === undefined ? modelLabel : `${modelLabel} · ${effortLabel}`
@@ -251,13 +317,13 @@ export function ModelSelect(
         >
           {pane === 'root' && (
             <>
-              <button ref={itemRef()} type="button" role="menuitem" className={css.cell} onClick={() => { setPane('model') }}>
+              <button ref={itemRef()} type="button" role="menuitem" tabIndex={-1} className={css.cell} onClick={() => { openPane('model') }}>
                 <span className={css.cellLabel}>{t('menu.model')}</span>
                 <span className={css.cellValue}>{modelLabel}</span>
                 <IconChevronRightOutline14 className={css.cellChevron} />
               </button>
               {reasoning !== undefined && (
-                <button ref={itemRef()} type="button" role="menuitem" className={css.cell} onClick={() => { setPane('effort') }}>
+                <button ref={itemRef()} type="button" role="menuitem" tabIndex={-1} className={css.cell} onClick={() => { openPane('effort') }}>
                   <span className={css.cellLabel}>{t('menu.effort')}</span>
                   <span className={css.cellValue}>{effortLabel}</span>
                   <IconChevronRightOutline14 className={css.cellChevron} />
@@ -274,13 +340,13 @@ export function ModelSelect(
               {state.error !== null && lastActionRef.current === 'load' && (
                 <div className={css.error}>
                   <span>{t('error.action', { message: state.error })}</span>
-                  <button type="button" className={css.retry} onClick={reload}>{t('retry')}</button>
+                  <button ref={itemRef()} type="button" role="menuitem" tabIndex={-1} className={css.retry} onClick={reload}>{t('retry')}</button>
                 </div>
               )}
               {state.failures.map(failure => (
                 <div className={css.warning} key={failure.id}>
                   <span>{t('warning.groupLoad', { name: failure.name, message: failure.message })}</span>
-                  <button type="button" className={css.retry} onClick={reload}>{t('retry')}</button>
+                  <button ref={itemRef()} type="button" role="menuitem" tabIndex={-1} className={css.retry} onClick={reload}>{t('retry')}</button>
                 </div>
               ))}
               <div className={clsx(css.groups, 'scrollable')}>
@@ -296,6 +362,7 @@ export function ModelSelect(
                             ref={itemRef()}
                             type="button"
                             role="menuitemradio"
+                            tabIndex={-1}
                             aria-checked={selected}
                             className={clsx(css.option, selected && css.selected)}
                             key={model.id}
@@ -330,7 +397,7 @@ export function ModelSelect(
               {state.error !== null && lastActionRef.current === 'load' && (
                 <div className={css.error}>
                   <span>{t('error.action', { message: state.error })}</span>
-                  <button type="button" className={css.retry} onClick={reload}>{t('action.reload')}</button>
+                  <button ref={itemRef()} type="button" role="menuitem" tabIndex={-1} className={css.retry} onClick={reload}>{t('action.reload')}</button>
                 </div>
               )}
               {effortChoices.length === 0
@@ -340,6 +407,7 @@ export function ModelSelect(
                     ref={itemRef()}
                     type="button"
                     role="menuitemradio"
+                    tabIndex={-1}
                     aria-checked={effectiveEffort === level.effort}
                     className={clsx(css.option, effectiveEffort === level.effort && css.selected)}
                     key={level.key}

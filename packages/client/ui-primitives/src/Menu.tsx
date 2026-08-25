@@ -8,8 +8,10 @@
 // Lists keep 12px clearance to the viewport's top/bottom edges and scroll
 // internally past that; submenu-bearing menus are exempt (see .scrollable).
 
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import type { CSSProperties, ReactNode } from 'react'
+import { cloneElement, isValidElement, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
+import type {
+  CSSProperties, KeyboardEvent as ReactKeyboardEvent, ReactElement, ReactNode, RefObject,
+} from 'react'
 import { createPortal } from 'react-dom'
 import clsx from 'clsx'
 import { IconCheckOutline16 } from './icons/index.tsx'
@@ -56,6 +58,30 @@ function isLabel(entry: MenuEntry): entry is MenuLabel {
 /** Unplaced portal list: hidden but laid out at a fixed origin so offsetWidth/offsetHeight are real. */
 const MEASURE_STYLE: CSSProperties = { visibility: 'hidden', left: 0, top: 0 }
 
+const DOCUMENT_FOCUSABLE = [
+  'a[href]', 'button:not([disabled])', 'input:not([disabled])',
+  'select:not([disabled])', 'textarea:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(',')
+
+function menuItems(menu: HTMLElement): HTMLButtonElement[] {
+  return [...menu.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')]
+    .filter(item => !item.disabled && item.closest('[role="menu"]') === menu)
+}
+
+function focusAt(menu: HTMLElement, at: number): void {
+  const items = menuItems(menu)
+  if (items.length === 0) return
+  items[(at + items.length) % items.length]?.focus()
+}
+
+function assignRef<T>(ref: React.Ref<T> | undefined, value: T | null): void {
+  if (typeof ref === 'function') ref(value)
+  else if (ref !== undefined && ref !== null) {
+    ;(ref as React.MutableRefObject<T | null>).current = value
+  }
+}
+
 /**
  * Render an anchored dropdown menu.
  * @param props.open - whether the list is showing (owner-controlled).
@@ -87,7 +113,7 @@ const MEASURE_STYLE: CSSProperties = { visibility: 'hidden', left: 0, top: 0 }
  * by a hairline; they stay visible while the items above scroll.
  * @returns anchor wrapper with the conditional list.
  */
-export function Menu({ open, anchor, items, selectedId, selectedIds, onSelect, onClose, align = 'start', side = 'bottom', portal = false, closeOnPointerLeave = false, dense = false, compact = false, getAnchorRect, footer, className }: {
+export function Menu({ open, anchor, items, selectedId, selectedIds, onSelect, onClose, align = 'start', side = 'bottom', portal = false, closeOnPointerLeave = false, dense = false, compact = false, getAnchorRect, returnFocusRef, ariaLabel, footer, className }: {
   open: boolean
   anchor: ReactNode
   items: readonly MenuEntry[]
@@ -103,13 +129,139 @@ export function Menu({ open, anchor, items, selectedId, selectedIds, onSelect, o
   dense?: boolean
   compact?: boolean
   getAnchorRect?: () => DOMRect | null
+  /** External trigger used when `anchor` is rendered by the owner rather than this Menu. */
+  returnFocusRef?: RefObject<HTMLElement | null> | undefined
+  /** Menu name for an external trigger; inline anchors name the menu through aria-labelledby. */
+  ariaLabel?: string | undefined
   className?: string
 }) {
   const rootRef = useRef<HTMLSpanElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
+  const generatedAnchorRef = useRef<HTMLElement | null>(null)
   const [openSubmenuId, setOpenSubmenuId] = useState<string | null>(null)
   const [fixedPos, setFixedPos] = useState<CSSProperties | null>(null)
+  const menuId = useId()
+  const generatedAnchorId = useId()
+  const initialEdge = useRef<1 | -1>(1)
+  const pendingSubmenuFocus = useRef<string | null>(null)
+  const typeahead = useRef('')
+  const typeaheadTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const { arm: armClose, cancel: cancelClose } = usePointerGrace(onClose)
+
+  const focusAnchor = (): void => {
+    ;(returnFocusRef?.current ?? generatedAnchorRef.current)?.focus()
+  }
+
+  const closeAndRestore = (): void => {
+    onClose()
+    queueMicrotask(focusAnchor)
+  }
+
+  const movePastAnchor = (direction: 1 | -1): void => {
+    const anchorElement = returnFocusRef?.current ?? generatedAnchorRef.current
+    if (anchorElement === null) {
+      onClose()
+      return
+    }
+    const candidates = [...document.querySelectorAll<HTMLElement>(DOCUMENT_FOCUSABLE)]
+      .filter(candidate => candidate.getAttribute('aria-hidden') !== 'true'
+        && !candidate.closest('[inert]') && !listRef.current?.contains(candidate))
+    const anchorIndex = candidates.indexOf(anchorElement)
+    const target = candidates[anchorIndex + direction]
+    onClose()
+    queueMicrotask(() => { (target ?? anchorElement).focus() })
+  }
+
+  const selectItem = (id: string): void => {
+    const selectedFrom = document.activeElement
+    onSelect(id)
+    queueMicrotask(() => {
+      if (document.activeElement === selectedFrom || document.activeElement === document.body) focusAnchor()
+    })
+  }
+
+  const onMenuKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>): void => {
+    if (!(event.target instanceof Element)) return
+    const item = event.target.closest<HTMLButtonElement>('[role="menuitem"]')
+    if (item === null || item.disabled || !listRef.current?.contains(item)) return
+    const currentMenu = item.closest<HTMLElement>('[role="menu"]')
+    if (currentMenu === null) return
+    const siblings = menuItems(currentMenu)
+    const index = siblings.indexOf(item)
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault()
+      focusAt(currentMenu, index + (event.key === 'ArrowDown' ? 1 : -1))
+      return
+    }
+    if (event.key === 'Home' || event.key === 'End') {
+      event.preventDefault()
+      focusAt(currentMenu, event.key === 'Home' ? 0 : siblings.length - 1)
+      return
+    }
+    if (event.key === 'ArrowRight') {
+      const submenuId = item.dataset['submenuId']
+      if (submenuId === undefined) return
+      event.preventDefault()
+      pendingSubmenuFocus.current = submenuId
+      setOpenSubmenuId(item.dataset['menuItemId'] ?? null)
+      return
+    }
+    if (event.key === 'ArrowLeft' && currentMenu !== listRef.current) {
+      event.preventDefault()
+      const parent = document.getElementById(currentMenu.getAttribute('aria-labelledby') ?? '')
+      setOpenSubmenuId(null)
+      if (parent instanceof HTMLElement) queueMicrotask(() => { parent.focus() })
+      return
+    }
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      if (currentMenu !== listRef.current) {
+        const parent = document.getElementById(currentMenu.getAttribute('aria-labelledby') ?? '')
+        setOpenSubmenuId(null)
+        if (parent instanceof HTMLElement) queueMicrotask(() => { parent.focus() })
+      } else closeAndRestore()
+      return
+    }
+    if (event.key === 'Tab') {
+      event.preventDefault()
+      movePastAnchor(event.shiftKey ? -1 : 1)
+      return
+    }
+    if (event.key.length !== 1 || event.ctrlKey || event.metaKey || event.altKey) return
+    typeahead.current += event.key.toLocaleLowerCase()
+    if (typeaheadTimer.current !== null) clearTimeout(typeaheadTimer.current)
+    typeaheadTimer.current = setTimeout(() => { typeahead.current = '' }, 500)
+    const ordered = [...siblings.slice(index + 1), ...siblings.slice(0, index + 1)]
+    const match = ordered.find(candidate => candidate.textContent.trim().toLocaleLowerCase().startsWith(typeahead.current))
+    if (match !== undefined) {
+      event.preventDefault()
+      match.focus()
+    }
+  }
+
+  useEffect(() => () => {
+    if (typeaheadTimer.current !== null) clearTimeout(typeaheadTimer.current)
+  }, [])
+
+  useLayoutEffect(() => {
+    const submenuId = pendingSubmenuFocus.current
+    if (submenuId === null || openSubmenuId === null) return
+    const submenu = document.getElementById(submenuId)
+    if (submenu instanceof HTMLElement) {
+      pendingSubmenuFocus.current = null
+      focusAt(submenu, 0)
+    }
+  }, [openSubmenuId])
+
+  useEffect(() => {
+    if (!open || (portal && fixedPos === null)) return
+    queueMicrotask(() => {
+      const menu = listRef.current
+      if (menu === null || menu.contains(document.activeElement)) return
+      focusAt(menu, initialEdge.current === 1 ? 0 : menuItems(menu).length - 1)
+      initialEdge.current = 1
+    })
+  }, [open, portal, fixedPos])
 
   // Portal mode: fixed-position the list from the anchor rect before paint;
   // track the anchor while open (capture-phase scroll catches nested panes).
@@ -177,7 +329,7 @@ export function Menu({ open, anchor, items, selectedId, selectedIds, onSelect, o
       onClose()
     }
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape' && !e.defaultPrevented) onClose()
     }
     document.addEventListener('pointerdown', onPointerDown)
     document.addEventListener('keydown', onKeyDown)
@@ -223,13 +375,17 @@ export function Menu({ open, anchor, items, selectedId, selectedIds, onSelect, o
           disabled={entry.disabled}
           aria-haspopup={hasSub ? 'menu' : undefined}
           aria-expanded={hasSub ? subOpen : undefined}
-          onFocus={() => { setOpenSubmenuId(hasSub ? entry.id : null) }}
+          id={`${menuId}-item-${encodeURIComponent(entry.id)}`}
+          tabIndex={-1}
+          data-menu-item-id={entry.id}
+          data-submenu-id={hasSub ? `${menuId}-submenu-${encodeURIComponent(entry.id)}` : undefined}
           onClick={() => {
             if (hasSub) {
+              pendingSubmenuFocus.current = `${menuId}-submenu-${encodeURIComponent(entry.id)}`
               setOpenSubmenuId(entry.id)
               return
             }
-            onSelect(entry.id)
+            selectItem(entry.id)
           }}
         >
           {entry.icon !== undefined && <span className={css.itemIcon}>{entry.icon}</span>}
@@ -238,15 +394,21 @@ export function Menu({ open, anchor, items, selectedId, selectedIds, onSelect, o
           {selected && <IconCheckOutline16 className={css.check} />}
         </button>
         {subOpen && entry.submenu !== undefined && (
-          <div className={clsx(css.submenu, compact && css.compactList)} role="menu">
+          <div
+            id={`${menuId}-submenu-${encodeURIComponent(entry.id)}`}
+            className={clsx(css.submenu, compact && css.compactList)}
+            role="menu"
+            aria-labelledby={`${menuId}-item-${encodeURIComponent(entry.id)}`}
+          >
             {entry.submenu.map(sub => (
               <button
                 key={sub.id}
                 type="button"
                 role="menuitem"
+                tabIndex={-1}
                 className={css.item}
                 disabled={sub.disabled}
-                onClick={() => { onSelect(sub.id) }}
+                onClick={() => { selectItem(sub.id) }}
               >
                 {sub.icon !== undefined && <span className={css.itemIcon}>{sub.icon}</span>}
                 <span className={css.itemLabel}>{sub.label}</span>
@@ -268,6 +430,12 @@ export function Menu({ open, anchor, items, selectedId, selectedIds, onSelect, o
       className={clsx(css.list, dense && css.denseList, compact && css.compactList, scrollable && css.scrollable, portal && css.portal, side === 'top' && !portal && css.sideTop, align === 'end' && !portal && css.alignEnd)}
       style={portal ? fixedPos ?? MEASURE_STYLE : undefined}
       role="menu"
+      id={menuId}
+      aria-label={ariaLabel}
+      aria-labelledby={ariaLabel === undefined && isValidElement(anchor)
+        ? ((anchor.props as { id?: string }).id ?? generatedAnchorId)
+        : undefined}
+      onKeyDown={onMenuKeyDown}
       // React portals bubble synthetic events through the REACT tree: without
       // this stop, an item click re-fires the anchor row's own onClick
       // (open/toggle) after onSelect.
@@ -284,6 +452,45 @@ export function Menu({ open, anchor, items, selectedId, selectedIds, onSelect, o
     </div>
   )
 
+  let renderedAnchor = anchor
+  if (isValidElement(anchor)) {
+    const element = anchor as ReactElement<{
+      id?: string
+      ref?: React.Ref<HTMLElement> | undefined
+      onKeyDown?: ((event: ReactKeyboardEvent<HTMLElement>) => void) | undefined
+      'aria-haspopup'?: string | undefined
+      'aria-expanded'?: boolean | undefined
+      'aria-controls'?: string | undefined
+    }>
+    const anchorId = element.props.id ?? generatedAnchorId
+    const existingRef = (element as ReactElement & { ref?: React.Ref<HTMLElement> | undefined }).ref
+    renderedAnchor = cloneElement(element, {
+      id: anchorId,
+      ref: (node: HTMLElement | null) => {
+        generatedAnchorRef.current = node
+        assignRef(existingRef, node)
+      },
+      'aria-haspopup': element.props['aria-haspopup'] ?? 'menu',
+      'aria-expanded': open,
+      'aria-controls': open ? menuId : undefined,
+      onKeyDown: (event) => {
+        element.props.onKeyDown?.(event)
+        if (event.defaultPrevented) return
+        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+          event.preventDefault()
+          initialEdge.current = event.key === 'ArrowDown' ? 1 : -1
+          if (open) {
+            const menu = listRef.current
+            if (menu !== null) focusAt(menu, initialEdge.current === 1 ? 0 : menuItems(menu).length - 1)
+          } else if (event.currentTarget instanceof HTMLElement) event.currentTarget.click()
+        } else if (event.key === 'Escape' && open) {
+          event.preventDefault()
+          closeAndRestore()
+        }
+      },
+    })
+  }
+
   // Pointer-leave dismissal watches the WRAPPER, not the list: React's
   // enter/leave traversal runs over the React tree, so trigger and portaled
   // list are one region here. Aiming back at the trigger, or crossing the 4px
@@ -295,7 +502,7 @@ export function Menu({ open, anchor, items, selectedId, selectedIds, onSelect, o
       onPointerEnter={closeOnPointerLeave ? cancelClose : undefined}
       onPointerLeave={closeOnPointerLeave ? () => { if (open) armClose() } : undefined}
     >
-      {anchor}
+      {renderedAnchor}
       {portal ? (list !== false && createPortal(list, document.body)) : list}
     </span>
   )

@@ -5,10 +5,11 @@
     - img
   - button "Dismiss all questions":
     - img
-  - group:
+  - group "Which color do you prefer?":
     - checkbox "Blue": Blue A cool recessive hue that reads as calm and trustworthy in long reading sessions and dense dashboards.
     - checkbox "Green": Green A restful mid-spectrum hue with the highest perceived brightness, easiest on the eye over long sessions.
-    - textbox "Type your answer"
+    - 'textbox "Which color do you prefer?: Type your answer"':
+      - /placeholder: Type your answer
   - button "Previous question" [disabled]:
     - img
   - text: 1 / 1

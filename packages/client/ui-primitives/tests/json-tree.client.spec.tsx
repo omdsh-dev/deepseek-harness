@@ -37,17 +37,16 @@ describe('JsonTree', () => {
     expect(rows[0]?.textContent).toBe('nested:{answer: 42},')
     expect(rows[1]?.textContent).toBe('list:["alpha", "beta"]')
 
-    const expanders = within(tree).getAllByRole('button', { name: 'Expand JSON node' })
-    expect(expanders[0]?.tabIndex).toBe(0)
-    expect(expanders[1]?.tabIndex).toBe(-1)
+    expect(rows[0]?.tabIndex).toBe(0)
+    expect(rows[1]?.tabIndex).toBe(-1)
 
-    fireEvent.click(expanders[0] as HTMLElement)
+    fireEvent.click(rows[0]?.querySelector('[data-json-expander]') as HTMLElement)
     expect(within(tree).getAllByRole('treeitem')).toHaveLength(3)
     expect(screen.getByText('answer:')).toBeDefined()
-    expect(within(tree).getByRole('button', { name: 'Collapse JSON node' })).toBeDefined()
+    expect(rows[0]?.getAttribute('aria-expanded')).toBe('true')
   })
 
-  it('moves the single tab stop between visible expanders with arrow keys', () => {
+  it('moves one treeitem tab stop and applies the APG tree arrow pattern', () => {
     render(
       <JsonTree
         expandTopLevel={false}
@@ -59,32 +58,46 @@ describe('JsonTree', () => {
     )
 
     const tree = screen.getByRole('tree', { name: 'JSON' })
-    const root = within(tree).getByRole('button', { name: 'Collapse JSON node' })
-    const children = within(tree).getAllByRole('button', { name: 'Expand JSON node' })
+    const initialRows = within(tree).getAllByRole('treeitem')
+    const [root, firstChild, secondChild] = initialRows
+    if (root === undefined || firstChild === undefined || secondChild === undefined) {
+      throw new Error('expected the root and two child rows')
+    }
 
     expect(root.tabIndex).toBe(0)
     fireEvent.keyDown(root, { key: 'ArrowDown' })
-    expect(document.activeElement).toBe(children[0])
+    expect(document.activeElement).toBe(firstChild)
     expect(root.tabIndex).toBe(-1)
-    expect(children[0]?.tabIndex).toBe(0)
+    expect(firstChild.tabIndex).toBe(0)
 
-    fireEvent.keyDown(children[0] as HTMLElement, { key: 'ArrowRight' })
-    expect(children[0]?.getAttribute('aria-expanded')).toBe('true')
-    fireEvent.keyDown(children[0] as HTMLElement, { key: 'ArrowLeft' })
-    expect(children[0]?.getAttribute('aria-expanded')).toBe('false')
-    fireEvent.keyDown(children[0] as HTMLElement, { key: 'Enter' })
+    fireEvent.keyDown(firstChild, { key: 'ArrowRight' })
+    expect(firstChild.getAttribute('aria-expanded')).toBe('true')
+    fireEvent.keyDown(firstChild, { key: 'ArrowRight' })
+    const nested = within(tree).getAllByRole('treeitem')
+      .find(item => item.textContent === 'nested:1')
+    if (nested === undefined) throw new Error('expected the nested row')
+    expect(document.activeElement).toBe(nested)
+    fireEvent.keyDown(nested, { key: 'ArrowLeft' })
+    expect(document.activeElement).toBe(firstChild)
+    fireEvent.keyDown(firstChild, { key: 'ArrowLeft' })
+    expect(firstChild.getAttribute('aria-expanded')).toBe('false')
+    fireEvent.keyDown(firstChild, { key: 'Enter' })
+    expect(firstChild.getAttribute('aria-expanded')).toBe('true')
+    fireEvent.keyDown(firstChild, { key: ' ' })
+    expect(firstChild.getAttribute('aria-expanded')).toBe('false')
 
-    fireEvent.keyDown(children[0] as HTMLElement, { key: 'ArrowUp' })
+    fireEvent.keyDown(firstChild, { key: 'ArrowUp' })
     expect(document.activeElement).toBe(root)
     fireEvent.keyDown(root, { key: 'ArrowUp' })
-    expect(document.activeElement).toBe(children[1])
+    expect(document.activeElement).toBe(secondChild)
   })
 
   it('copies an array element path without recovering data from rendered labels', async () => {
     render(<JsonTree data={{ list: [{ value: 'x' }, 'tail'] }} />)
 
     const tree = screen.getByRole('tree')
-    fireEvent.click(within(tree).getByRole('button', { name: 'Expand JSON node' }))
+    const list = within(tree).getByRole('treeitem')
+    fireEvent.click(list.querySelector('[data-json-expander]') as HTMLElement)
     const arrayRow = within(tree).getAllByRole('treeitem')
       .find(row => row.textContent?.startsWith('0:'))
     expect(arrayRow).toBeDefined()
@@ -173,12 +186,14 @@ describe('JsonTree', () => {
     const first = render(<JsonTree data={['plain', { nested: true }]} />)
     const tree = screen.getByRole('tree')
     expect(tree.textContent).toContain('0:"plain"')
-    expect(within(tree).getByRole('button', { name: 'Expand JSON node' }).tabIndex).toBe(0)
+    const rows = within(tree).getAllByRole('treeitem')
+    expect(rows[0]?.tabIndex).toBe(0)
+    expect(rows[1]?.tabIndex).toBe(-1)
     first.unmount()
 
     render(<JsonTree expandTopLevel={false} data={{}} />)
     expect(screen.getByRole('tree').textContent).toBe('{}')
-    expect(screen.queryByRole('button', { name: /JSON node/ })).toBeNull()
+    expect(screen.getByRole('treeitem').tabIndex).toBe(0)
   })
 
   it('copies primitive and object values in every menu mode', async () => {

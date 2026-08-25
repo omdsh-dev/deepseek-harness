@@ -200,22 +200,30 @@ function pathId(path: JsonPath): string {
   )).join('/')
 }
 
-function claimFocus(button: HTMLElement): void {
-  button.focus()
+function claimFocus(item: HTMLElement): void {
+  item.focus()
 }
 
-function moveFocus(button: HTMLElement, direction: -1 | 1): void {
-  const tree = button.closest<HTMLElement>('[role="tree"]')
-  /* v8 ignore next -- JsonTree attaches expander handlers only beneath its owning role=tree. */
+function visibleTreeItems(item: HTMLElement): HTMLElement[] {
+  const tree = item.closest<HTMLElement>('[role="tree"]')
+  /* v8 ignore next -- JsonTree attaches tree-item handlers only beneath its owning role=tree. */
+  if (tree === null) return []
+  return Array.from(tree.querySelectorAll<HTMLElement>('[role="treeitem"]'))
+    .filter(candidate => candidate.closest('[role="tree"]') === tree)
+}
+
+function moveFocus(item: HTMLElement, direction: -1 | 1): void {
+  const tree = item.closest<HTMLElement>('[role="tree"]')
+  /* v8 ignore next -- JsonTree attaches tree-item handlers only beneath its owning role=tree. */
   if (tree === null) return
-  const expanders = Array.from(tree.querySelectorAll<HTMLElement>('[data-json-expander]'))
-  const current = expanders.indexOf(button)
-  /* v8 ignore next -- the current expander is a member of the queried non-empty set. */
-  if (current < 0 || expanders.length === 0) return
-  const next = (current + direction + expanders.length) % expanders.length
-  const nextExpander = expanders[next]
-  /* v8 ignore next -- modulo over the non-empty expander set always resolves a member. */
-  if (nextExpander !== undefined) claimFocus(nextExpander)
+  const items = visibleTreeItems(item)
+  const current = items.indexOf(item)
+  /* v8 ignore next -- the current item is a member of the queried non-empty set. */
+  if (current < 0 || items.length === 0) return
+  const next = (current + direction + items.length) % items.length
+  const nextItem = items[next]
+  /* v8 ignore next -- modulo over the non-empty item set always resolves a member. */
+  if (nextItem !== undefined) claimFocus(nextItem)
 }
 
 function NodeField({
@@ -262,7 +270,7 @@ function JsonTreeNode({
   value,
 }: JsonTreeNodeProps) {
   const contentsId = useId()
-  const expanderRef = useRef<HTMLSpanElement>(null)
+  const rowRef = useRef<HTMLDivElement>(null)
   const [expanded, setExpanded] = useState(initialExpanded)
   const nodeId = pathId(path)
   const container = isExpandableValue(value)
@@ -271,26 +279,62 @@ function JsonTreeNode({
 
   const toggle = () => {
     setExpanded(current => !current)
-    claimFocus(expanderRef.current as HTMLSpanElement)
+    if (rowRef.current !== null) claimFocus(rowRef.current)
   }
 
-  const onExpanderKeyDown = (event: ReactKeyboardEvent<HTMLSpanElement>) => {
-    if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
+  const onTreeItemKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (event.target !== event.currentTarget) return
+    if ((event.key === 'Enter' || event.key === ' ') && expandable) {
       event.preventDefault()
-      setExpanded(event.key === 'ArrowRight')
+      toggle()
+      return
+    }
+    if (event.key === 'ArrowRight' && expandable) {
+      event.preventDefault()
+      if (!expanded) setExpanded(true)
+      else {
+        const child = event.currentTarget.querySelector<HTMLElement>(':scope > [role="group"] > [role="treeitem"]')
+        child?.focus()
+      }
+      return
+    }
+    if (event.key === 'ArrowLeft') {
+      if (expandable && expanded) {
+        event.preventDefault()
+        setExpanded(false)
+        return
+      }
+      const parent = event.currentTarget.parentElement?.closest<HTMLElement>('[role="treeitem"]')
+      if (parent !== null && parent !== undefined) {
+        event.preventDefault()
+        parent.focus()
+      }
       return
     }
     if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
       event.preventDefault()
       moveFocus(event.currentTarget, event.key === 'ArrowUp' ? -1 : 1)
+      return
+    }
+    if (event.key === 'Home' || event.key === 'End') {
+      event.preventDefault()
+      const items = visibleTreeItems(event.currentTarget)
+      items[event.key === 'Home' ? 0 : items.length - 1]?.focus()
     }
   }
 
   const row = (children: ReactNode, ariaExpanded?: boolean) => (
     <div
+      ref={rowRef}
       className={css.row}
       role="treeitem"
       aria-expanded={ariaExpanded}
+      aria-controls={ariaExpanded === true ? contentsId : undefined}
+      tabIndex={tabStopId === nodeId ? 0 : -1}
+      onFocus={(event) => {
+        if (event.target === event.currentTarget) onClaimTabStop(nodeId)
+      }}
+      onKeyDown={onTreeItemKeyDown}
       onMouseOver={(event) => {
         event.stopPropagation()
         onRowHover(event.currentTarget, { path, value })
@@ -325,17 +369,10 @@ function JsonTreeNode({
   return row((
     <>
       <span
-        ref={expanderRef}
         className={clsx(css.expander, expanded ? css.collapseIcon : css.expandIcon)}
         data-json-expander
-        role="button"
-        aria-label={expanded ? labels.collapseNode : labels.expandNode}
-        aria-expanded={expanded}
-        aria-controls={expanded ? contentsId : undefined}
-        tabIndex={tabStopId === nodeId ? 0 : -1}
-        onFocus={() => { onClaimTabStop(nodeId) }}
+        aria-hidden="true"
         onClick={toggle}
-        onKeyDown={onExpanderKeyDown}
       />
       <NodeField field={field} expandable onToggle={toggle} />
       <span className={css.preview}>{previewValue(value, 0)}</span>
@@ -417,15 +454,11 @@ export function JsonTree({
     [labels],
   )
   const rootEntries = entriesOf(data)
-  const firstExpandableIndex = rootEntries.findIndex(([, value]) => (
-    isExpandableValue(value) && entriesOf(value).length > 0
-  ))
-  const firstExpandableEntry = rootEntries[firstExpandableIndex]
   const initialTabStopId = expandTopLevel
-    ? firstExpandableEntry === undefined
+    ? rootEntries[0] === undefined
       ? null
-      : pathId([Array.isArray(data) ? firstExpandableIndex : firstExpandableEntry[0]])
-    : isExpandableValue(data) && rootEntries.length > 0 ? pathId([]) : null
+      : pathId([Array.isArray(data) ? 0 : rootEntries[0][0]])
+    : pathId([])
   const rootRef = useRef<HTMLDivElement>(null)
   const activeRowRef = useRef<HTMLElement>()
   const copyButtonRef = useRef<HTMLButtonElement>(null)

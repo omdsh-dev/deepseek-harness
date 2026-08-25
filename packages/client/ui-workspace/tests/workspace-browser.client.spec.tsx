@@ -583,6 +583,7 @@ describe('WorkspaceBrowser', () => {
       })
       fireEvent.click(screen.getByRole('button', { name: '搜索会话' }))
       const input = screen.getByPlaceholderText<HTMLInputElement>('搜索会话…')
+      expect(input.getAttribute('aria-label')).toBe('搜索会话…')
       fireEvent.change(input, { target: { value: 'needle' } })
       const resultTree = screen.getByRole('tree', { name: '搜索结果' })
       expect(screen.getByText('Needle row')).toBeTruthy()

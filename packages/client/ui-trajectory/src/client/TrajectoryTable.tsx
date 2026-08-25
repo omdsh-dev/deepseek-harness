@@ -1729,6 +1729,7 @@ export function TrajectoryTable({
   const tableScrollInitialized = useRef(false)
   const [tableScrollReady, setTableScrollReady] = useState(false)
   const pendingScrollRecordId = useRef<string | null>(null)
+  const rovingRowKey = useRef<string | null>(null)
   const loadingOlder = useRef(false)
   const [olderLoading, setOlderLoading] = useState(false)
   const olderLoadAnchor = useRef<OlderLoadAnchor | null>(null)
@@ -1835,6 +1836,48 @@ export function TrajectoryTable({
       terminalRequestBoundary:
         record.cell.requestOnly === true && position === records.length - 1,
     }))
+  const selectedRenderedRow = renderedRecords.find(({ record }) => (
+    record.collapsedSummary === undefined
+    && record.cell.requestOnly !== true
+    && record.cell.index === selectedIndex
+  ))
+  const rememberedRenderedRow = renderedRecords.find(({ record }) => (
+    trajectoryVirtualRecordKey(record) === rovingRowKey.current
+    && record.cell.requestOnly !== true
+  ))
+  const initialRovingRecord = selectedRenderedRow?.record
+    ?? rememberedRenderedRow?.record
+    ?? renderedRecords.find(({ record }) => record.cell.requestOnly !== true)?.record
+  const initialRovingRowKey = initialRovingRecord === undefined
+    ? null
+    : trajectoryVirtualRecordKey(initialRovingRecord)
+  rovingRowKey.current = initialRovingRowKey
+
+  const claimRovingRow = (row: HTMLTableRowElement): void => {
+    const body = row.closest('tbody')
+    if (body === null) return
+    rovingRowKey.current = row.dataset['trajectoryRowKey'] ?? null
+    for (const candidate of body.querySelectorAll<HTMLTableRowElement>('tr[data-trajectory-row-key]:not([data-request-only="true"])')) {
+      candidate.tabIndex = candidate === row ? 0 : -1
+    }
+  }
+
+  const moveRovingRow = (row: HTMLTableRowElement, key: string): boolean => {
+    const body = row.closest('tbody')
+    if (body === null) return false
+    const rows = [...body.querySelectorAll<HTMLTableRowElement>('tr[data-trajectory-row-key]:not([data-request-only="true"])')]
+    const current = rows.indexOf(row)
+    if (current < 0 || rows.length === 0) return false
+    const target = key === 'Home'
+      ? rows[0]
+      : key === 'End'
+        ? rows.at(-1)
+        : rows[current + (key === 'ArrowDown' ? 1 : -1)]
+    if (target === undefined) return false
+    claimRovingRow(target)
+    target.focus()
+    return true
+  }
   const requestBoundaryRuns = useMemo(
     () => indexRequestBoundaryRuns(records),
     [records],
@@ -2305,7 +2348,9 @@ export function TrajectoryTable({
                     : activeTurn === record.turn
                   return (
                     <tr
-                      tabIndex={isRequestOnly ? -1 : 0}
+                      tabIndex={isRequestOnly
+                        ? -1
+                        : trajectoryVirtualRecordKey(record) === initialRovingRowKey ? 0 : -1}
                       aria-rowindex={position + 1 + historyRowOffset}
                       aria-label={isCollapsedSummary
                         ? `Collapsed ${record.collapsedSummaryKind} summary, ${record.collapsedSummary}`
@@ -2364,8 +2409,15 @@ export function TrajectoryTable({
                         event.preventDefault()
                         onToggleTurn(record.turn)
                       }}
+                      onFocus={(event) => {
+                        if (event.target === event.currentTarget) claimRovingRow(event.currentTarget)
+                      }}
                       onKeyDown={(event) => {
-                        if (isRequestOnly) return
+                        if (isRequestOnly || event.target !== event.currentTarget) return
+                        if (event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'Home' || event.key === 'End') {
+                          if (moveRovingRow(event.currentTarget, event.key)) event.preventDefault()
+                          return
+                        }
                         if (event.key !== 'Enter' && event.key !== ' ') return
                         event.preventDefault()
                         if (isCollapsedSummary) {

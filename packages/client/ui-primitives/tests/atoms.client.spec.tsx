@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { useState } from 'react'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Button, ConnectionBanner, Input, Menu, Modal, Pill } from '@deepseek-ai/dsh-client-ui-primitives'
@@ -87,6 +88,66 @@ describe('Menu', () => {
     expect(onClose).toHaveBeenCalledTimes(1)
     fireEvent.pointerDown(document.body)
     expect(onClose).toHaveBeenCalledTimes(2)
+  })
+
+  it('implements menu-button focus entry, roving arrow keys, typeahead, Tab exit, and Escape restoration', async () => {
+    function Harness() {
+      const [open, setOpen] = useState(false)
+      return (
+        <>
+          <Menu
+            open={open}
+            anchor={<button type="button" onClick={() => { setOpen(value => !value) }}>Choose</button>}
+            items={[
+              { id: 'a', label: 'Alpha' },
+              { id: 'b', label: 'Beta', disabled: true },
+              { id: 'g', label: 'Gamma' },
+            ]}
+            onSelect={() => { setOpen(false) }}
+            onClose={() => { setOpen(false) }}
+          />
+          <button type="button">After</button>
+        </>
+      )
+    }
+
+    render(<Harness />)
+    const trigger = screen.getByRole('button', { name: 'Choose' })
+    expect(trigger.getAttribute('aria-haspopup')).toBe('menu')
+    expect(trigger.getAttribute('aria-expanded')).toBe('false')
+    await act(async () => {
+      fireEvent.keyDown(trigger, { key: 'ArrowDown' })
+      await Promise.resolve()
+    })
+    const alpha = screen.getByRole('menuitem', { name: 'Alpha' })
+    const gamma = screen.getByRole('menuitem', { name: 'Gamma' })
+    expect(trigger.getAttribute('aria-controls')).toBe(screen.getByRole('menu').id)
+    expect(document.activeElement).toBe(alpha)
+    expect(alpha.tabIndex).toBe(-1)
+    fireEvent.keyDown(alpha, { key: 'ArrowDown' })
+    expect(document.activeElement).toBe(gamma)
+    fireEvent.keyDown(gamma, { key: 'Home' })
+    expect(document.activeElement).toBe(alpha)
+    fireEvent.keyDown(alpha, { key: 'g' })
+    expect(document.activeElement).toBe(gamma)
+    await act(async () => {
+      fireEvent.keyDown(gamma, { key: 'Escape' })
+      await Promise.resolve()
+    })
+    expect(screen.queryByRole('menu')).toBeNull()
+    expect(document.activeElement).toBe(trigger)
+
+    await act(async () => {
+      fireEvent.click(trigger)
+      await Promise.resolve()
+    })
+    const reopenedAlpha = screen.getByRole('menuitem', { name: 'Alpha' })
+    await act(async () => {
+      fireEvent.keyDown(reopenedAlpha, { key: 'Tab' })
+      await Promise.resolve()
+    })
+    expect(screen.queryByRole('menu')).toBeNull()
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'After' }))
   })
 
   it('inside pointerdown does not close', () => {
@@ -278,6 +339,34 @@ describe('Menu', () => {
     expect(onSelect).toHaveBeenCalledWith('ok')
     fireEvent.mouseLeave(wrap)
     expect(screen.queryByRole('menuitem', { name: 'Create ok' })).toBeNull()
+  })
+
+  it('enters and leaves a submenu with ArrowRight, ArrowLeft, and Escape', async () => {
+    render(
+      <Menu
+        open
+        anchor={<button type="button">trigger</button>}
+        items={[
+          { id: 'plain', label: 'Plain' },
+          { id: 'parent', label: 'Parent', submenu: [{ id: 'child', label: 'Child' }] },
+        ]}
+        onSelect={() => {}}
+        onClose={() => {}}
+      />)
+    const parent = screen.getByRole('menuitem', { name: 'Parent' })
+    parent.focus()
+    await act(async () => {
+      fireEvent.keyDown(parent, { key: 'ArrowRight' })
+      await Promise.resolve()
+    })
+    const child = screen.getByRole('menuitem', { name: 'Child' })
+    expect(document.activeElement).toBe(child)
+    await act(async () => {
+      fireEvent.keyDown(child, { key: 'ArrowLeft' })
+      await Promise.resolve()
+    })
+    expect(screen.queryByRole('menuitem', { name: 'Child' })).toBeNull()
+    expect(document.activeElement).toBe(parent)
   })
 
   it('portal mode prefers getAnchorRect over measuring its own wrapper', () => {

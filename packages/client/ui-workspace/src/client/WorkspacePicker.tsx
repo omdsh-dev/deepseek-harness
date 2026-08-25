@@ -193,6 +193,8 @@ export function WorkspacePickFlow({
         side={side}
         portal
         getAnchorRect={getAnchorRect}
+        returnFocusRef={anchorRef}
+        ariaLabel={t('section.workspaces')}
       />
       {open && !addIsTheOnlyEntry && !menuIsEmpty && workspaceSnapshot.phase === 'pending' && <div className={css.menuStatus} role="status">{t('picker.loading')}</div>}
       {renderDirectoryFlow(flowOwner)}

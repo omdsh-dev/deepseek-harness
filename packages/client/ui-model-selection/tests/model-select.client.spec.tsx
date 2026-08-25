@@ -48,6 +48,36 @@ function state(overrides: Partial<ModelDirectoryState> = {}): ModelDirectoryStat
 afterEach(cleanup)
 
 describe('ModelSelect reasoning effort', () => {
+  it('uses one managed menu focus path across root and drilled panes', async () => {
+    const directory = createSnapshotStore<ModelDirectoryState>(state())
+    render(<ModelSelect
+      locked={false}
+      available
+      directory={directory}
+      load={vi.fn()}
+      select={vi.fn().mockResolvedValue(true)}
+      t={t}
+    />)
+
+    const trigger = screen.getByRole('button', { name: /选择模型，当前/ })
+    fireEvent.keyDown(trigger, { key: 'ArrowDown' })
+    const rootItems = screen.getAllByRole('menuitem')
+    expect(rootItems.every(item => item.tabIndex === -1)).toBe(true)
+    expect(document.activeElement).toBe(rootItems[0])
+    fireEvent.keyDown(rootItems[0] as HTMLElement, { key: 'End' })
+    expect(document.activeElement).toBe(rootItems[1])
+    fireEvent.keyDown(rootItems[1] as HTMLElement, { key: 'ArrowRight' })
+    const efforts = screen.getAllByRole('menuitemradio')
+    expect(efforts.every(item => item.tabIndex === -1)).toBe(true)
+    expect(document.activeElement).toBe(efforts[0])
+    fireEvent.keyDown(efforts[0] as HTMLElement, { key: 'ArrowLeft' })
+    expect(document.activeElement).toBe(screen.getAllByRole('menuitem')[0])
+    fireEvent.keyDown(document.activeElement as HTMLElement, { key: 'Escape' })
+    await Promise.resolve()
+    expect(screen.queryByRole('menu')).toBeNull()
+    expect(document.activeElement).toBe(trigger)
+  })
+
   it('renders adapter metadata and submits the effort as part of the session selection', async () => {
     const directory = createSnapshotStore<ModelDirectoryState>(state())
     const select = vi.fn(async (selection: ModelSelection) => {

@@ -69,7 +69,7 @@ async function mountOpen(overrides: Partial<PopupSpec<string>> = {}, consumeResu
     popup.open('theme', spec(overrides), 'ctx-A', SEGMENT)
     await Promise.resolve()
   })
-  return { popup, view, consume, focusComposer, search: screen.getByRole('textbox', { name: '筛选选项' }) }
+  return { popup, view, consume, focusComposer, search: screen.getByRole('combobox', { name: '筛选选项' }) }
 }
 
 function rowLabels(): string[] {
@@ -85,8 +85,14 @@ describe('PopupSelectView', () => {
       popup.open('theme', spec(), 'ctx-A', SEGMENT)
       await Promise.resolve()
     })
-    const search = screen.getByRole('textbox', { name: '筛选选项' })
+    const search = screen.getByRole('combobox', { name: '筛选选项' })
     expect(document.activeElement).toBe(search)
+    expect(search.getAttribute('role')).toBe('combobox')
+    expect(search.getAttribute('aria-autocomplete')).toBe('list')
+    expect(search.getAttribute('aria-expanded')).toBe('true')
+    const listbox = screen.getByRole('listbox', { name: '/theme 匹配项' })
+    expect(search.getAttribute('aria-controls')).toBe(listbox.id)
+    expect(search.getAttribute('aria-activedescendant')).toBe(screen.getAllByRole('option')[0]!.id)
     expect(rowLabels()).toEqual(['Dark', 'Light', 'Sepia'])
   })
 
@@ -107,6 +113,7 @@ describe('PopupSelectView', () => {
     act(() => { fireEvent.keyDown(search, { key: 'ArrowDown' }) })
     let options = screen.getAllByRole('option')
     expect(options[1]!.getAttribute('aria-selected')).toBe('true')
+    expect(search.getAttribute('aria-activedescendant')).toBe(options[1]!.id)
     act(() => { fireEvent.keyDown(search, { key: 'ArrowUp' }) })
     options = screen.getAllByRole('option')
     expect(options[0]!.getAttribute('aria-selected')).toBe('true')

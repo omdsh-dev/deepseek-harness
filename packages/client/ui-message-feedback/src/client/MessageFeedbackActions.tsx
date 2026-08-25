@@ -11,7 +11,7 @@
  */
 
 import {
-  useCallback, useEffect, useRef, useState,
+  useCallback, useEffect, useId, useRef, useState,
   type CSSProperties,
 } from 'react'
 import { createPortal } from 'react-dom'
@@ -36,6 +36,12 @@ const PANEL_GAP = 4
  */
 const MEASURE_STYLE: CSSProperties = { visibility: 'hidden', left: 0, top: 0 }
 
+const PAGE_FOCUSABLE = [
+  'a[href]', 'button:not([disabled])', 'input:not([disabled])',
+  'select:not([disabled])', 'textarea:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(',')
+
 /**
  * One message's feedback controls.
  * @param props - the owner's message identity, the injected verbs, and the
@@ -59,6 +65,8 @@ export function MessageFeedbackActions({ messageId, ensure, rate, toggle, clearN
   const triggerRef = useRef<HTMLButtonElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const panelId = useId()
+  const restoreFocusOnClose = useRef(true)
   // The controls mount for every settled message in the transcript, so the
   // Session's feedback is read once on first hover/focus rather than on mount.
   const seeded = useRef(false)
@@ -88,9 +96,10 @@ export function MessageFeedbackActions({ messageId, ensure, rate, toggle, clearN
     setRowFailure(result.ok ? null : errorCopy(result))
   }, [errorCopy])
 
-  const closeNote = useCallback(() => {
+  const closeNote = useCallback((restoreFocus = true) => {
     // Ends the editing session, so any save still in flight becomes stale.
     noteGeneration.current += 1
+    restoreFocusOnClose.current = restoreFocus
     setNoteOpen(false)
   }, [])
 
@@ -100,7 +109,7 @@ export function MessageFeedbackActions({ messageId, ensure, rate, toggle, clearN
     // The controller decides retract-vs-replace from the committed item, so a
     // click that lands before the first list read still toggles the stored
     // value instead of this render's empty view.
-    closeNote()
+    closeNote(false)
     void toggle(messageId, next).then(settleRating)
   }, [closeNote, messageId, settleRating, toggle])
 
@@ -179,6 +188,7 @@ export function MessageFeedbackActions({ messageId, ensure, rate, toggle, clearN
     // A failure that arrives after the panel closed is reported in the row, and
     // clearing it here is what retires that notice when a new session starts.
     setNoteFailure(null)
+    restoreFocusOnClose.current = true
     setNoteOpen(true)
   }, [noteOpen, closeNote, item?.note])
 
@@ -201,7 +211,7 @@ export function MessageFeedbackActions({ messageId, ensure, rate, toggle, clearN
       if (!(e.target instanceof Node)) return
       if (triggerRef.current?.contains(e.target) === true) return
       if (panelRef.current?.contains(e.target) === true) return
-      closeNote()
+      closeNote(false)
     }
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') closeNote()
@@ -220,7 +230,8 @@ export function MessageFeedbackActions({ messageId, ensure, rate, toggle, clearN
   const wasOpen = useRef(false)
   useEffect(() => {
     if (noteOpen) { wasOpen.current = true; return }
-    if (wasOpen.current) triggerRef.current?.focus()
+    if (wasOpen.current && restoreFocusOnClose.current) triggerRef.current?.focus()
+    restoreFocusOnClose.current = true
     wasOpen.current = false
   }, [noteOpen])
 
@@ -266,6 +277,7 @@ export function MessageFeedbackActions({ messageId, ensure, rate, toggle, clearN
           className={css.noteOpen}
           aria-haspopup="dialog"
           aria-expanded={noteOpen}
+          aria-controls={panelId}
           onClick={toggleNote}
         >
           {item?.note === undefined ? t('note.open') : item.note}
@@ -288,10 +300,30 @@ export function MessageFeedbackActions({ messageId, ensure, rate, toggle, clearN
       {rating !== undefined && noteOpen && createPortal(
         <div
           ref={panelRef}
+          id={panelId}
           className={css.notePanel}
           role="dialog"
           aria-label={t('note.dialog')}
           style={pos ?? MEASURE_STYLE}
+          onKeyDown={(event) => {
+            if (event.key !== 'Tab') return
+            const panel = panelRef.current
+            const trigger = triggerRef.current
+            if (panel === null || trigger === null) return
+            const panelItems = [...panel.querySelectorAll<HTMLElement>(PAGE_FOCUSABLE)]
+              .filter(item => item.getAttribute('aria-hidden') !== 'true')
+            const atBoundary = event.shiftKey
+              ? document.activeElement === panelItems[0]
+              : document.activeElement === panelItems.at(-1)
+            if (!atBoundary) return
+            const pageItems = [...document.querySelectorAll<HTMLElement>(PAGE_FOCUSABLE)]
+              .filter(item => !panel.contains(item) && item.getAttribute('aria-hidden') !== 'true' && !item.closest('[inert]'))
+            const triggerIndex = pageItems.indexOf(trigger)
+            const target = pageItems[triggerIndex + (event.shiftKey ? -1 : 1)] ?? trigger
+            event.preventDefault()
+            closeNote(false)
+            queueMicrotask(() => { target.focus() })
+          }}
         >
           <textarea
             ref={inputRef}
@@ -311,7 +343,7 @@ export function MessageFeedbackActions({ messageId, ensure, rate, toggle, clearN
             >
               {t('note.save')}
             </button>
-            <button type="button" className={css.noteCancel} onClick={closeNote}>
+            <button type="button" className={css.noteCancel} onClick={() => { closeNote() }}>
               {t('note.cancel')}
             </button>
           </div>

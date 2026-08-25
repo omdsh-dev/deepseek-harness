@@ -53,6 +53,8 @@ interface AnswerFieldProps {
   value: string
   /** Empty-field prompt. */
   placeholder: string
+  /** Accessible name that keeps identical placeholders distinguishable by question. */
+  ariaLabel: string
   /** Whether a submission in flight has frozen the field. */
   disabled: boolean
   /** Whether this field takes focus on mount. */
@@ -92,6 +94,7 @@ function AnswerField(props: AnswerFieldProps) {
         disabled={props.disabled}
         rows={1}
         placeholder={props.placeholder}
+        aria-label={props.ariaLabel}
         onFocus={props.onFocus}
         onChange={props.onChange}
         onKeyDown={props.onKeyDown}
@@ -138,12 +141,17 @@ function QuestionFlow({ pending, t }: { pending: PendingQuestion } & Pick<Questi
   // collapsed question must not steal focus from the expand toggle back into
   // the input, so focus is granted once per question index.
   const focusedQuestions = useRef(new Set<number>())
+  const optionRefs = useRef<Array<HTMLButtonElement | null>>([])
   // index stays in bounds (every setIndex site clamps) and drafts mirrors questions 1:1.
   // oxlint-disable-next-line typescript/no-non-null-assertion
   const question = questions[index]!
   // oxlint-disable-next-line typescript/no-non-null-assertion
   const draft = drafts[index]!
   const hasOptions = (question.options?.length ?? 0) > 0
+  const optionList = question.options ?? []
+  const selectedOptionIndex = optionList.findIndex(option => draft.selected.includes(option.label))
+  const radioTabStopIndex = selectedOptionIndex >= 0 ? selectedOptionIndex : 0
+  const questionTitleId = `question-${pending.key}-${String(index)}`
 
   const cancelFlow = (): void => {
     setBusy('cancel')
@@ -159,7 +167,7 @@ function QuestionFlow({ pending, t }: { pending: PendingQuestion } & Pick<Questi
     setError(null)
   }
 
-  const choose = (label: string): void => {
+  const choose = (label: string, advance = true): void => {
     updateDraft((current) => {
       if (question.multiSelect === true) {
         const selected = current.selected.includes(label)
@@ -169,9 +177,24 @@ function QuestionFlow({ pending, t }: { pending: PendingQuestion } & Pick<Questi
       }
       return { selected: [label], custom: '', skipped: false }
     })
-    if (question.multiSelect !== true && index < questions.length - 1) {
+    if (advance && question.multiSelect !== true && index < questions.length - 1) {
       setIndex(current => current + 1)
     }
+  }
+
+  const moveRadio = (optionIndex: number, key: string): void => {
+    if (question.multiSelect === true || optionList.length === 0) return
+    let targetIndex: number
+    if (key === 'Home') targetIndex = 0
+    else if (key === 'End') targetIndex = optionList.length - 1
+    else {
+      const direction = key === 'ArrowRight' || key === 'ArrowDown' ? 1 : -1
+      targetIndex = (optionIndex + direction + optionList.length) % optionList.length
+    }
+    const target = optionList[targetIndex]
+    if (target === undefined) return
+    choose(target.label, false)
+    optionRefs.current[targetIndex]?.focus()
   }
 
   const answered = (item: DraftAnswer): boolean =>
@@ -255,12 +278,12 @@ function QuestionFlow({ pending, t }: { pending: PendingQuestion } & Pick<Questi
     <div className={css.frame} data-question-key={pending.key}>
       <section
         className={clsx(css.card, minimized && css.cardMinimized)}
-        aria-labelledby={`question-${pending.key}-${String(index)}`}
+        aria-labelledby={questionTitleId}
       >
         <header className={css.header}>
           <div className={css.headingBlock}>
             {question.header !== undefined && <div className={css.eyebrow}>{question.header}</div>}
-            <h2 className={css.title} id={`question-${pending.key}-${String(index)}`}>
+            <h2 className={css.title} id={questionTitleId}>
               {question.question}
             </h2>
           </div>
@@ -291,20 +314,31 @@ function QuestionFlow({ pending, t }: { pending: PendingQuestion } & Pick<Questi
               {question.detail !== undefined && (
                 <div className={css.detail}><MarkdownText text={question.detail} /></div>
               )}
-              <div className={css.options} role={question.multiSelect === true ? 'group' : 'radiogroup'}>
-                {(question.options ?? []).map((option, optionIndex) => {
+              <div
+                className={css.options}
+                role={question.multiSelect === true ? 'group' : 'radiogroup'}
+                aria-labelledby={questionTitleId}
+              >
+                {optionList.map((option, optionIndex) => {
                   const selected = draft.selected.includes(option.label)
                   const display = parseRecommendedLabel(option.label)
                   return (
                     <button
                       type="button" key={`${option.label}-${String(optionIndex)}`}
+                      ref={(node) => { optionRefs.current[optionIndex] = node }}
                       className={clsx(css.option, selected && question.multiSelect !== true && css.optionSelected)}
                       role={question.multiSelect === true ? 'checkbox' : 'radio'}
                       aria-checked={selected}
                       aria-label={display.label}
+                      tabIndex={question.multiSelect === true ? undefined : optionIndex === radioTabStopIndex ? 0 : -1}
                       disabled={busy !== null}
                       onClick={() => { choose(option.label) }}
                       onKeyDown={(event) => {
+                        if (question.multiSelect !== true && ['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
+                          event.preventDefault()
+                          moveRadio(optionIndex, event.key)
+                          return
+                        }
                         if (event.key !== 'Enter' || !drafts.every(completed)) return
                         event.preventDefault()
                         submitDrafts(drafts)
@@ -354,6 +388,7 @@ function QuestionFlow({ pending, t }: { pending: PendingQuestion } & Pick<Questi
                         value={draft.custom}
                         disabled={busy !== null}
                         placeholder={t('custom.placeholder')}
+                        ariaLabel={`${question.question}: ${t('custom.placeholder')}`}
                         onChange={draftCustom}
                         onKeyDown={continueFromCustom}
                       />
@@ -366,6 +401,7 @@ function QuestionFlow({ pending, t }: { pending: PendingQuestion } & Pick<Questi
                       value={draft.custom}
                       disabled={busy !== null}
                       placeholder={t('custom.placeholder')}
+                      ariaLabel={`${question.question}: ${t('custom.placeholder')}`}
                       onFocus={() => { focusedQuestions.current.add(index) }}
                       onChange={draftCustom}
                       onKeyDown={continueFromCustom}

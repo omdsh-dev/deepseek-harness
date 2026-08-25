@@ -92,23 +92,22 @@ export function PluginsSettingsSection({ t, renderSlot, useTabs }: PluginsSettin
               )
             })}
           </div>
-          {rows
-            .filter(row => row.id === active || visitedIds.has(row.id))
-            .map((row) => {
-              const selected = row.id === active
-              return (
-                <div
-                  key={row.id}
-                  id={`${tabsId}-panel-${row.id}`}
-                  className={css.panel}
-                  role="tabpanel"
-                  aria-labelledby={`${tabsId}-tab-${row.id}`}
-                  hidden={!selected}
-                >
-                  {renderSlot('settings.plugins.tab', {}, { only: row.id })}
-                </div>
-              )
-            })}
+          {rows.map((row) => {
+            const selected = row.id === active
+            return (
+              <div
+                key={row.id}
+                id={`${tabsId}-panel-${row.id}`}
+                className={css.panel}
+                role="tabpanel"
+                aria-labelledby={`${tabsId}-tab-${row.id}`}
+                hidden={!selected}
+              >
+                {(selected || visitedIds.has(row.id))
+                  && renderSlot('settings.plugins.tab', {}, { only: row.id })}
+              </div>
+            )
+          })}
         </>
       )}
     </div>

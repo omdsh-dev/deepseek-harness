@@ -257,8 +257,31 @@ describe('MessageFeedbackActions', () => {
     // rather than inline inside the component's own container.
     const panel = ui.getByRole('dialog')
     expect(panel).toBeTruthy()
+    const trigger = ui.getByText(zh['note.open'])
+    expect(trigger.getAttribute('aria-controls')).toBe(panel.id)
     expect(ui.container.querySelector('[role="dialog"]')).toBeNull()
     expect(document.body.contains(panel)).toBe(true)
+  })
+
+  it('leaves the portaled editor in trigger order at either Tab boundary', async () => {
+    const ui = mount({ current: item({ rating: 'positive' }) })
+    const trigger = ui.getByText(zh['note.open'])
+
+    fireEvent.click(trigger)
+    const input = ui.getByLabelText(zh['note.aria'])
+    expect(document.activeElement).toBe(input)
+    fireEvent.keyDown(input, { key: 'Tab', shiftKey: true })
+    await Promise.resolve()
+    expect(ui.queryByRole('dialog')).toBeNull()
+    expect(document.activeElement).toBe(ui.getByLabelText(zh['action.dislike']))
+
+    fireEvent.click(trigger)
+    const cancel = ui.getByText(zh['note.cancel'])
+    cancel.focus()
+    fireEvent.keyDown(cancel, { key: 'Tab' })
+    await Promise.resolve()
+    expect(ui.queryByRole('dialog')).toBeNull()
+    expect(document.activeElement).toBe(trigger)
   })
 
   it('closes the note popover on Escape', () => {

@@ -206,10 +206,17 @@ describe('SubagentHeaderLineage', () => {
     const trigger = screen.getByRole('button', { name: /2 个子代理/ })
     fireEvent.keyDown(trigger, { key: 'ArrowDown' })
     await Promise.resolve()
-    expect(document.activeElement).toBe(screen.getByRole('treeitem', { name: /worker/ }))
+    const worker = screen.getByRole('treeitem', { name: /worker/ })
+    const reviewer = screen.getByRole('treeitem', { name: /reviewer/ })
+    expect(document.activeElement).toBe(worker)
+    expect(worker.tabIndex).toBe(0)
+    expect(reviewer.tabIndex).toBe(-1)
+    expect(trigger.getAttribute('aria-controls')).toBe(screen.getByRole('tree').id)
 
     fireEvent.keyDown(document.activeElement as Element, { key: 'End' })
-    expect(document.activeElement).toBe(screen.getByRole('treeitem', { name: /reviewer/ }))
+    expect(document.activeElement).toBe(reviewer)
+    expect(worker.tabIndex).toBe(-1)
+    expect(reviewer.tabIndex).toBe(0)
     fireEvent.keyDown(document.activeElement as Element, { key: 'Home' })
     expect(document.activeElement).toBe(screen.getByRole('treeitem', { name: /worker/ }))
     fireEvent.keyDown(document.activeElement as Element, { key: 'ArrowUp' })
@@ -226,11 +233,13 @@ describe('SubagentHeaderLineage', () => {
     expect(screen.queryByRole('tree')).toBeNull()
   })
 
-  it('opens only on hover and preserves the portaled-menu crossing grace', async () => {
+  it('opens by activation or hover and preserves the portaled-menu crossing grace', async () => {
     vi.useFakeTimers()
     const view = render(<SubagentHeaderLineage {...props(catalog())} />)
     const trigger = screen.getByRole('button', { name: /2 个子代理/ })
 
+    fireEvent.click(trigger)
+    expect(screen.getByRole('tree')).toBeTruthy()
     fireEvent.click(trigger)
     expect(screen.queryByRole('tree')).toBeNull()
 

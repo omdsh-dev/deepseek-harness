@@ -72,6 +72,26 @@ function answeredEnvelope(rpcId: string, answers: object[]) {
 }
 
 describe('QuestionComposer', () => {
+  it('labels the radio group and text field, with one arrow-key radio tab stop', () => {
+    const { carrier } = wait()
+    render(<QuestionComposer matched={carrier} interactions={[carrier]} {...kit} />)
+
+    expect(screen.getByRole('radiogroup', { name: '选择候选人类型' })).toBeTruthy()
+    const radios = screen.getAllByRole('radio')
+    expect(radios[0]?.tabIndex).toBe(0)
+    expect(radios[1]?.tabIndex).toBe(-1)
+    radios[0]?.focus()
+    fireEvent.keyDown(radios[0] as HTMLElement, { key: 'ArrowDown' })
+    expect(screen.getByText('1 / 3')).toBeTruthy()
+    expect(document.activeElement).toBe(radios[1])
+    expect(radios[0]?.tabIndex).toBe(-1)
+    expect(radios[1]?.tabIndex).toBe(0)
+    expect(radios[1]?.getAttribute('aria-checked')).toBe('true')
+
+    fireEvent.click(radios[1] as HTMLElement)
+    expect(screen.getByRole('textbox', { name: '补充你的要求: 输入你的答案' })).toBeTruthy()
+  })
+
   it('collects single, custom, and multi-select answers before one batch submit', () => {
     const { carrier, respond } = wait()
     render(<QuestionComposer matched={carrier} interactions={[carrier]} {...kit} />)

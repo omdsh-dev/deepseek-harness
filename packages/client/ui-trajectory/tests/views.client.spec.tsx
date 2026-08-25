@@ -371,6 +371,15 @@ describe('tab switching in ConversationRoot', () => {
     expect(screen.getByRole('toolbar', { name: '轨迹工具栏' })).toBeTruthy()
     expect(screen.getByRole('region', { name: 'Trajectory timeline' })).toBeTruthy()
     expect(view.container.querySelector('[data-conversation-composer-overlay]')).toBeTruthy()
+    const ledgerRows = screen.getAllByRole('row')
+      .filter(row => row.hasAttribute('data-trajectory-row-key') && !row.hasAttribute('data-request-only'))
+    expect(ledgerRows.filter(row => row.tabIndex === 0)).toHaveLength(1)
+    expect(ledgerRows.filter(row => row.tabIndex === -1)).toHaveLength(ledgerRows.length - 1)
+    const firstRow = ledgerRows.find(row => row.tabIndex === 0) as HTMLElement
+    firstRow.focus()
+    fireEvent.keyDown(firstRow, { key: 'ArrowDown' })
+    expect(document.activeElement).toBe(ledgerRows[1])
+    expect(ledgerRows[1]?.tabIndex).toBe(0)
     fireEvent.click(screen.getByRole('button', { name: 'Collapse turns' }))
     expect(view.container.querySelector('[data-collapsed-summary="turn"]')).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Expand turns' }))
@@ -647,6 +656,44 @@ describe('timeline projection', () => {
       })),
     }],
   }] satisfies readonly TrajectoryTurnModel[]
+
+  it('exposes timeline records as a keyboard-browsable multiselect listbox', () => {
+    const onRangeChange = vi.fn()
+    const onRecordSelect = vi.fn()
+    const onRecordFocus = vi.fn()
+    render(
+      <TrajectoryTimeline
+        turns={turns}
+        mode="sequence"
+        range={null}
+        onRangeChange={onRangeChange}
+        onRecordSelect={onRecordSelect}
+        onRecordFocus={onRecordFocus}
+      />,
+    )
+
+    const timeline = screen.getByRole('listbox', {
+      name: 'Timeline overview; drag horizontally to focus events',
+    })
+    const options = screen.getAllByRole('option')
+    expect(options).toHaveLength(3)
+    expect(options[0]?.getAttribute('aria-label')).toContain('ASSISTANT')
+    expect(timeline.getAttribute('aria-multiselectable')).toBe('true')
+    expect(timeline.getAttribute('aria-activedescendant')).toBe(options[0]?.id)
+
+    fireEvent.keyDown(timeline, { key: 'ArrowRight' })
+    expect(timeline.getAttribute('aria-activedescendant')).toBe(options[1]?.id)
+    expect(onRecordFocus).toHaveBeenLastCalledWith(2)
+    fireEvent.keyDown(timeline, { key: 'ArrowRight', shiftKey: true })
+    expect(timeline.getAttribute('aria-activedescendant')).toBe(options[2]?.id)
+    expect(onRangeChange).toHaveBeenLastCalledWith({ start: 1, end: 3 })
+
+    fireEvent.keyDown(timeline, { key: 'Enter' })
+    expect(onRangeChange).toHaveBeenLastCalledWith(null)
+    expect(onRecordSelect).toHaveBeenLastCalledWith(3)
+    fireEvent.keyDown(timeline, { key: 'a', ctrlKey: true })
+    expect(onRangeChange).toHaveBeenLastCalledWith({ start: 0, end: 3 })
+  })
 
   it('splits assistant time into recorded TTFT and decoding proportions with a delayed tooltip', () => {
     vi.useFakeTimers()
