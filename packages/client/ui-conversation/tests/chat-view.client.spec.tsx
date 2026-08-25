@@ -377,6 +377,19 @@ describe('Chat node rendering', () => {
 })
 
 describe('ChatView', () => {
+  it('exposes a named message log and announces run completion once per transition', () => {
+    const h = makeHarness({ nodes: [user(1, 'question'), assistant(2, 'answer')], running: true })
+    const view = render(<h.ChatView {...h.props} />)
+    const log = view.getByRole('log', { name: '对话消息' })
+    expect(log.getAttribute('aria-live')).toBe('off')
+    expect(view.getByRole('article', { name: '用户消息' })).toBeTruthy()
+    expect(view.getByRole('article', { name: '智能体回复' })).toBeTruthy()
+    expect(view.queryByText('智能体回复完成')).toBeNull()
+
+    act(() => { h.set({ running: false }) })
+    expect(view.getByRole('status').textContent).toBe('智能体回复完成')
+  })
+
   it('hands a windowless tool result to the Tool seat with an empty tool name', () => {
     const h = makeHarness({
       nodes: [{ ...toolResult(3, 'w1'), call: null }],

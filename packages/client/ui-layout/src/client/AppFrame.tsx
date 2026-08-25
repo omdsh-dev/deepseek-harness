@@ -12,8 +12,11 @@
  */
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import type { PropsRenderSlots, PropsRuntime, PropsStore } from '@deepseek-ai/dsh-client-ui-slots'
-import { computeColumns, SIDEBAR_AUTO_COLLAPSE, SIDEBAR_DEFAULT } from './columns.ts'
+import type { PropsLocale, PropsRenderSlots, PropsRuntime, PropsStore } from '@deepseek-ai/dsh-client-ui-slots'
+import {
+  computeColumns, DETAILS_MAX, DETAILS_MIN, SIDEBAR_AUTO_COLLAPSE,
+  SIDEBAR_DEFAULT, SIDEBAR_MAX, SIDEBAR_MIN,
+} from './columns.ts'
 import type { createLayoutStore } from './stores.ts'
 import css from './AppFrame.module.css'
 
@@ -22,10 +25,11 @@ export type AppFrameProps =
   & PropsRuntime<'root'>
   & PropsRenderSlots<'sidebar' | 'conversation' | 'details' | 'shell.overlay'>
   & PropsStore<ReturnType<typeof createLayoutStore>>
+  & PropsLocale<'layout'>
 
 /** Center column grid item (session-body building block). */
 function CenterColumn(props: { children?: ReactNode }) {
-  return <div className={css.centerCol}>{props.children}</div>
+  return <main className={css.centerCol}>{props.children}</main>
 }
 
 /** Details column grid item; width 0 keeps the subtree mounted (never unmount on close). */
@@ -37,13 +41,28 @@ function DetailsColumn(props: { children?: ReactNode }) {
  * One drag handle: pointer capture, rAF-throttled dx reports against the drag-start origin.
  * `side` keys the hover-reveal CSS to the owning column.
  */
-function DragHandle(props: { side: 'sidebar' | 'details'; left: number; onStart: () => void; onDrag: (dx: number) => void; onEnd: () => void }) {
+function DragHandle(props: {
+  side: 'sidebar' | 'details'
+  left: number
+  value: number
+  min: number
+  max: number
+  label: string
+  onResize: (width: number) => void
+  onStart: () => void
+  onDrag: (dx: number) => void
+  onEnd: () => void
+}) {
   const [dragging, setDragging] = useState(false)
   const origin = useRef(0)
   const latest = useRef(0)
   const frame = useRef<number | null>(null)
-  const callbacks = useRef({ onStart: props.onStart, onDrag: props.onDrag, onEnd: props.onEnd })
-  callbacks.current = { onStart: props.onStart, onDrag: props.onDrag, onEnd: props.onEnd }
+  const callbacks = useRef({
+    onResize: props.onResize, onStart: props.onStart, onDrag: props.onDrag, onEnd: props.onEnd,
+  })
+  callbacks.current = {
+    onResize: props.onResize, onStart: props.onStart, onDrag: props.onDrag, onEnd: props.onEnd,
+  }
 
   const onPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     e.preventDefault()
@@ -69,6 +88,17 @@ function DragHandle(props: { side: 'sidebar' | 'details'; left: number; onStart:
     setDragging(false)
     callbacks.current.onEnd()
   }, [])
+  const onKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    const step = e.shiftKey ? 40 : 8
+    let next: number | undefined
+    if (e.key === 'ArrowLeft') next = props.value + (props.side === 'sidebar' ? -step : step)
+    else if (e.key === 'ArrowRight') next = props.value + (props.side === 'sidebar' ? step : -step)
+    else if (e.key === 'Home') next = props.side === 'sidebar' ? props.min : props.max
+    else if (e.key === 'End') next = props.side === 'sidebar' ? props.max : props.min
+    else return
+    e.preventDefault()
+    callbacks.current.onResize(next)
+  }, [props.max, props.min, props.side, props.value])
 
   return (
     <div
@@ -76,9 +106,17 @@ function DragHandle(props: { side: 'sidebar' | 'details'; left: number; onStart:
       style={{ left: props.left }}
       data-side={props.side}
       data-dragging={dragging || undefined}
+      role="separator"
+      aria-label={props.label}
+      aria-orientation="vertical"
+      aria-valuemin={props.min}
+      aria-valuemax={props.max}
+      aria-valuenow={props.value}
+      tabIndex={0}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
+      onKeyDown={onKeyDown}
     />
   )
 }
@@ -89,6 +127,7 @@ export function AppFrame({
   useSessions,
   actions,
   renderSlot,
+  t,
 }: AppFrameProps) {
   const panels = useStore(s => s)
   const detailsSession = useSessions((s) => {
@@ -194,8 +233,34 @@ export function AppFrame({
         {renderSlot('shell.overlay', {})}
       </div>
       {/* The collapsed rail is fixed-width: no resize handle while closed. */}
-      {!sidebarCollapsed && <DragHandle side="sidebar" left={cols.sidebar} onStart={onSidebarStart} onDrag={onSidebarDrag} onEnd={onDragEnd} />}
-      {cols.details > 0 && <DragHandle side="details" left={viewport - cols.details} onStart={onDetailsStart} onDrag={onDetailsDrag} onEnd={onDragEnd} />}
+      {!sidebarCollapsed && (
+        <DragHandle
+          side="sidebar"
+          left={cols.sidebar}
+          value={cols.sidebar}
+          min={SIDEBAR_MIN}
+          max={SIDEBAR_MAX}
+          label={t('resize.sidebar')}
+          onResize={actions.setSidebar}
+          onStart={onSidebarStart}
+          onDrag={onSidebarDrag}
+          onEnd={onDragEnd}
+        />
+      )}
+      {cols.details > 0 && (
+        <DragHandle
+          side="details"
+          left={viewport - cols.details}
+          value={cols.details}
+          min={DETAILS_MIN}
+          max={DETAILS_MAX}
+          label={t('resize.details')}
+          onResize={actions.setDetails}
+          onStart={onDetailsStart}
+          onDrag={onDetailsDrag}
+          onEnd={onDragEnd}
+        />
+      )}
     </div>
   )
 }

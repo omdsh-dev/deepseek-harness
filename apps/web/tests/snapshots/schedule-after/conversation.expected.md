@@ -1,1 +1,2 @@
-- paragraph: "Reminder: Check the deployment log."
+- article "Agent response":
+  - paragraph: "Reminder: Check the deployment log."

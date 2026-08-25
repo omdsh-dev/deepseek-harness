@@ -1,4 +1,4 @@
-- banner:
+- main:
   - navigation "Session hierarchy":
     - button "Use the ask_user_question tool to" [disabled]
   - img
@@ -6,45 +6,51 @@
   - button "Session log":
     - text: Session log
     - img
-  - tablist:
+  - tablist "Session views":
     - tab "Chat" [selected]
     - tab "Trajectory"
-- text: Use the ask_user_question tool to ask me exactly one question with id "checkpoint", question "Ready to continue?", header "Checkpoint", and options labeled "Yes" and "No". After I answer, reply with one short sentence acknowledging my answer and stop. {{clock}}
-- button "Copy":
-  - img
-- button "Context injection @deepseek-ai/dsh-system-prompt":
-  - img
-  - img
-  - text: Context injection @deepseek-ai/dsh-system-prompt
-- button "Think The user wants me to use the ask_user_question tool to ask them a specific question with the given parameters. Let me do exactly that.":
-  - img
-  - img
-  - text: Think The user wants me to use the ask_user_question tool to ask them a specific question with the given parameters. Let me do exactly that.
-- text: Running
-- button "Ask question waiting":
-  - img
-  - img
-  - text: Ask question waiting
-- status: Deep diving...
-- text: "Interjection: include the word BANANA in your final reply."
-- button "Copy":
-  - img
-- region "Ready to continue?":
-  - text: Checkpoint
-  - heading "Ready to continue?" [level=2]
-  - button "Collapse the question card" [expanded]:
-    - img
-  - button "Dismiss all questions":
-    - img
-  - radiogroup:
-    - radio "Yes": 1 Yes
-    - radio "No": 2 No
-    - textbox "Type your answer"
-  - button "Previous question" [disabled]:
-    - img
-  - text: 1 / 1
-  - button "Next question" [disabled]:
-    - img
-  - status
-  - button "Skip this question"
-  - button "Submit" [disabled]
+  - tabpanel "Chat":
+    - log "Conversation messages":
+      - article "User message":
+        - text: Use the ask_user_question tool to ask me exactly one question with id "checkpoint", question "Ready to continue?", header "Checkpoint", and options labeled "Yes" and "No". After I answer, reply with one short sentence acknowledging my answer and stop. {{clock}}
+        - button "Copy":
+          - img
+      - article:
+        - button "Context injection @deepseek-ai/dsh-system-prompt":
+          - img
+          - img
+          - text: Context injection @deepseek-ai/dsh-system-prompt
+      - article "Agent response":
+        - button "Think The user wants me to use the ask_user_question tool to ask them a specific question with the given parameters. Let me do exactly that.":
+          - img
+          - img
+          - text: Think The user wants me to use the ask_user_question tool to ask them a specific question with the given parameters. Let me do exactly that.
+      - article:
+        - text: Running
+        - button "Ask question waiting":
+          - img
+          - img
+          - text: Ask question waiting
+      - status: Deep diving...
+      - text: "Interjection: include the word BANANA in your final reply."
+      - button "Copy":
+        - img
+  - region "Ready to continue?":
+    - text: Checkpoint
+    - heading "Ready to continue?" [level=2]
+    - button "Collapse the question card" [expanded]:
+      - img
+    - button "Dismiss all questions":
+      - img
+    - radiogroup:
+      - radio "Yes": 1 Yes
+      - radio "No": 2 No
+      - textbox "Type your answer"
+    - button "Previous question" [disabled]:
+      - img
+    - text: 1 / 1
+    - button "Next question" [disabled]:
+      - img
+    - status
+    - button "Skip this question"
+    - button "Submit" [disabled]

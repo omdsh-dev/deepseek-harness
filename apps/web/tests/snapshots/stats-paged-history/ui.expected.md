@@ -1,357 +1,470 @@
-- banner:
+- main:
   - navigation "Session hierarchy":
     - button "{{workspace}}" [disabled]
   - button "Session log":
     - text: Session log
     - img
-  - tablist:
+  - tablist "Session views":
     - tab "Chat" [selected]
     - tab "Trajectory"
-- text: m1 7/25 {{clock}}
-- button "Copy":
-  - img
-- paragraph: r1
-- button "Copy":
-  - img
-- button "Good response":
-  - img
-- button "Bad response":
-  - img
-- button "Branch into a new conversation":
-  - img
-- text: 7/25 {{clock}} Ran for {{duration}} m2 7/25 {{clock}}
-- button "Copy":
-  - img
-- paragraph: r2
-- button "Copy":
-  - img
-- button "Good response":
-  - img
-- button "Bad response":
-  - img
-- button "Branch into a new conversation":
-  - img
-- text: 7/25 {{clock}} Ran for {{duration}} m3 7/25 {{clock}}
-- button "Copy":
-  - img
-- paragraph: r3
-- button "Copy":
-  - img
-- button "Good response":
-  - img
-- button "Bad response":
-  - img
-- button "Branch into a new conversation":
-  - img
-- text: 7/25 {{clock}} Ran for {{duration}} m4 7/25 {{clock}}
-- button "Copy":
-  - img
-- paragraph: r4
-- button "Copy":
-  - img
-- button "Good response":
-  - img
-- button "Bad response":
-  - img
-- button "Branch into a new conversation":
-  - img
-- text: 7/25 {{clock}} Ran for {{duration}} m5 7/25 {{clock}}
-- button "Copy":
-  - img
-- paragraph: r5
-- button "Copy":
-  - img
-- button "Good response":
-  - img
-- button "Bad response":
-  - img
-- button "Branch into a new conversation":
-  - img
-- text: 7/25 {{clock}} Ran for {{duration}} m6 7/25 {{clock}}
-- button "Copy":
-  - img
-- paragraph: r6
-- button "Copy":
-  - img
-- button "Good response":
-  - img
-- button "Bad response":
-  - img
-- button "Branch into a new conversation":
-  - img
-- text: 7/25 {{clock}} Ran for {{duration}} m7 7/25 {{clock}}
-- button "Copy":
-  - img
-- paragraph: r7
-- button "Copy":
-  - img
-- button "Good response":
-  - img
-- button "Bad response":
-  - img
-- button "Branch into a new conversation":
-  - img
-- text: 7/25 {{clock}} Ran for {{duration}} m8 7/25 {{clock}}
-- button "Copy":
-  - img
-- paragraph: r8
-- button "Copy":
-  - img
-- button "Good response":
-  - img
-- button "Bad response":
-  - img
-- button "Branch into a new conversation":
-  - img
-- text: 7/25 {{clock}} Ran for {{duration}} m9 7/25 {{clock}}
-- button "Copy":
-  - img
-- paragraph: r9
-- button "Copy":
-  - img
-- button "Good response":
-  - img
-- button "Bad response":
-  - img
-- button "Branch into a new conversation":
-  - img
-- text: 7/25 {{clock}} Ran for {{duration}} m10 7/25 {{clock}}
-- button "Copy":
-  - img
-- paragraph: r10
-- button "Copy":
-  - img
-- button "Good response":
-  - img
-- button "Bad response":
-  - img
-- button "Branch into a new conversation":
-  - img
-- text: 7/25 {{clock}} Ran for {{duration}} m11 7/25 {{clock}}
-- button "Copy":
-  - img
-- paragraph: r11
-- button "Copy":
-  - img
-- button "Good response":
-  - img
-- button "Bad response":
-  - img
-- button "Branch into a new conversation":
-  - img
-- text: 7/25 {{clock}} Ran for {{duration}} m12 7/25 {{clock}}
-- button "Copy":
-  - img
-- paragraph: r12
-- button "Copy":
-  - img
-- button "Good response":
-  - img
-- button "Bad response":
-  - img
-- button "Branch into a new conversation":
-  - img
-- text: 7/25 {{clock}} Ran for {{duration}} m13 7/25 {{clock}}
-- button "Copy":
-  - img
-- paragraph: r13
-- button "Copy":
-  - img
-- button "Good response":
-  - img
-- button "Bad response":
-  - img
-- button "Branch into a new conversation":
-  - img
-- text: 7/25 {{clock}} Ran for {{duration}} m14 7/25 {{clock}}
-- button "Copy":
-  - img
-- paragraph: r14
-- button "Copy":
-  - img
-- button "Good response":
-  - img
-- button "Bad response":
-  - img
-- button "Branch into a new conversation":
-  - img
-- text: 7/25 {{clock}} Ran for {{duration}} m15 7/25 {{clock}}
-- button "Copy":
-  - img
-- paragraph: r15
-- button "Copy":
-  - img
-- button "Good response":
-  - img
-- button "Bad response":
-  - img
-- button "Branch into a new conversation":
-  - img
-- text: 7/25 {{clock}} Ran for {{duration}} m16 7/25 {{clock}}
-- button "Copy":
-  - img
-- paragraph: r16
-- button "Copy":
-  - img
-- button "Good response":
-  - img
-- button "Bad response":
-  - img
-- button "Branch into a new conversation":
-  - img
-- text: 7/25 {{clock}} Ran for {{duration}} m17 7/25 {{clock}}
-- button "Copy":
-  - img
-- paragraph: r17
-- button "Copy":
-  - img
-- button "Good response":
-  - img
-- button "Bad response":
-  - img
-- button "Branch into a new conversation":
-  - img
-- text: 7/25 {{clock}} Ran for {{duration}} m18 7/25 {{clock}}
-- button "Copy":
-  - img
-- paragraph: r18
-- button "Copy":
-  - img
-- button "Good response":
-  - img
-- button "Bad response":
-  - img
-- button "Branch into a new conversation":
-  - img
-- text: 7/25 {{clock}} Ran for {{duration}} m19 7/25 {{clock}}
-- button "Copy":
-  - img
-- paragraph: r19
-- button "Copy":
-  - img
-- button "Good response":
-  - img
-- button "Bad response":
-  - img
-- button "Branch into a new conversation":
-  - img
-- text: 7/25 {{clock}} Ran for {{duration}} m20 7/25 {{clock}}
-- button "Copy":
-  - img
-- paragraph: r20
-- button "Copy":
-  - img
-- button "Good response":
-  - img
-- button "Bad response":
-  - img
-- button "Branch into a new conversation":
-  - img
-- text: 7/25 {{clock}} Ran for {{duration}} m21 7/25 {{clock}}
-- button "Copy":
-  - img
-- paragraph: r21
-- button "Copy":
-  - img
-- button "Good response":
-  - img
-- button "Bad response":
-  - img
-- button "Branch into a new conversation":
-  - img
-- text: 7/25 {{clock}} Ran for {{duration}} m22 7/25 {{clock}}
-- button "Copy":
-  - img
-- paragraph: r22
-- button "Copy":
-  - img
-- button "Good response":
-  - img
-- button "Bad response":
-  - img
-- button "Branch into a new conversation":
-  - img
-- text: 7/25 {{clock}} Ran for {{duration}} m23 7/25 {{clock}}
-- button "Copy":
-  - img
-- paragraph: r23
-- button "Copy":
-  - img
-- button "Good response":
-  - img
-- button "Bad response":
-  - img
-- button "Branch into a new conversation":
-  - img
-- text: 7/25 {{clock}} Ran for {{duration}} m24 7/25 {{clock}}
-- button "Copy":
-  - img
-- paragraph: r24
-- button "Copy":
-  - img
-- button "Good response":
-  - img
-- button "Bad response":
-  - img
-- button "Branch into a new conversation":
-  - img
-- text: 7/25 {{clock}} Ran for {{duration}} m25 7/25 {{clock}}
-- button "Copy":
-  - img
-- paragraph: r25
-- button "Copy":
-  - img
-- button "Good response":
-  - img
-- button "Bad response":
-  - img
-- button "Branch into a new conversation":
-  - img
-- text: 7/25 {{clock}} Ran for {{duration}} m26 7/25 {{clock}}
-- button "Copy":
-  - img
-- paragraph: r26
-- button "Copy":
-  - img
-- button "Good response":
-  - img
-- button "Bad response":
-  - img
-- button "Branch into a new conversation":
-  - img
-- text: 7/25 {{clock}} Ran for {{duration}} m27 7/25 {{clock}}
-- button "Copy":
-  - img
-- paragraph: r27
-- button "Copy":
-  - img
-- button "Good response":
-  - img
-- button "Bad response":
-  - img
-- button "Branch into a new conversation":
-  - img
-- text: 7/25 {{clock}} Ran for {{duration}} m28 7/25 {{clock}}
-- button "Copy":
-  - img
-- paragraph: r28
-- button "Copy":
-  - img
-- button "Good response":
-  - img
-- button "Bad response":
-  - img
-- button "Branch into a new conversation":
-  - img
-- text: 7/25 {{clock}} Ran for {{duration}}
-- button "Back to bottom":
-  - img
-- textbox "Message the agent"
-- button "Commands":
-  - img
-- 'button "Access mode, current: Workspace Write"': Workspace Write
-- button "Select model, current DeepSeek-V4-Flash":
-  - text: DeepSeek-V4-Flash
-  - img
-- button "Send message" [disabled]
-- text: 28 turns · 28 steps LLM {{duration}}
+  - tabpanel "Chat":
+    - log "Conversation messages":
+      - article "User message":
+        - text: m1 7/25 {{clock}}
+        - button "Copy":
+          - img
+      - article "Agent response":
+        - paragraph: r1
+      - article:
+        - button "Copy":
+          - img
+        - button "Good response":
+          - img
+        - button "Bad response":
+          - img
+        - button "Branch into a new conversation":
+          - img
+        - text: 7/25 {{clock}} Ran for {{duration}}
+      - article "User message":
+        - text: m2 7/25 {{clock}}
+        - button "Copy":
+          - img
+      - article "Agent response":
+        - paragraph: r2
+      - article:
+        - button "Copy":
+          - img
+        - button "Good response":
+          - img
+        - button "Bad response":
+          - img
+        - button "Branch into a new conversation":
+          - img
+        - text: 7/25 {{clock}} Ran for {{duration}}
+      - article "User message":
+        - text: m3 7/25 {{clock}}
+        - button "Copy":
+          - img
+      - article "Agent response":
+        - paragraph: r3
+      - article:
+        - button "Copy":
+          - img
+        - button "Good response":
+          - img
+        - button "Bad response":
+          - img
+        - button "Branch into a new conversation":
+          - img
+        - text: 7/25 {{clock}} Ran for {{duration}}
+      - article "User message":
+        - text: m4 7/25 {{clock}}
+        - button "Copy":
+          - img
+      - article "Agent response":
+        - paragraph: r4
+      - article:
+        - button "Copy":
+          - img
+        - button "Good response":
+          - img
+        - button "Bad response":
+          - img
+        - button "Branch into a new conversation":
+          - img
+        - text: 7/25 {{clock}} Ran for {{duration}}
+      - article "User message":
+        - text: m5 7/25 {{clock}}
+        - button "Copy":
+          - img
+      - article "Agent response":
+        - paragraph: r5
+      - article:
+        - button "Copy":
+          - img
+        - button "Good response":
+          - img
+        - button "Bad response":
+          - img
+        - button "Branch into a new conversation":
+          - img
+        - text: 7/25 {{clock}} Ran for {{duration}}
+      - article "User message":
+        - text: m6 7/25 {{clock}}
+        - button "Copy":
+          - img
+      - article "Agent response":
+        - paragraph: r6
+      - article:
+        - button "Copy":
+          - img
+        - button "Good response":
+          - img
+        - button "Bad response":
+          - img
+        - button "Branch into a new conversation":
+          - img
+        - text: 7/25 {{clock}} Ran for {{duration}}
+      - article "User message":
+        - text: m7 7/25 {{clock}}
+        - button "Copy":
+          - img
+      - article "Agent response":
+        - paragraph: r7
+      - article:
+        - button "Copy":
+          - img
+        - button "Good response":
+          - img
+        - button "Bad response":
+          - img
+        - button "Branch into a new conversation":
+          - img
+        - text: 7/25 {{clock}} Ran for {{duration}}
+      - article "User message":
+        - text: m8 7/25 {{clock}}
+        - button "Copy":
+          - img
+      - article "Agent response":
+        - paragraph: r8
+      - article:
+        - button "Copy":
+          - img
+        - button "Good response":
+          - img
+        - button "Bad response":
+          - img
+        - button "Branch into a new conversation":
+          - img
+        - text: 7/25 {{clock}} Ran for {{duration}}
+      - article "User message":
+        - text: m9 7/25 {{clock}}
+        - button "Copy":
+          - img
+      - article "Agent response":
+        - paragraph: r9
+      - article:
+        - button "Copy":
+          - img
+        - button "Good response":
+          - img
+        - button "Bad response":
+          - img
+        - button "Branch into a new conversation":
+          - img
+        - text: 7/25 {{clock}} Ran for {{duration}}
+      - article "User message":
+        - text: m10 7/25 {{clock}}
+        - button "Copy":
+          - img
+      - article "Agent response":
+        - paragraph: r10
+      - article:
+        - button "Copy":
+          - img
+        - button "Good response":
+          - img
+        - button "Bad response":
+          - img
+        - button "Branch into a new conversation":
+          - img
+        - text: 7/25 {{clock}} Ran for {{duration}}
+      - article "User message":
+        - text: m11 7/25 {{clock}}
+        - button "Copy":
+          - img
+      - article "Agent response":
+        - paragraph: r11
+      - article:
+        - button "Copy":
+          - img
+        - button "Good response":
+          - img
+        - button "Bad response":
+          - img
+        - button "Branch into a new conversation":
+          - img
+        - text: 7/25 {{clock}} Ran for {{duration}}
+      - article "User message":
+        - text: m12 7/25 {{clock}}
+        - button "Copy":
+          - img
+      - article "Agent response":
+        - paragraph: r12
+      - article:
+        - button "Copy":
+          - img
+        - button "Good response":
+          - img
+        - button "Bad response":
+          - img
+        - button "Branch into a new conversation":
+          - img
+        - text: 7/25 {{clock}} Ran for {{duration}}
+      - article "User message":
+        - text: m13 7/25 {{clock}}
+        - button "Copy":
+          - img
+      - article "Agent response":
+        - paragraph: r13
+      - article:
+        - button "Copy":
+          - img
+        - button "Good response":
+          - img
+        - button "Bad response":
+          - img
+        - button "Branch into a new conversation":
+          - img
+        - text: 7/25 {{clock}} Ran for {{duration}}
+      - article "User message":
+        - text: m14 7/25 {{clock}}
+        - button "Copy":
+          - img
+      - article "Agent response":
+        - paragraph: r14
+      - article:
+        - button "Copy":
+          - img
+        - button "Good response":
+          - img
+        - button "Bad response":
+          - img
+        - button "Branch into a new conversation":
+          - img
+        - text: 7/25 {{clock}} Ran for {{duration}}
+      - article "User message":
+        - text: m15 7/25 {{clock}}
+        - button "Copy":
+          - img
+      - article "Agent response":
+        - paragraph: r15
+      - article:
+        - button "Copy":
+          - img
+        - button "Good response":
+          - img
+        - button "Bad response":
+          - img
+        - button "Branch into a new conversation":
+          - img
+        - text: 7/25 {{clock}} Ran for {{duration}}
+      - article "User message":
+        - text: m16 7/25 {{clock}}
+        - button "Copy":
+          - img
+      - article "Agent response":
+        - paragraph: r16
+      - article:
+        - button "Copy":
+          - img
+        - button "Good response":
+          - img
+        - button "Bad response":
+          - img
+        - button "Branch into a new conversation":
+          - img
+        - text: 7/25 {{clock}} Ran for {{duration}}
+      - article "User message":
+        - text: m17 7/25 {{clock}}
+        - button "Copy":
+          - img
+      - article "Agent response":
+        - paragraph: r17
+      - article:
+        - button "Copy":
+          - img
+        - button "Good response":
+          - img
+        - button "Bad response":
+          - img
+        - button "Branch into a new conversation":
+          - img
+        - text: 7/25 {{clock}} Ran for {{duration}}
+      - article "User message":
+        - text: m18 7/25 {{clock}}
+        - button "Copy":
+          - img
+      - article "Agent response":
+        - paragraph: r18
+      - article:
+        - button "Copy":
+          - img
+        - button "Good response":
+          - img
+        - button "Bad response":
+          - img
+        - button "Branch into a new conversation":
+          - img
+        - text: 7/25 {{clock}} Ran for {{duration}}
+      - article "User message":
+        - text: m19 7/25 {{clock}}
+        - button "Copy":
+          - img
+      - article "Agent response":
+        - paragraph: r19
+      - article:
+        - button "Copy":
+          - img
+        - button "Good response":
+          - img
+        - button "Bad response":
+          - img
+        - button "Branch into a new conversation":
+          - img
+        - text: 7/25 {{clock}} Ran for {{duration}}
+      - article "User message":
+        - text: m20 7/25 {{clock}}
+        - button "Copy":
+          - img
+      - article "Agent response":
+        - paragraph: r20
+      - article:
+        - button "Copy":
+          - img
+        - button "Good response":
+          - img
+        - button "Bad response":
+          - img
+        - button "Branch into a new conversation":
+          - img
+        - text: 7/25 {{clock}} Ran for {{duration}}
+      - article "User message":
+        - text: m21 7/25 {{clock}}
+        - button "Copy":
+          - img
+      - article "Agent response":
+        - paragraph: r21
+      - article:
+        - button "Copy":
+          - img
+        - button "Good response":
+          - img
+        - button "Bad response":
+          - img
+        - button "Branch into a new conversation":
+          - img
+        - text: 7/25 {{clock}} Ran for {{duration}}
+      - article "User message":
+        - text: m22 7/25 {{clock}}
+        - button "Copy":
+          - img
+      - article "Agent response":
+        - paragraph: r22
+      - article:
+        - button "Copy":
+          - img
+        - button "Good response":
+          - img
+        - button "Bad response":
+          - img
+        - button "Branch into a new conversation":
+          - img
+        - text: 7/25 {{clock}} Ran for {{duration}}
+      - article "User message":
+        - text: m23 7/25 {{clock}}
+        - button "Copy":
+          - img
+      - article "Agent response":
+        - paragraph: r23
+      - article:
+        - button "Copy":
+          - img
+        - button "Good response":
+          - img
+        - button "Bad response":
+          - img
+        - button "Branch into a new conversation":
+          - img
+        - text: 7/25 {{clock}} Ran for {{duration}}
+      - article "User message":
+        - text: m24 7/25 {{clock}}
+        - button "Copy":
+          - img
+      - article "Agent response":
+        - paragraph: r24
+      - article:
+        - button "Copy":
+          - img
+        - button "Good response":
+          - img
+        - button "Bad response":
+          - img
+        - button "Branch into a new conversation":
+          - img
+        - text: 7/25 {{clock}} Ran for {{duration}}
+      - article "User message":
+        - text: m25 7/25 {{clock}}
+        - button "Copy":
+          - img
+      - article "Agent response":
+        - paragraph: r25
+      - article:
+        - button "Copy":
+          - img
+        - button "Good response":
+          - img
+        - button "Bad response":
+          - img
+        - button "Branch into a new conversation":
+          - img
+        - text: 7/25 {{clock}} Ran for {{duration}}
+      - article "User message":
+        - text: m26 7/25 {{clock}}
+        - button "Copy":
+          - img
+      - article "Agent response":
+        - paragraph: r26
+      - article:
+        - button "Copy":
+          - img
+        - button "Good response":
+          - img
+        - button "Bad response":
+          - img
+        - button "Branch into a new conversation":
+          - img
+        - text: 7/25 {{clock}} Ran for {{duration}}
+      - article "User message":
+        - text: m27 7/25 {{clock}}
+        - button "Copy":
+          - img
+      - article "Agent response":
+        - paragraph: r27
+      - article:
+        - button "Copy":
+          - img
+        - button "Good response":
+          - img
+        - button "Bad response":
+          - img
+        - button "Branch into a new conversation":
+          - img
+        - text: 7/25 {{clock}} Ran for {{duration}}
+      - article "User message":
+        - text: m28 7/25 {{clock}}
+        - button "Copy":
+          - img
+      - article "Agent response":
+        - paragraph: r28
+      - article:
+        - button "Copy":
+          - img
+        - button "Good response":
+          - img
+        - button "Bad response":
+          - img
+        - button "Branch into a new conversation":
+          - img
+        - text: 7/25 {{clock}} Ran for {{duration}}
+    - button "Back to bottom":
+      - img
+  - textbox "Message the agent"
+  - button "Commands":
+    - img
+  - 'button "Access mode, current: Workspace Write"': Workspace Write
+  - button "Select model, current DeepSeek-V4-Flash":
+    - text: DeepSeek-V4-Flash
+    - img
+  - button "Send message" [disabled]
+  - text: 28 turns · 28 steps LLM {{duration}}

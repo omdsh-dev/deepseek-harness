@@ -406,6 +406,97 @@ describe('Modal', () => {
     fireEvent.click(mask)
     expect(onClose).toHaveBeenCalledTimes(2)
   })
+
+  it('contains focus, makes the app inert, and restores the opening control', () => {
+    const appRoot = document.createElement('div')
+    appRoot.id = 'root'
+    const opener = document.createElement('button')
+    appRoot.append(opener)
+    document.body.append(appRoot)
+    opener.focus()
+
+    const { rerender } = render(
+      <Modal open onClose={() => {}} title="Focusable dialog">
+        <input autoFocus aria-label="First" />
+        <button type="button">Last</button>
+      </Modal>,
+    )
+    const first = screen.getByRole('textbox', { name: 'First' })
+    const last = screen.getByRole('button', { name: 'Last' })
+    const dialogFirst = screen.getByRole('button', { name: 'Close' })
+    expect(appRoot.inert).toBe(true)
+    expect(document.activeElement).toBe(first)
+
+    dialogFirst.focus()
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true })
+    expect(document.activeElement).toBe(last)
+    fireEvent.keyDown(document, { key: 'Tab' })
+    expect(document.activeElement).toBe(dialogFirst)
+
+    first.focus()
+    expect(fireEvent.keyDown(document, { key: 'Tab' })).toBe(true)
+    expect(document.activeElement).toBe(first)
+    opener.focus()
+    fireEvent.keyDown(document, { key: 'Tab' })
+    expect(document.activeElement).toBe(dialogFirst)
+    opener.focus()
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true })
+    expect(document.activeElement).toBe(last)
+
+    rerender(<Modal open={false} onClose={() => {}} title="Focusable dialog" />)
+    expect(appRoot.inert).not.toBe(true)
+    expect(document.activeElement).toBe(opener)
+    appRoot.remove()
+  })
+
+  it('does not try to restore a removed opening control', () => {
+    const opener = document.createElement('button')
+    document.body.append(opener)
+    opener.focus()
+    const { rerender } = render(
+      <Modal open onClose={() => {}} title="Detached opener"><button type="button">Action</button></Modal>,
+    )
+    opener.remove()
+    expect(() => {
+      rerender(<Modal open={false} onClose={() => {}} title="Detached opener" />)
+    }).not.toThrow()
+    expect(document.activeElement).not.toBe(opener)
+  })
+
+  it('keeps focus on the dialog when it has no tabbable descendants', () => {
+    render(
+      <Modal open onClose={() => {}} title="Empty dialog" headless>
+        <span>Nothing actionable</span>
+      </Modal>,
+    )
+    const dialog = screen.getByRole('dialog', { name: 'Empty dialog' })
+    expect(document.activeElement).toBe(dialog)
+
+    fireEvent.keyDown(document, { key: 'Tab' })
+    expect(document.activeElement).toBe(dialog)
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true })
+    expect(document.activeElement).toBe(dialog)
+  })
+
+  it('lets only the topmost nested dialog handle Escape and mask clicks', () => {
+    const closeOuter = vi.fn()
+    const closeInner = vi.fn()
+    render(
+      <>
+        <Modal open onClose={closeOuter} title="Outer"><button type="button">Outer action</button></Modal>
+        <Modal open onClose={closeInner} title="Inner"><button type="button">Inner action</button></Modal>
+      </>,
+    )
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(closeInner).toHaveBeenCalledTimes(1)
+    expect(closeOuter).not.toHaveBeenCalled()
+
+    const masks = document.querySelectorAll<HTMLElement>('[aria-hidden="true"]')
+    fireEvent.click(masks[0]!)
+    expect(closeOuter).not.toHaveBeenCalled()
+    fireEvent.click(masks[1]!)
+    expect(closeInner).toHaveBeenCalledTimes(2)
+  })
 })
 
 describe('ConnectionBanner', () => {

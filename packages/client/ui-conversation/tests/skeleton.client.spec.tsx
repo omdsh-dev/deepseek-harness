@@ -487,6 +487,33 @@ describe('ConversationRoot resident composer', () => {
     expect(b.view.getByRole('textbox')).toBeTruthy()
   })
 
+  it('implements roving keyboard navigation and tab-panel relationships for session views', () => {
+    const b = mount(conversationSnapshot())
+    const list = b.view.getByRole('tablist', { name: '会话视图' })
+    const chat = b.view.getByRole('tab', { name: 'Chat' })
+    const trajectory = b.view.getByRole('tab', { name: 'Trajectory' })
+    const panel = b.view.getByRole('tabpanel')
+
+    expect(list).toContain(chat)
+    expect(chat.tabIndex).toBe(0)
+    expect(trajectory.tabIndex).toBe(-1)
+    expect(chat.getAttribute('aria-controls')).toBe(panel.id)
+    expect(panel.getAttribute('aria-labelledby')).toBe(chat.id)
+
+    fireEvent.keyDown(chat, { key: 'ArrowRight' })
+    expect(document.activeElement).toBe(trajectory)
+    expect(trajectory.getAttribute('aria-selected')).toBe('true')
+    expect(trajectory.tabIndex).toBe(0)
+    expect(b.view.getByRole('tabpanel').getAttribute('aria-labelledby')).toBe(trajectory.id)
+
+    fireEvent.keyDown(trajectory, { key: 'Home' })
+    expect(document.activeElement).toBe(chat)
+    fireEvent.keyDown(chat, { key: 'End' })
+    expect(document.activeElement).toBe(trajectory)
+    fireEvent.keyDown(trajectory, { key: 'ArrowRight' })
+    expect(document.activeElement).toBe(chat)
+  })
+
   it('keeps the Chat fallback selected by id when a view is inserted before it', () => {
     const viewTabs: ViewTab[] = [
       { id: 'chat', label: 'Chat' },

@@ -365,8 +365,8 @@ export function DirectoryBrowser({ open, listDirectory, createDirectory, onOpen,
 
   /**
    * A landed preview replaced the pane a keyboard operator may have Tabbed
-   * onto, so the focus it drops is re-parked on the still-open editor (the
-   * Modal has no focus trap). Consumed by the refocus effect below.
+   * onto, so the focus it drops is re-parked on the still-open editor.
+   * Consumed by the refocus effect below.
    */
   const refocusPathInput = useRef(false)
 
@@ -701,8 +701,8 @@ export function DirectoryBrowser({ open, listDirectory, createDirectory, onOpen,
     if (row !== null && childPath !== undefined) row.scrollLeft = row.scrollWidth
   }, [childPath])
   // Every editor exit that would drop focus to body re-parks it after
-  // commit, so keyboard traversal stays inside the dialog (the Modal has no
-  // focus trap): a pick lands on the selection's row — aria-current in the
+  // commit, so the operator stays at the changed content: a pick lands on the
+  // selection's row — aria-current in the
   // freshly rendered left pane, which survives even a right-pane advance
   // replacing the picked button's column — while Enter and an input-focused
   // Escape land on the crumb edit zone that replaces the input.
@@ -740,9 +740,9 @@ export function DirectoryBrowser({ open, listDirectory, createDirectory, onOpen,
 
   if (!open) return null
   const twoPane = selected !== null
-  // The nested create dialog owns the interaction while open: Modal has no
-  // focus trap, so every parent control goes inert (Shift-Tab or AT must not
-  // close, adopt, or retarget underneath the child).
+  // The nested create dialog owns the interaction while open. Parent controls
+  // stay disabled so pointer and assistive-technology actions cannot adopt or
+  // retarget underneath the child.
   const parentInert = busy || folderDraft !== null
   // An uncommitted path draft makes targetPath stale relative to the header:
   // committing actions must not act on the previous selection/listing while
@@ -752,9 +752,8 @@ export function DirectoryBrowser({ open, listDirectory, createDirectory, onOpen,
   return (
     <Modal
       open={open}
-      // Escape and mask reach every mounted Modal's document listener; while
-      // the nested create dialog is up only that topmost dialog may close
-      // (its own guard keeps an in-flight creation open), and an in-flight
+      // Modal dispatches Escape only to the topmost dialog. The guard keeps an
+      // in-flight creation open, and an in-flight
       // adoption pins the flow — dismissing it would leave the owner's
       // createWorkspace to land after an apparent cancel.
       onClose={() => { if (folderDraft === null && !busy) onClose() }}

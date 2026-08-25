@@ -11,12 +11,15 @@
  * resizes are driven through the ResizeObserver stub.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { act, cleanup, render } from '@testing-library/react'
+import { act, cleanup, fireEvent, render } from '@testing-library/react'
 import { useSyncExternalStore } from 'react'
 import { AppFrame } from '@deepseek-ai/dsh-client-ui-layout/src/client/AppFrame.tsx'
 import type { AppFrameProps } from '@deepseek-ai/dsh-client-ui-layout/src/client/AppFrame.tsx'
-import { SIDEBAR_COLLAPSED } from '@deepseek-ai/dsh-client-ui-layout/src/client/columns.ts'
+import {
+  DETAILS_MIN, SIDEBAR_COLLAPSED, SIDEBAR_MIN,
+} from '@deepseek-ai/dsh-client-ui-layout/src/client/columns.ts'
 import { createLayoutStore } from '@deepseek-ai/dsh-client-ui-layout/src/client/stores.ts'
+import { en } from '@deepseek-ai/dsh-client-ui-layout/src/client/locales.ts'
 import type {
   SessionId, SessionListState, WorkspaceListState,
 } from '@deepseek-ai/dsh-client-runtime/client'
@@ -84,6 +87,7 @@ function mountFrame() {
     <AppFrame
       useStore={hookOf(instance)}
       actions={instance.actions}
+      t={key => (en as Record<string, string>)[key] ?? key}
       renderSlot={renderSlot}
       useSessions={useSessions}
       useWorkspaces={((sel: (s: WorkspaceListState) => unknown) => sel(workspaceState)) as never}
@@ -140,6 +144,7 @@ describe('AppFrame', () => {
   it('renders three tracks from store state', () => {
     const { frame } = mountFrame()
     expect(tracks(frame)).toEqual([280, 0])
+    expect(frame.querySelector('main')?.querySelector('[data-testid="center-content"]')).not.toBeNull()
   })
 
   it('renders the session pair with empty owner shares (sessionId is framework-standard)', () => {
@@ -224,6 +229,24 @@ describe('AppFrame', () => {
     const handles = frame.querySelectorAll('[class*="handle"]')
     drag(handles[0]!, 280, 350)
     expect(tracks(frame)[0]).toBe(350)
+  })
+
+  it('exposes named separators and resizes both panels from the keyboard', () => {
+    const { frame, instance } = mountFrame()
+    const sidebar = frame.querySelector<HTMLElement>('[role="separator"][aria-label="Resize sidebar"]')!
+    expect(sidebar.getAttribute('aria-orientation')).toBe('vertical')
+    expect(sidebar.getAttribute('aria-valuenow')).toBe('280')
+    fireEvent.keyDown(sidebar, { key: 'ArrowRight' })
+    expect(instance.getSnapshot().sidebar).toBe(288)
+    fireEvent.keyDown(sidebar, { key: 'Home' })
+    expect(instance.getSnapshot().sidebar).toBe(SIDEBAR_MIN)
+
+    act(() => { instance.actions.openDetails() })
+    const details = frame.querySelector<HTMLElement>('[role="separator"][aria-label="Resize details panel"]')!
+    fireEvent.keyDown(details, { key: 'ArrowLeft' })
+    expect(instance.getSnapshot().details).toBe(368)
+    fireEvent.keyDown(details, { key: 'End' })
+    expect(instance.getSnapshot().details).toBe(DETAILS_MIN)
   })
 
   it('details drag widens leftward (negative dx grows the panel)', () => {

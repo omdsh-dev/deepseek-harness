@@ -1,1 +1,2 @@
-- paragraph: "Reminders: Check primary metrics; Check secondary metrics."
+- article "Agent response":
+  - paragraph: "Reminders: Check primary metrics; Check secondary metrics."

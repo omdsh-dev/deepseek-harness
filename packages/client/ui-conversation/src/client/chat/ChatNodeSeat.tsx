@@ -40,9 +40,18 @@ export const ChatNodeSeat = memo(function ChatNodeSeat({
   // keyed-slot entry passed alongside that same Node. TypeScript does not
   // distribute an object containing a union into a union of objects itself.
   const routedOwner = { ...owner, node: routedNode } as RoutedChatNodeOwner
+  const rowLabel = routedNode.kind === 'user'
+    ? t('message.user')
+    : routedNode.kind === 'steering'
+      ? t('message.steering')
+      : routedNode.kind === 'assistant-step'
+        ? t('message.assistant')
+        : undefined
   return (
     <div
       className={css.flowItem}
+      role="article"
+      aria-label={rowLabel}
       data-chat-anchor-key={routedNode.key}
       data-chat-flow-key={routedNode.key}
       data-chat-flow-kind={routedNode.kind}

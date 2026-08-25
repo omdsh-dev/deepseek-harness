@@ -6,7 +6,7 @@
 // share the store seat exists for) and derives the call material from the
 // session snapshot — no data of its own.
 
-import { Fragment } from 'react'
+import { Fragment, useId } from 'react'
 import { CodeBlock } from '@deepseek-ai/dsh-client-ui-primitives'
 import { shallowEqual } from '@deepseek-ai/dsh-client-runtime/client'
 import type { ConversationSnapshot, RunningToolCall, ToolCallBlock, ToolResultNode } from '@deepseek-ai/dsh-client-runtime/client'
@@ -64,6 +64,7 @@ function rawResultText(block: ToolCallBlock): string {
 }
 
 export function DetailsPanel({ useSession, useSessions, sessionId, useStore, renderSlot, closeDetails, t }: DetailsPanelProps) {
+  const titleId = useId()
   const selection = useStore(s => s.selection)
   // Session workspace root: an omitted or relative terminal cwd resolves
   // against it, which the pure presenter cannot see.
@@ -76,9 +77,9 @@ export function DetailsPanel({ useSession, useSessions, sessionId, useStore, ren
     (a, b) => shallowEqual(a, b))
 
   return (
-    <div className={css.root}>
+    <aside className={css.root} aria-labelledby={titleId}>
       <div className={css.header}>
-        <div className={css.title}>
+        <div className={css.title} id={titleId}>
           {selection === null ? t('details.title') : material?.name ?? selection.toolName ?? t('details.title')}
         </div>
         <button
@@ -124,6 +125,6 @@ export function DetailsPanel({ useSession, useSessions, sessionId, useStore, ren
               </>
             )}
       </div>
-    </div>
+    </aside>
   )
 }

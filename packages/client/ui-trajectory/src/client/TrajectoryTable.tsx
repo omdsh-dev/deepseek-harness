@@ -2541,6 +2541,9 @@ export function TrajectoryTable({
             aria-label="Resize event details"
             aria-controls="trajectory-detail-panel"
             aria-orientation="vertical"
+            aria-valuemin={DETAILS_MIN_WIDTH}
+            aria-valuemax={DETAILS_MAX_WIDTH}
+            aria-valuenow={detailsWidth ?? 440}
             tabIndex={0}
             title="Drag to resize. Double-click to reset."
             onDoubleClick={() => {
@@ -2588,16 +2591,22 @@ export function TrajectoryTable({
               detailsResizeDrag.current = null
             }}
             onKeyDown={(event) => {
-              if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
+              if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight'
+                && event.key !== 'Home' && event.key !== 'End') return
               const details = event.currentTarget.parentElement
               if (details === null) return
               const split = details.parentElement
               if (split === null) return
-              const direction = event.key === 'ArrowLeft' ? 1 : -1
               const currentDetailsWidth = details.getBoundingClientRect().width
               const splitWidth = split.getBoundingClientRect().width
+              const step = event.shiftKey ? DETAILS_RESIZE_STEP * 4 : DETAILS_RESIZE_STEP
+              const requestedWidth = event.key === 'Home'
+                ? DETAILS_MAX_WIDTH
+                : event.key === 'End'
+                  ? DETAILS_MIN_WIDTH
+                  : currentDetailsWidth + (event.key === 'ArrowLeft' ? step : -step)
               const nextDetailsWidth = clampDetailsWidth(
-                currentDetailsWidth + direction * DETAILS_RESIZE_STEP,
+                requestedWidth,
                 splitWidth,
               )
               const currentToolRequestOffset = toolRequestOffset ?? (
@@ -2678,8 +2687,25 @@ export function TrajectoryTable({
                 role="tab"
                 aria-controls="trajectory-detail-panel"
                 aria-selected={activeTab === tab.id}
+                tabIndex={activeTab === tab.id ? 0 : -1}
                 className={activeTab === tab.id ? `${css.detailTab} ${css.detailTabActive}` : css.detailTab}
                 onClick={() => { activateTab(tab.id) }}
+                onKeyDown={(event) => {
+                  const index = selectedTabs.findIndex(candidate => candidate.id === tab.id)
+                  let nextIndex: number
+                  switch (event.key) {
+                    case 'ArrowRight': nextIndex = (index + 1) % selectedTabs.length; break
+                    case 'ArrowLeft': nextIndex = (index - 1 + selectedTabs.length) % selectedTabs.length; break
+                    case 'Home': nextIndex = 0; break
+                    case 'End': nextIndex = selectedTabs.length - 1; break
+                    default: return
+                  }
+                  event.preventDefault()
+                  const next = selectedTabs[nextIndex]
+                  if (next === undefined) return
+                  activateTab(next.id)
+                  document.getElementById(`trajectory-detail-${next.id}`)?.focus()
+                }}
               >
                 {tab.label}
               </button>

@@ -95,6 +95,15 @@
     background var(--ds-transition-duration-slow) var(--ds-ease-in-out);
 }
 
+.handle:focus-visible {
+  outline: 2px solid var(--dsw-alias-brand-primary);
+  outline-offset: 1px;
+}
+
+.handle[data-side='details']:focus-visible::after {
+  opacity: 1;
+}
+
 .detailsCol:hover ~ .handle[data-side='details']::after,
 .handle[data-side='details']:hover::after,
 .handle[data-side='details'][data-dragging='true']::after {

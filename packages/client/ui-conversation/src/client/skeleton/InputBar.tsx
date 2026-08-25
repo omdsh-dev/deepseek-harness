@@ -181,6 +181,24 @@ export function InputBar({
   const textareaDisabled = removed || (locked && !workspaceTrigger)
   const canSteerQueue = !locked && !machineBusy && !commandMenuOpen && empty && running && subagent === null
     && input.queue.some(row => row.placement === 'queued')
+  const inputPlaceholder = placeholder ?? (parentOffline
+    ? t('placeholder.parentOffline')
+    : disabled
+      ? t('placeholder.unavailable')
+      // The steer hint deliberately outranks the plan placeholder:
+      // while it shows, the whole-queue gesture is genuinely available
+      // (the gate never consults plan mode), so the actionable hint wins.
+      : canSteerQueue
+        ? t('placeholder.steerQueue')
+        : planActive ? t('placeholder.plan') : t('placeholder.default'))
+  // The ordinary composer keeps one stable name while its actionable hint
+  // changes. A disabled field instead exposes its blocking reason as the name,
+  // preserving the established read-screen command for recovery states.
+  const composerLabel = workspaceTrigger
+    ? t('hero.chooseWorkspace')
+    : textareaDisabled
+      ? inputPlaceholder
+      : t('input.composer')
 
   useEffect(() => {
     if (input === undefined || inputActions === undefined) return
@@ -740,20 +758,11 @@ export function InputBar({
               value={draft}
               disabled={textareaDisabled}
               readOnly={machineBusy || workspaceTrigger}
-              aria-label={workspaceTrigger ? t('hero.chooseWorkspace') : undefined}
+              aria-label={composerLabel}
               aria-haspopup={workspaceTrigger ? 'menu' : undefined}
               aria-expanded={workspaceTrigger ? workspacePickerOpen : undefined}
               data-phase={input?.phase ?? 'inert'}
-              placeholder={placeholder ?? (parentOffline
-                ? t('placeholder.parentOffline')
-                : disabled
-                  ? t('placeholder.unavailable')
-                  // The steer hint deliberately outranks the plan placeholder:
-                  // while it shows, the whole-queue gesture is genuinely available
-                  // (the gate never consults plan mode), so the actionable hint wins.
-                  : canSteerQueue
-                    ? t('placeholder.steerQueue')
-                    : planActive ? t('placeholder.plan') : t('placeholder.default'))}
+              placeholder={inputPlaceholder}
               rows={2}
               onChange={onChange}
               onKeyDown={onKeyDown}

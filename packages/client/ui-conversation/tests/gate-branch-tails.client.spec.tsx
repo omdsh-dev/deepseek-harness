@@ -147,6 +147,7 @@ describe('render branch tails', () => {
       />,
     )
     expect(view.getByText('详情')).toBeTruthy()
+    expect(view.getByRole('complementary', { name: '详情' })).toBeTruthy()
     expect(view.getByText('该调用不在当前窗口内')).toBeTruthy()
   })
 

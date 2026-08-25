@@ -42,7 +42,9 @@ it('boots the built plugin graph and renders a fixture session end to end', asyn
 
   // The sidebar renders from the boot graph: every inject layer activated.
   const tree = await screen.findByRole('tree', { name: 'Sessions' }, { timeout: 10_000 })
-  expect(document.querySelector('svg[viewBox="26 0 156 24"]')).not.toBeNull()
+  await waitFor(() => {
+    expect(document.querySelector('svg[viewBox="26 0 156 24"]')).not.toBeNull()
+  })
   expect(screen.queryByText('DSH Local Build')).toBeNull()
   // The compact layout dropped group session counts; the fixture workspace
   // group row renders immediately with its sessions beneath it.
@@ -79,7 +81,7 @@ it('boots the built plugin graph and renders a fixture session end to end', asyn
   // fallback path.
   const contextTrigger = await screen.findByRole('button', { name: /of context used/ })
   fireEvent.click(contextTrigger)
-  const contextPanel = await screen.findByRole('dialog', { name: 'of context used' })
+  const contextPanel = await screen.findByRole('region', { name: 'of context used' })
   within(contextPanel).getByText('System prompt')
   within(contextPanel).getByText('Tools')
   within(contextPanel).getByText('Messages')

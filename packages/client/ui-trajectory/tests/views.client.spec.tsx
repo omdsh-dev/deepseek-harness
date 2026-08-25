@@ -403,6 +403,36 @@ describe('tab switching in ConversationRoot', () => {
     expect(screen.getByText('Completed')).toBeTruthy()
     expect(screen.getByRole('tab', { name: 'Result' })).toBeTruthy()
 
+    const summary = screen.getByRole('tab', { name: 'Summary' })
+    const result = screen.getByRole('tab', { name: 'Result' })
+    expect(summary.tabIndex).toBe(0)
+    expect(result.tabIndex).toBe(-1)
+    fireEvent.keyDown(summary, { key: 'End' })
+    expect(document.activeElement).not.toBe(summary)
+    const activeEnd = screen.getAllByRole('tab').find(tab => tab.getAttribute('aria-selected') === 'true'
+      && tab.closest('[aria-label="Event details"]') !== null)
+    expect(document.activeElement).toBe(activeEnd)
+    fireEvent.keyDown(activeEnd as HTMLElement, { key: 'Home' })
+    expect(document.activeElement).toBe(summary)
+
+    const separator = screen.getByRole('separator', { name: 'Resize event details' })
+    expect(separator.getAttribute('aria-valuemin')).toBe('320')
+    expect(separator.getAttribute('aria-valuemax')).toBe('720')
+    expect(separator.getAttribute('aria-valuenow')).toBe('440')
+    const details = separator.parentElement as HTMLElement
+    const split = details.parentElement as HTMLElement
+    vi.spyOn(details, 'getBoundingClientRect').mockReturnValue({ width: 440 } as DOMRect)
+    vi.spyOn(split, 'getBoundingClientRect').mockReturnValue({ width: 1_200 } as DOMRect)
+    fireEvent.keyDown(separator, { key: 'ArrowLeft', shiftKey: true })
+    expect(screen.getByRole('separator', { name: 'Resize event details' })
+      .getAttribute('aria-valuenow')).toBe('504')
+    fireEvent.keyDown(separator, { key: 'Home' })
+    expect(screen.getByRole('separator', { name: 'Resize event details' })
+      .getAttribute('aria-valuenow')).toBe('720')
+    fireEvent.keyDown(separator, { key: 'End' })
+    expect(screen.getByRole('separator', { name: 'Resize event details' })
+      .getAttribute('aria-valuenow')).toBe('320')
+
     fireEvent.click(screen.getByRole('button', { name: 'Close details' }))
     expect(screen.queryByRole('complementary', { name: 'Event details' })).toBeNull()
   })

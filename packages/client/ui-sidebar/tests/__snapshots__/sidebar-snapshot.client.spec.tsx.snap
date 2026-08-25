@@ -5,7 +5,8 @@ exports[`sidebar shell snapshots > renders the collapsed rail after the crossfad
   data-slot="sidebar"
   style="display: contents;"
 >
-  <div
+  <aside
+    aria-label="Primary navigation"
     class="root collapsed railIn quietBars"
     style=""
   >
@@ -88,7 +89,7 @@ exports[`sidebar shell snapshots > renders the collapsed rail after the crossfad
         />
       </div>
     </div>
-  </div>
+  </aside>
 </div>
 `;
 
@@ -97,7 +98,8 @@ exports[`sidebar shell snapshots > renders the expanded column (wordmark, capsul
   data-slot="sidebar"
   style="display: contents;"
 >
-  <div
+  <aside
+    aria-label="Primary navigation"
     class="root quietBars"
     style="width: 300px;"
   >
@@ -214,7 +216,7 @@ exports[`sidebar shell snapshots > renders the expanded column (wordmark, capsul
         />
       </div>
     </div>
-  </div>
+  </aside>
 </div>
 `;
 
@@ -223,7 +225,8 @@ exports[`sidebar shell snapshots > renders the expanded column in the default lo
   data-slot="sidebar"
   style="display: contents;"
 >
-  <div
+  <aside
+    aria-label="主导航"
     class="root quietBars"
     style="width: 300px;"
   >
@@ -340,6 +343,6 @@ exports[`sidebar shell snapshots > renders the expanded column in the default lo
         />
       </div>
     </div>
-  </div>
+  </aside>
 </div>
 `;

@@ -1,4 +1,4 @@
-- banner:
+- main:
   - navigation "Session hierarchy":
     - button "Ask a research subagent to"
     - text: /
@@ -11,50 +11,61 @@
   - button "Session log":
     - text: Session log
     - img
-  - tablist:
+  - tablist "Session views":
     - tab "Chat" [selected]
     - tab "Trajectory"
-- text: Explain event sourcing in one sentence. {{clock}}
-- button "Copy":
-  - img
-- button "Context injection @deepseek-ai/dsh-system-prompt":
-  - img
-  - img
-  - text: Context injection @deepseek-ai/dsh-system-prompt
-- button "Think The user is asking for a one-sentence description of event sourcing. This is a straightforward knowledge question that doesn't require any skill loading or tool calls.":
-  - img
-  - img
-  - text: Think The user is asking for a one-sentence description of event sourcing. This is a straightforward knowledge question that doesn't require any skill loading or tool calls.
-- paragraph: Event sourcing is a pattern where all changes to an application's state are stored as an immutable, append-only sequence of events, rather than persisting only the current state, enabling full auditability, temporal queries, and event-driven architectures.
-- button "Copy":
-  - img
-- button "Good response":
-  - img
-- button "Bad response":
-  - img
-- button "Branch into a new conversation":
-  - img
-- text: {{clock}} Ran for {{duration}} TTFT {{duration}} {{throughput}} tok/s Now give the same explanation to a human reader. {{clock}}
-- button "Copy":
-  - img
-- button "Think The user is asking for a one-sentence description of event sourcing. This is a straightforward knowledge question that doesn't require any skill loading or tool calls.":
-  - img
-  - img
-  - text: Think The user is asking for a one-sentence description of event sourcing. This is a straightforward knowledge question that doesn't require any skill loading or tool calls.
-- paragraph: Event sourcing is a pattern where all changes to an application's state are stored as an immutable, append-only sequence of events, rather than persisting only the current state, enabling full auditability, temporal queries, and event-driven architectures.
-- button "Copy":
-  - img
-- button "Good response":
-  - img
-- button "Bad response":
-  - img
-- button "Branch into a new conversation":
-  - img
-- text: {{clock}} Ran for {{duration}} TTFT {{duration}} {{throughput}} tok/s
-- textbox "Message the agent"
-- button "Commands":
-  - img
-- 'button "Access mode, current: Custom"': Custom
-- button "6% of context used"
-- button "Send message" [disabled]
-- text: 2 turns · 2 steps LLM {{duration}} TTFT avg {{duration}} · {{throughput}} tok/s Cache hit 99% Input 15.6K tok · Output 158 tok
+  - tabpanel "Chat":
+    - status: Agent response complete
+    - log "Conversation messages":
+      - article "User message":
+        - text: Explain event sourcing in one sentence. {{clock}}
+        - button "Copy":
+          - img
+      - article:
+        - button "Context injection @deepseek-ai/dsh-system-prompt":
+          - img
+          - img
+          - text: Context injection @deepseek-ai/dsh-system-prompt
+      - article "Agent response":
+        - button "Think The user is asking for a one-sentence description of event sourcing. This is a straightforward knowledge question that doesn't require any skill loading or tool calls.":
+          - img
+          - img
+          - text: Think The user is asking for a one-sentence description of event sourcing. This is a straightforward knowledge question that doesn't require any skill loading or tool calls.
+        - paragraph: Event sourcing is a pattern where all changes to an application's state are stored as an immutable, append-only sequence of events, rather than persisting only the current state, enabling full auditability, temporal queries, and event-driven architectures.
+      - article:
+        - button "Copy":
+          - img
+        - button "Good response":
+          - img
+        - button "Bad response":
+          - img
+        - button "Branch into a new conversation":
+          - img
+        - text: {{clock}} Ran for {{duration}} TTFT {{duration}} {{throughput}} tok/s
+      - article "User message":
+        - text: Now give the same explanation to a human reader. {{clock}}
+        - button "Copy":
+          - img
+      - article "Agent response":
+        - button "Think The user is asking for a one-sentence description of event sourcing. This is a straightforward knowledge question that doesn't require any skill loading or tool calls.":
+          - img
+          - img
+          - text: Think The user is asking for a one-sentence description of event sourcing. This is a straightforward knowledge question that doesn't require any skill loading or tool calls.
+        - paragraph: Event sourcing is a pattern where all changes to an application's state are stored as an immutable, append-only sequence of events, rather than persisting only the current state, enabling full auditability, temporal queries, and event-driven architectures.
+      - article:
+        - button "Copy":
+          - img
+        - button "Good response":
+          - img
+        - button "Bad response":
+          - img
+        - button "Branch into a new conversation":
+          - img
+        - text: {{clock}} Ran for {{duration}} TTFT {{duration}} {{throughput}} tok/s
+  - textbox "Message the agent"
+  - button "Commands":
+    - img
+  - 'button "Access mode, current: Custom"': Custom
+  - button "6% of context used"
+  - button "Send message" [disabled]
+  - text: 2 turns · 2 steps LLM {{duration}} TTFT avg {{duration}} · {{throughput}} tok/s Cache hit 99% Input 15.6K tok · Output 158 tok

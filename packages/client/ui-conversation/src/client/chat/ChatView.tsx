@@ -21,6 +21,7 @@ import { PendingSteeringBubble } from './MessageItem.tsx'
 import { ChatNodeSeat } from './ChatNodeSeat.tsx'
 import { formatRunDuration } from './message-chrome.ts'
 import css from './ChatView.module.css'
+import a11yCss from './accessibility.module.css'
 
 const FOLLOW_THRESHOLD = 24
 
@@ -166,6 +167,12 @@ export function ChatView({
   // Workspace root off the session list row: path summaries display relative to it.
   const cwd = useSessions(s => s.byId[sessionId]?.cwd)
   const running = useSession(s => s.running)
+  const previousRunning = useRef(running)
+  const [completedRuns, setCompletedRuns] = useState(0)
+  useEffect(() => {
+    if (previousRunning.current && !running) setCompletedRuns(count => count + 1)
+    previousRunning.current = running
+  }, [running])
   const openState = useSession(s => s.openState)
   const openError = useSession(s => s.openError)
   const hasMore = useSession(s => s.hasMore)
@@ -414,8 +421,20 @@ export function ChatView({
 
   return (
     <div className={css.root}>
+      {completedRuns > 0 && (
+        <span key={completedRuns} className={a11yCss.visuallyHidden} role="status">
+          {t('chat.responseReady')}
+        </span>
+      )}
       <div ref={listRef} className={css.scroll}>
-        <div ref={columnRef} className={css.column} data-chat-flow="">
+        <div
+          ref={columnRef}
+          className={css.column}
+          data-chat-flow=""
+          role="log"
+          aria-label={t('chat.messages')}
+          aria-live="off"
+        >
           {openState === 'loading' && <div className={css.hint}>{t('chat.loadingHistory')}</div>}
           {openState === 'error' && openError !== null && (
             <div className={css.openError}>

@@ -9,7 +9,11 @@
  * menu in between; the flow and its error dialog live in WorkspacePicker
  * (same package — direct composition, no slot between them).
  */
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import type {
+  FocusEvent as ReactFocusEvent, KeyboardEvent as ReactKeyboardEvent,
+  PointerEvent as ReactPointerEvent,
+} from 'react'
 import clsx from 'clsx'
 import {
   Button, IconCloseFill14, IconPersonalizationOutline16,
@@ -74,6 +78,113 @@ function useNativeDragAcceptance(active: boolean): void {
       document.removeEventListener('drop', acceptDrop)
     }
   }, [active])
+}
+
+/** Return every rendered row in DOM order for one composite tree. */
+function renderedTreeItems(tree: HTMLElement): HTMLElement[] {
+  return [...tree.querySelectorAll<HTMLElement>('[role="treeitem"]')]
+}
+
+/** Maintain the tree's one roving row and the actions owned by that row. */
+function setRovingTreeItem(items: readonly HTMLElement[], active: HTMLElement): void {
+  for (const item of items) {
+    const current = item === active
+    item.tabIndex = current ? 0 : -1
+    for (const action of item.querySelectorAll<HTMLButtonElement>('button')) {
+      action.tabIndex = current ? 0 : -1
+    }
+  }
+}
+
+/**
+ * APG-style keyboard behavior shared by grouped, flat, and search trees.
+ * One row participates in Tab order; arrows move within the composite while
+ * Enter/Space activate a row and Left/Right operate Workspace disclosure.
+ */
+function useTreeKeyboardNavigation() {
+  const treeRef = useRef<HTMLDivElement | null>(null)
+
+  useLayoutEffect(() => {
+    const tree = treeRef.current
+    if (tree === null) return
+    const items = renderedTreeItems(tree)
+    if (items.length === 0) return
+    const focused = document.activeElement instanceof HTMLElement
+      ? document.activeElement.closest<HTMLElement>('[role="treeitem"]')
+      : null
+    const active = focused !== null && tree.contains(focused)
+      ? focused
+      : items.find(item => item.tabIndex === 0)
+        ?? items.find(item => item.getAttribute('aria-selected') === 'true')
+        ?? items[0]
+    if (active === undefined) return
+    setRovingTreeItem(items, active)
+  })
+
+  const promote = (target: EventTarget | null): HTMLElement | null => {
+    const tree = treeRef.current
+    if (!(target instanceof HTMLElement) || tree === null) return null
+    const item = target.closest<HTMLElement>('[role="treeitem"]')
+    if (item === null || !tree.contains(item)) return null
+    setRovingTreeItem(renderedTreeItems(tree), item)
+    return item
+  }
+
+  const onFocusCapture = (event: ReactFocusEvent<HTMLDivElement>): void => {
+    promote(event.target)
+  }
+  const onPointerDownCapture = (event: ReactPointerEvent<HTMLDivElement>): void => {
+    if (event.target instanceof HTMLElement
+      && event.target.closest('button, a, input, select, textarea') !== null) return
+    promote(event.target)?.focus({ preventScroll: true })
+  }
+  const onKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>): void => {
+    const tree = treeRef.current
+    if (tree === null || !(event.target instanceof HTMLElement)) return
+    const item = event.target.closest<HTMLElement>('[role="treeitem"]')
+    // Child row actions retain their native keyboard behavior.
+    if (item === null || event.target !== item || !tree.contains(item)) return
+    const items = renderedTreeItems(tree)
+    const index = items.indexOf(item)
+    if (index < 0) return
+    let destination: HTMLElement | undefined
+    if (event.key === 'ArrowDown') destination = items[index + 1]
+    else if (event.key === 'ArrowUp') destination = items[index - 1]
+    else if (event.key === 'Home') destination = items[0]
+    else if (event.key === 'End') destination = items.at(-1)
+    else if (event.key === 'ArrowRight') {
+      if (item.getAttribute('aria-expanded') === 'false') {
+        event.preventDefault()
+        item.click()
+        return
+      }
+      if (item.getAttribute('aria-expanded') === 'true') {
+        const group = item.closest<HTMLElement>('[data-tree-group]')
+        destination = group === null
+          ? undefined
+          : renderedTreeItems(group).find(candidate => candidate !== item)
+      }
+    } else if (event.key === 'ArrowLeft') {
+      if (item.getAttribute('aria-expanded') === 'true') {
+        event.preventDefault()
+        item.click()
+        return
+      }
+      const group = item.closest<HTMLElement>('[data-tree-group]')
+      const parent = group?.querySelector<HTMLElement>('[role="treeitem"][aria-expanded]')
+      if (parent !== null && parent !== item) destination = parent
+    } else if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      item.click()
+      return
+    } else return
+    if (destination === undefined) return
+    event.preventDefault()
+    setRovingTreeItem(items, destination)
+    destination.focus({ preventScroll: true })
+  }
+
+  return { ref: treeRef, onFocusCapture, onPointerDownCapture, onKeyDown }
 }
 
 /** Reconcile a stored view order with the Workspace's current session account. */
@@ -255,6 +366,7 @@ function SessionTree({
   groupExpansion, setGroupExpanded,
   sessionOrderByAccount, sessionUpdatedAtByAccount, syncSessionOrderAccount, setSessionOrder, home, t,
 }: SessionTreeProps) {
+  const treeNavigation = useTreeKeyboardNavigation()
   const list = useSessions(s => s)
   const current = list.current
   const [expandedSessionGroups, setExpandedSessionGroups] = useState<string[]>([])
@@ -389,6 +501,7 @@ function SessionTree({
         className={clsx(css.list, workspaceDropAtListStart && css.listTopDropActive)}
         role="tree"
         aria-label={t('section.sessions')}
+        {...treeNavigation}
       >
         {groups.length === 0 && (
           <div className={css.empty}>{t('empty.none')}</div>
@@ -431,6 +544,7 @@ function SessionTree({
           // (WorkspaceBrowser.module.css).
             <div
               key={group.key}
+              data-tree-group=""
               className={clsx(
                 css.groupSection,
                 workspaceMarker === 'before' && css.workspaceDropBefore,
@@ -564,6 +678,7 @@ function FlatList({
   | 'setSessionOrder'
   | 't'
 >) {
+  const treeNavigation = useTreeKeyboardNavigation()
   const list = useSessions(s => s)
   const baseRows = useMemo(
     () => deriveFlat(list, archivedSessionIds),
@@ -619,7 +734,12 @@ function FlatList({
   const now = Date.now()
   return (
     <div className={clsx(css.treeBody, css.wide)}>
-      <div className={clsx(css.list, css.flatList)} role="tree" aria-label={t('section.sessions')}>
+      <div
+        className={clsx(css.list, css.flatList)}
+        role="tree"
+        aria-label={t('section.sessions')}
+        {...treeNavigation}
+      >
         {rows.length === 0 && (
           <div className={css.empty}>{t('empty.none')}</div>
         )}
@@ -689,6 +809,7 @@ function SearchResults({
   remote: RemoteSearchState
   resultLimit: number
 }) {
+  const treeNavigation = useTreeKeyboardNavigation()
   const list = useSessions(s => s)
   const currentRemote = remote.query === query
     ? remote
@@ -703,7 +824,12 @@ function SearchResults({
   return (
     <div className={clsx(css.treeBody, css.wide)}>
       <div className={css.list}>
-        <div className={css.searchTree} role="tree" aria-label={t('search.results.aria')}>
+        <div
+          className={css.searchTree}
+          role="tree"
+          aria-label={t('search.results.aria')}
+          {...treeNavigation}
+        >
           {results.items.map(result => (
             <SearchResultItem
               key={result.id}
@@ -822,7 +948,9 @@ export function WorkspaceBrowser({
     hasMore: false,
   })
   const searchRoot = useRef<HTMLDivElement | null>(null)
+  const searchButton = useRef<HTMLButtonElement | null>(null)
   const searchInput = useRef<HTMLInputElement | null>(null)
+  const restoreSearchFocus = useRef(false)
   // Section-header ＋ opens the picker menu (same popover in wide and rail
   // states; the menu anchors on this button).
   const [wsPickerOpen, setWsPickerOpen] = useState(false)
@@ -847,6 +975,12 @@ export function WorkspaceBrowser({
     searchInput.current?.focus({ preventScroll: true })
   }, [wide, searchExpanded, searchOnExpand])
 
+  useEffect(() => {
+    if (!wide || searchExpanded || !restoreSearchFocus.current) return
+    restoreSearchFocus.current = false
+    searchButton.current?.focus({ preventScroll: true })
+  }, [wide, searchExpanded])
+
   // Outside-click dismissal stays off while the rail gesture is in flight
   // (searchOnExpand): the rail click flips the shell wide and mounts this
   // listener during its own dispatch, then keeps bubbling to document with
@@ -858,6 +992,7 @@ export function WorkspaceBrowser({
       if (!(event.target instanceof Node) || searchRoot.current?.contains(event.target) === true) return
       searchInput.current?.blur()
       if (normalizedQuery !== '') return
+      restoreSearchFocus.current = false
       setSearchExpanded(false)
     }
     document.addEventListener('click', onClick)
@@ -1028,6 +1163,7 @@ export function WorkspaceBrowser({
             >
               <Tooltip label={t('search')} side="bottom" delayMs={500} disabled={searchExpanded}>
                 <button
+                  ref={searchButton}
                   type="button"
                   className={css.searchButton}
                   aria-label={t('search.sessions.aria')}
@@ -1051,6 +1187,8 @@ export function WorkspaceBrowser({
                 onChange={(e) => { setQuery(sanitizeSearchQuery(e.target.value)) }}
                 onKeyDown={(e) => {
                   if (e.key !== 'Escape') return
+                  e.preventDefault()
+                  restoreSearchFocus.current = true
                   setQuery('')
                   setSearchExpanded(false)
                 }}
@@ -1062,6 +1200,7 @@ export function WorkspaceBrowser({
                   aria-label={t('search.clear')}
                   onClick={(e) => {
                     e.stopPropagation()
+                    restoreSearchFocus.current = true
                     setQuery('')
                     setSearchExpanded(false)
                   }}

@@ -3,18 +3,59 @@
 // cannot leave sticky page controls above the mask. This is still an in-page
 // WebUI dialog; it never creates or targets another browser/native window.
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import type { ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import clsx from 'clsx'
 import { IconCloseOutline16 } from './icons/index.tsx'
 import css from './Modal.module.css'
 
+const FOCUSABLE_SELECTOR = [
+  'a[href]',
+  'area[href]',
+  'button:not([disabled])',
+  'input:not([disabled]):not([type="hidden"])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  '[contenteditable="true"]',
+  '[tabindex]:not([tabindex="-1"])',
+].join(',')
+
+const dialogStack: HTMLElement[] = []
+let inertRoot: { element: HTMLElement; previous: boolean } | null = null
+
+function focusableElements(dialog: HTMLElement): HTMLElement[] {
+  return [...dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)].filter(element =>
+    !element.hidden
+    && element.getAttribute('aria-hidden') !== 'true'
+    && element.closest('[inert]') === null)
+}
+
+function activateDialog(dialog: HTMLElement): () => void {
+  if (dialogStack.length === 0) {
+    const appRoot = document.getElementById('root')
+    if (appRoot !== null) {
+      inertRoot = { element: appRoot, previous: appRoot.inert }
+      appRoot.inert = true
+    }
+  }
+  dialogStack.push(dialog)
+  return () => {
+    const index = dialogStack.lastIndexOf(dialog)
+    /* v8 ignore else -- every cleanup closes the dialog registered by this activation. */
+    if (index >= 0) dialogStack.splice(index, 1)
+    if (dialogStack.length !== 0 || inertRoot === null) return
+    inertRoot.element.inert = inertRoot.previous
+    inertRoot = null
+  }
+}
+
 /**
  * Render a centered modal over a blurred page mask.
  * @param props.open - whether the dialog is showing.
  * @param props.onClose - Escape or mask click.
  * @param props.title - dialog heading (aria-label in every mode).
+ * @param props.labelledBy - optional id of a visible heading that replaces the aria-label.
  * @param props.closeLabel - accessible close-button label.
  * @param props.description - optional supporting sentence under the title.
  * @param props.children - body (inputs, etc.).
@@ -28,11 +69,12 @@ import css from './Modal.module.css'
  * @returns null when closed; otherwise the overlay tree.
  */
 export function Modal({
-  open, onClose, title, closeLabel = 'Close', description, children, footer, className, contentClassName, headless = false,
+  open, onClose, title, labelledBy, closeLabel = 'Close', description, children, footer, className, contentClassName, headless = false,
 }: {
   open: boolean
   onClose: () => void
   title: string
+  labelledBy?: string
   closeLabel?: string
   description?: string
   children?: ReactNode
@@ -41,25 +83,84 @@ export function Modal({
   contentClassName?: string
   headless?: boolean
 }) {
+  const dialogRef = useRef<HTMLDivElement | null>(null)
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
+  const openingInvokerRef = useRef<HTMLElement | null>(null)
+  // Capture during the opening render: React may run a descendant's native
+  // `autoFocus` commit before this component's effect, at which point
+  // document.activeElement would already be inside the dialog.
+  if (!open) openingInvokerRef.current = null
+  else if (dialogRef.current === null && openingInvokerRef.current === null
+    && typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) {
+    openingInvokerRef.current = document.activeElement
+  }
+
   useEffect(() => {
     if (!open) return
+    const dialog = dialogRef.current
+    /* v8 ignore next -- open always renders and attaches the dialog before effects run. */
+    if (dialog === null) return
+    const opener = openingInvokerRef.current
+    const deactivate = activateDialog(dialog)
+    const current = document.activeElement instanceof HTMLElement && dialog.contains(document.activeElement)
+      ? document.activeElement
+      : null
+    const initial = current
+      ?? dialog.querySelector<HTMLElement>('[autofocus]')
+      ?? focusableElements(dialog)[0]
+      ?? dialog
+    initial.focus()
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (dialogStack.at(-1) !== dialog) return
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        onCloseRef.current()
+        return
+      }
+      if (e.key !== 'Tab') return
+      const items = focusableElements(dialog)
+      const first = items[0]
+      const last = items.at(-1)
+      if (first === undefined || last === undefined) {
+        e.preventDefault()
+        dialog.focus()
+        return
+      }
+      const active = document.activeElement
+      if (e.shiftKey ? active === first || !dialog.contains(active) : active === last || !dialog.contains(active)) {
+        e.preventDefault()
+        ;(e.shiftKey ? last : first).focus()
+      }
     }
     document.addEventListener('keydown', onKeyDown)
-    return () => { document.removeEventListener('keydown', onKeyDown) }
-  }, [open, onClose])
+    return () => {
+      document.removeEventListener('keydown', onKeyDown)
+      deactivate()
+      if (opener?.isConnected === true) opener.focus()
+    }
+  }, [open])
 
   if (!open) return null
 
   return createPortal((
     <div className={css.root} role="presentation">
-      <div className={css.mask} aria-hidden="true" onClick={onClose} />
       <div
+        className={css.mask}
+        aria-hidden="true"
+        onClick={() => {
+          const dialog = dialogRef.current
+          if (dialog !== null && dialogStack.at(-1) === dialog) onClose()
+        }}
+      />
+      <div
+        ref={dialogRef}
         className={clsx(css.dialog, className)}
         role="dialog"
         aria-modal="true"
-        aria-label={title}
+        aria-label={labelledBy === undefined ? title : undefined}
+        aria-labelledby={labelledBy}
+        tabIndex={-1}
       >
         {headless
           ? children

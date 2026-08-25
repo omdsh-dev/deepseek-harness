@@ -6,6 +6,8 @@ Shell plugin: three-column AppFrame (drag handles and concession chain) plus the
 
 AppFrame always mounts the conversation and details columns; a connected Session renders through `SessionProvider`. The transient layout store starts the sidebar at its default width and details closed, and it never reads or writes `localStorage`. Hero and other unselected states also derive a zero rendered details width without changing that stored preference. AppFrame retains the last non-blank Session id across those states: the first Session remains closed, an explicit details action opens the contract default width, returning to the same Session restores its unchanged width, and selecting a different Session closes details before paint. The conversation owner share is empty, while the sidebar owner share contains only `collapsed` and `width`; registrants obtain business data from standard hooks and actions from their own inject faces.
 
+The center column is the page's `main` landmark. Both resize boundaries expose named, focusable vertical separators with current/minimum/maximum values: Left/Right resize by the normal step, Shift uses the larger step, and Home/End move to the permitted bounds. Pointer dragging and keyboard resizing update the same geometry service.
+
 The `/client` exports are the plugin body (`apply`/`inject`), `LayoutController`, and the four owner-share interfaces. AppFrame, the panel store, and the concession solver remain package-internal.
 
 ## Model Experience

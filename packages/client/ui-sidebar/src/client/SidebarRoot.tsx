@@ -112,8 +112,9 @@ export function SidebarRoot({
   }, [pointerInside])
 
   return (
-    <div
+    <aside
       ref={column}
+      aria-label={t('navigation')}
       className={clsx(
         css.root, !wide && css.collapsed, !wide && everWide.current && css.railIn,
         collapsed && wide && css.fading, !pointerInside && css.quietBars,
@@ -205,6 +206,6 @@ export function SidebarRoot({
           {renderSlot('sidebar.settings', { wide })}
         </div>
       </div>
-    </div>
+    </aside>
   )
 }

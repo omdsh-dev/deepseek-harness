@@ -4,17 +4,14 @@
   z-index: 1000;
   display: grid;
   place-items: center;
+  gap: 0;
+  width: auto;
   padding: 40px;
-}
-
-/* Same mask recipe as the Modal primitive and the settings dialog. A separate
-   layer, not a background on .backdrop: backdrop-filter there would blur the
-   previewed image and the close control along with the page. */
-.mask {
-  position: absolute;
-  inset: 0;
-  background: var(--dsw-alias-bg-mask-1);
-  backdrop-filter: var(--dsw-mask-blur);
+  overflow: visible;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .image {

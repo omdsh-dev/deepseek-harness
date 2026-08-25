@@ -9,22 +9,27 @@ afterEach(cleanup)
 const labels = { dialog: '原图预览', close: '关闭原图预览' }
 
 describe('ImageLightbox', () => {
-  it('focuses its close control, closes by button and Escape, and restores focus', () => {
+  it('uses the shared modal focus scope, closes by button and Escape, and restores focus', () => {
+    const root = document.createElement('div')
+    root.id = 'root'
+    document.body.appendChild(root)
     const opener = document.createElement('button')
-    document.body.appendChild(opener)
+    root.appendChild(opener)
     opener.focus()
     const onClose = vi.fn()
     const view = render(<ImageLightbox src="blob:original" alt="原图" labels={labels} onClose={onClose} />)
     const close = view.getByRole('button', { name: '关闭原图预览' })
     expect(document.activeElement).toBe(close)
-    fireEvent.keyDown(window, { key: 'a' })
+    expect(root.inert).toBe(true)
+    fireEvent.keyDown(document, { key: 'a' })
     expect(onClose).not.toHaveBeenCalled()
-    fireEvent.keyDown(window, { key: 'Escape' })
+    fireEvent.keyDown(document, { key: 'Escape' })
     fireEvent.click(close)
     expect(onClose).toHaveBeenCalledTimes(2)
     view.unmount()
+    expect(root.inert).not.toBe(true)
     expect(document.activeElement).toBe(opener)
-    opener.remove()
+    root.remove()
   })
 
   it('tolerates a focus owner it cannot restore (no active element at mount)', () => {
@@ -39,13 +44,13 @@ describe('ImageLightbox', () => {
     }
   })
 
-  it('closes on a mask press but not on a press over the image', () => {
+  it('closes on a mask click but not on a click over the image', () => {
     const onClose = vi.fn()
     const view = render(<ImageLightbox src="blob:original" alt="原图" labels={labels} onClose={onClose} />)
-    fireEvent.mouseDown(view.getByRole('img'))
+    fireEvent.click(view.getByRole('img'))
     expect(onClose).not.toHaveBeenCalled()
     const mask = document.querySelector('[aria-hidden="true"]') as HTMLElement
-    fireEvent.mouseDown(mask)
+    fireEvent.click(mask)
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 })

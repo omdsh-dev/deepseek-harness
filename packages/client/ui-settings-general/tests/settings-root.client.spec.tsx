@@ -156,8 +156,16 @@ describe('SettingsPanel close paths', () => {
 
   it('lands focus on the close button when the dialog opens', () => {
     mount()
+    const trigger = screen.getByRole('button', { name: 'Settings' })
+    trigger.focus()
     openPanel()
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Close' }))
+    fireEvent.keyDown(document, { key: 'Tab' })
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'General' }))
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true })
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Close' }))
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(document.activeElement).toBe(trigger)
   })
 })
 

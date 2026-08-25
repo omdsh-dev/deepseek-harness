@@ -676,6 +676,7 @@ describe('running and lock semantics', () => {
     })
     expect(textarea.disabled).toBe(true)
     expect(textarea.placeholder).toBe('父会话已离线，无法继续发送；仍可停止当前运行')
+    expect(textarea.getAttribute('aria-label')).toBe('父会话已离线，无法继续发送；仍可停止当前运行')
     expect((view.getByLabelText('命令') as HTMLButtonElement).disabled).toBe(true)
     expect(button.getAttribute('aria-label')).toBe('发送消息')
     expect(button.disabled).toBe(true)
@@ -1063,10 +1064,13 @@ describe('running and lock semantics', () => {
   it('disabled state shows the unavailable placeholder; custom placeholder wins', () => {
     const { textarea } = bench({ disabled: true })
     expect(textarea.placeholder).toBe('会话不可用')
+    expect(textarea.getAttribute('aria-label')).toBe('会话不可用')
     const live = bench()
     expect(live.textarea.placeholder).toBe('给智能体发消息')
+    expect(live.textarea.getAttribute('aria-label')).toBe('给智能体发消息')
     const custom = bench({ placeholder: 'Custom placeholder' })
     expect(custom.textarea.placeholder).toBe('Custom placeholder')
+    expect(custom.textarea.getAttribute('aria-label')).toBe('给智能体发消息')
   })
 
   it('the inert textarea opens the Workspace picker by pointer or keyboard', () => {
@@ -1080,6 +1084,7 @@ describe('running and lock semantics', () => {
     expect(textarea.disabled).toBe(false)
     expect(textarea.readOnly).toBe(true)
     expect(textarea.getAttribute('aria-haspopup')).toBe('menu')
+    expect(textarea.getAttribute('aria-label')).toBe('选择工作区')
     expect(textarea.getAttribute('aria-expanded')).toBe('false')
     expect((view.getByLabelText('命令') as HTMLButtonElement).disabled).toBe(true)
 

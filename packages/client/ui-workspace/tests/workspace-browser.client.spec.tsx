@@ -180,6 +180,42 @@ describe('WorkspaceBrowser', () => {
     expect(b.store.getSnapshot().groupBy).toBe('workspace')
   })
 
+  it('supports roving focus and disclosure keys in the grouped tree', () => {
+    mount({
+      useSessions: hook(sessionState([summary('alpha-s', 2), summary('beta-s', 1)])),
+      useWorkspaces: hook(workspaceState([
+        workspace('alpha', ['alpha-s']),
+        workspace('beta', ['beta-s']),
+      ])),
+    })
+    const alpha = screen.getByText('alpha').closest<HTMLElement>('[role="treeitem"]')!
+    const beta = screen.getByText('beta').closest<HTMLElement>('[role="treeitem"]')!
+    expect(alpha.tabIndex).toBe(0)
+    expect(beta.tabIndex).toBe(-1)
+
+    alpha.focus()
+    fireEvent.keyDown(alpha, { key: 'ArrowDown' })
+    expect(document.activeElement).toBe(beta)
+    fireEvent.keyDown(beta, { key: 'Home' })
+    expect(document.activeElement).toBe(alpha)
+    fireEvent.keyDown(alpha, { key: 'End' })
+    expect(document.activeElement).toBe(beta)
+    fireEvent.keyDown(beta, { key: 'ArrowUp' })
+    expect(document.activeElement).toBe(alpha)
+
+    fireEvent.keyDown(alpha, { key: 'ArrowRight' })
+    expect(alpha.getAttribute('aria-expanded')).toBe('true')
+    const session = screen.getByText('alpha-s').closest<HTMLElement>('[role="treeitem"]')!
+    fireEvent.keyDown(alpha, { key: 'ArrowRight' })
+    expect(document.activeElement).toBe(session)
+    fireEvent.keyDown(session, { key: 'ArrowLeft' })
+    expect(document.activeElement).toBe(alpha)
+    fireEvent.keyDown(alpha, { key: 'ArrowLeft' })
+    expect(alpha.getAttribute('aria-expanded')).toBe('false')
+    fireEvent.keyDown(alpha, { key: 'Enter' })
+    expect(alpha.getAttribute('aria-expanded')).toBe('true')
+  })
+
   it('persists flat-list drag order locally and applies Last updated within that account', async () => {
     const insertSessionBefore = vi.fn(async () => {})
     const sessions = sessionState([summary('one', 3), summary('two', 2), summary('three', 1)])
@@ -561,6 +597,7 @@ describe('WorkspaceBrowser', () => {
       fireEvent.click(screen.getByRole('button', { name: '清除搜索' }))
       expect(input.value).toBe('')
       expect(screen.getByRole('tree', { name: '会话' })).toBeTruthy()
+      expect(document.activeElement).toBe(screen.getByRole('button', { name: '搜索会话' }))
       // Clicking the field row focuses the input (wide mode).
       fireEvent.click(input.parentElement as HTMLElement)
       expect(document.activeElement).toBe(input)
@@ -574,11 +611,16 @@ describe('WorkspaceBrowser', () => {
     const search = screen.getByRole('button', { name: '搜索会话' })
     fireEvent.click(search)
     expect(search.getAttribute('aria-expanded')).toBe('true')
+    const input = screen.getByPlaceholderText<HTMLInputElement>('搜索会话…')
+    fireEvent.keyDown(input, { key: 'Escape' })
+    expect(search.getAttribute('aria-expanded')).toBe('false')
+    expect(document.activeElement).toBe(search)
+
+    fireEvent.click(search)
     fireEvent.click(document.body)
     expect(search.getAttribute('aria-expanded')).toBe('false')
 
     fireEvent.click(search)
-    const input = screen.getByPlaceholderText<HTMLInputElement>('搜索会话…')
     fireEvent.change(input, { target: { value: '   ' } })
     fireEvent.click(document.body)
     expect(search.getAttribute('aria-expanded')).toBe('false')

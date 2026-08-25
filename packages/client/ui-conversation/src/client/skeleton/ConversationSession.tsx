@@ -23,6 +23,10 @@ interface Breadcrumb {
 
 const DEFAULT_VIEW_ID = 'chat'
 
+function viewDomId(kind: 'tab' | 'panel', sessionId: SessionId, viewId: string): string {
+  return `conversation-view-${kind}-${encodeURIComponent(sessionId)}-${encodeURIComponent(viewId)}`
+}
+
 /** Resolve by id and keep stale persisted selections on the stable Chat fallback. */
 function resolveActiveView(tabs: readonly ViewTab[], selectedId: string | null): ViewTab | undefined {
   const requestedId = selectedId ?? DEFAULT_VIEW_ID
@@ -143,15 +147,33 @@ export function ConversationSessionHeader({
             </div>
           </div>
           {tabs.length > 1 && (
-            <div className={css.tabs} role="tablist">
-              {tabs.map(viewTab => (
+            <div className={css.tabs} role="tablist" aria-label={t('session.views')}>
+              {tabs.map((viewTab, index) => (
                 <button
                   key={viewTab.id}
+                  id={viewDomId('tab', sessionId, viewTab.id)}
                   type="button"
                   role="tab"
                   aria-selected={viewTab.id === active?.id}
+                  aria-controls={viewDomId('panel', sessionId, 'active')}
+                  tabIndex={viewTab.id === active?.id ? 0 : -1}
                   className={clsx(css.tab, viewTab.id === active?.id && css.tabActive)}
                   onClick={() => { actions.setView(viewTab.id) }}
+                  onKeyDown={(event) => {
+                    let nextIndex: number
+                    switch (event.key) {
+                      case 'ArrowRight': nextIndex = (index + 1) % tabs.length; break
+                      case 'ArrowLeft': nextIndex = (index - 1 + tabs.length) % tabs.length; break
+                      case 'Home': nextIndex = 0; break
+                      case 'End': nextIndex = tabs.length - 1; break
+                      default: return
+                    }
+                    event.preventDefault()
+                    const next = tabs[nextIndex]
+                    if (next === undefined) return
+                    actions.setView(next.id)
+                    document.getElementById(viewDomId('tab', sessionId, next.id))?.focus()
+                  }}
                 >
                   {viewTab.label}
                 </button>
@@ -199,7 +221,14 @@ export function ConversationSession({
 
   if (blank && composerPhase === 'blank') return null
   return (
-    <div className={css.viewArea}>
+    <div
+      id={active === undefined ? undefined : viewDomId('panel', sessionId, 'active')}
+      className={css.viewArea}
+      role={tabs.length > 1 ? 'tabpanel' : undefined}
+      aria-labelledby={tabs.length > 1 && active !== undefined
+        ? viewDomId('tab', sessionId, active.id)
+        : undefined}
+    >
       {active !== undefined && renderSlot('conversation.view', {
         inspect,
         onInspectDone: () => { actions.setInspect(null) },

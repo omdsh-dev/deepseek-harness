@@ -1,4 +1,4 @@
-- banner:
+- main:
   - navigation "Session hierarchy":
     - button "Reply with a one-sentence description" [disabled]
   - img
@@ -6,25 +6,32 @@
   - button "Session log":
     - text: Session log
     - img
-  - tablist:
+  - tablist "Session views":
     - tab "Chat" [selected]
     - tab "Trajectory"
-- text: Reply with a one-sentence description of event sourcing, then stop. {{clock}}
-- button "Copy":
-  - img
-- button "Context injection @deepseek-ai/dsh-system-prompt":
-  - img
-  - img
-  - text: Context injection @deepseek-ai/dsh-system-prompt
-- status:
-  - text: This turn failedAPI key is invalid
-  - code: AUTH
-- textbox "Message the agent"
-- button "Commands":
-  - img
-- 'button "Access mode, current: Workspace Write"': Workspace Write
-- button "Select model, current DeepSeek-V4-Flash":
-  - text: DeepSeek-V4-Flash
-  - img
-- button "Send message" [disabled]
-- text: 1 turns · 1 steps
+  - tabpanel "Chat":
+    - status: Agent response complete
+    - log "Conversation messages":
+      - article "User message":
+        - text: Reply with a one-sentence description of event sourcing, then stop. {{clock}}
+        - button "Copy":
+          - img
+      - article:
+        - button "Context injection @deepseek-ai/dsh-system-prompt":
+          - img
+          - img
+          - text: Context injection @deepseek-ai/dsh-system-prompt
+      - article:
+        - status:
+          - text: This turn failedAPI key is invalid
+          - code: AUTH
+      - article
+  - textbox "Message the agent"
+  - button "Commands":
+    - img
+  - 'button "Access mode, current: Workspace Write"': Workspace Write
+  - button "Select model, current DeepSeek-V4-Flash":
+    - text: DeepSeek-V4-Flash
+    - img
+  - button "Send message" [disabled]
+  - text: 1 turns · 1 steps
