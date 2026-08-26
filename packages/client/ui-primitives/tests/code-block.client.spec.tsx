@@ -45,10 +45,13 @@ describe('highlightToHtml', () => {
     // First touch returns the plain fallback (undefined) and starts the import.
     for (const alias of LAZY_ALIASES) expect(highlightToHtml('x', alias)).toBeUndefined()
     // Once every grammar has registered, the same call highlights.
+    // Windows runners need longer to evaluate all 22 dynamic Shiki grammar
+    // chunks. Keep the assertion exhaustive without coupling it to Vitest's
+    // five-second default test budget.
     await vi.waitFor(() => {
       for (const alias of LAZY_ALIASES) expect(highlightToHtml('x', alias)).toContain('shiki')
-    }, { timeout: 5_000 })
-  })
+    }, { timeout: 20_000 })
+  }, 30_000)
 })
 
 describe('CodeBlock', () => {
