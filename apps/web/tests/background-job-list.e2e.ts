@@ -121,6 +121,12 @@ describe.skipIf(MODE === 'record')('web e2e: background job list', () => {
     const idle = page.getByRole('button', { name: '1 background job' })
     await idle.waitFor({ timeout: 20_000 })
 
+    // The trigger and the open menu consume the same frame through separate
+    // React subscriptions. Wait for the row too, otherwise a fast capture can
+    // combine the settled trigger label with the preceding running row.
+    const row = page.getByRole('list', { name: 'Background jobs' }).getByRole('listitem').first()
+    await expect.poll(() => row.textContent(), { timeout: 20_000 }).toContain('signal: SIGTERM')
+
     const snapshot = await captureStableAria(page, '[class*="menu"]', scaffold.workspaceCwd)
     await compareOrRefreshGolden(SETTLED_EXPECTED, snapshot, MODE)
     expect(tripwire.pageErrors).toEqual([])
