@@ -249,6 +249,20 @@ describe('DeepSeek e2e workflow', () => {
   })
 })
 
+describe('Accessibility workflow', () => {
+  it('prepares the functional bubblewrap backend before browser replay', () => {
+    const workflow = loadWorkflow('.github/workflows/accessibility.yml')
+    const production = workflowJob(workflow, 'production')
+    if (!Array.isArray(production.steps)) throw new TypeError('Accessibility production job must define steps')
+
+    const steps = production.steps.filter(isRecord)
+    expect(steps.find(step => step.name === 'Prepare bubblewrap (unrestrict userns)')).toMatchObject({
+      run: 'bash scripts/prepare-ci-bubblewrap.sh',
+    })
+    expect(JSON.stringify(steps)).not.toContain('apt-get')
+  })
+})
+
 describe('E2B e2e workflow', () => {
   it('is manual-only and fails loud before running the focused live suite', () => {
     const workflow = loadWorkflow('.github/workflows/e2b-e2e.yml')
