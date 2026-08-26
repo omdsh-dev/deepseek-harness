@@ -1,4 +1,5 @@
 - main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy":
     - button "/user-invoke-demo and confirm the fixtur" [disabled]
   - img
@@ -17,15 +18,9 @@
         - button "Copy":
           - img
       - article:
-        - button "Context injection @deepseek-ai/dsh-system-prompt":
-          - img
-          - img
-          - text: Context injection @deepseek-ai/dsh-system-prompt
+        - button "Context injection @deepseek-ai/dsh-system-prompt"
       - article:
-        - button "Context injection user-invoke-demo":
-          - img
-          - img
-          - text: Context injection user-invoke-demo
+        - button "Context injection user-invoke-demo"
       - article "Agent response":
         - paragraph: USER_INVOKE_REPLY acknowledged; following the injected skill.
       - article:
@@ -48,3 +43,4 @@
   - button "0% of context used"
   - button "Send message" [disabled]
   - text: 1 turns · 1 steps LLM {{duration}} TTFT avg {{duration}} · {{throughput}} tok/s Cache hit 0% Input 256 tok · Output 16 tok
+  - separator "Resize sidebar"

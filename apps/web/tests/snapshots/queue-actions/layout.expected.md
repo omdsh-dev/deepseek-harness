@@ -1,4 +1,5 @@
 - main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy":
     - button "workspace" [disabled]
   - img
@@ -14,20 +15,11 @@
       - article:
         - group "Command input": /goal Keep the composer context panels aligned
       - article:
-        - 'button "goal Goal created Status: active Objective: Keep the composer context panels aligned Rounds: 0/256 Activation: armed Commands: /goal edit <objective>, /goal pause, /goal clear"':
-          - img
-          - img
-          - text: "goal Goal created Status: active Objective: Keep the composer context panels aligned Rounds: 0/256 Activation: armed Commands: /goal edit <objective>, /goal pause, /goal clear"
+        - 'button "goal Goal created Status: active Objective: Keep the composer context panels aligned Rounds: 0/256 Activation: armed Commands: /goal edit <objective>, /goal pause, /goal clear"'
       - article:
-        - button "Context injection goal":
-          - img
-          - img
-          - text: Context injection goal
+        - button "Context injection goal"
       - article:
-        - button "Context injection @deepseek-ai/dsh-system-prompt":
-          - img
-          - img
-          - text: Context injection @deepseek-ai/dsh-system-prompt
+        - button "Context injection @deepseek-ai/dsh-system-prompt"
       - article "Agent response":
         - paragraph: partial
       - status: Deep diving...
@@ -51,3 +43,4 @@
     - text: DeepSeek-V4-Flash
     - img
   - button "Stop generating"
+  - separator "Resize sidebar"

@@ -499,8 +499,9 @@ function SessionTree({
       {workspaceDropAtListStart && <span className={css.listTopDropIndicator} aria-hidden="true" />}
       <div
         className={clsx(css.list, workspaceDropAtListStart && css.listTopDropActive)}
-        role="tree"
-        aria-label={t('section.sessions')}
+        data-session-list
+        role={groups.length === 0 ? undefined : 'tree'}
+        aria-label={groups.length === 0 ? undefined : t('section.sessions')}
         {...treeNavigation}
       >
         {groups.length === 0 && (
@@ -736,8 +737,9 @@ function FlatList({
     <div className={clsx(css.treeBody, css.wide)}>
       <div
         className={clsx(css.list, css.flatList)}
-        role="tree"
-        aria-label={t('section.sessions')}
+        data-session-list
+        role={rows.length === 0 ? undefined : 'tree'}
+        aria-label={rows.length === 0 ? undefined : t('section.sessions')}
         {...treeNavigation}
       >
         {rows.length === 0 && (
@@ -826,8 +828,8 @@ function SearchResults({
       <div className={css.list}>
         <div
           className={css.searchTree}
-          role="tree"
-          aria-label={t('search.results.aria')}
+          role={results.items.length === 0 ? undefined : 'tree'}
+          aria-label={results.items.length === 0 ? undefined : t('search.results.aria')}
           {...treeNavigation}
         >
           {results.items.map(result => (

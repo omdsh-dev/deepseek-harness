@@ -270,14 +270,16 @@ describe('ToolRow', () => {
     expect(view.queryByTestId('tool-icon')).not.toBeNull()
   })
 
-  it('the row toggles from Enter and Space, ignoring other keys', () => {
+  it('uses a native button for keyboard activation', () => {
     const view = render(<ToolRow {...rowProps} />)
     const row = view.getByRole('button')
     fireEvent.keyDown(row, { key: 'Tab' })
     expect(row.getAttribute('aria-expanded')).toBe('false')
-    fireEvent.keyDown(row, { key: 'Enter' })
+    expect(row.tagName).toBe('BUTTON')
+    fireEvent.click(row)
     expect(row.getAttribute('aria-expanded')).toBe('true')
-    fireEvent.keyDown(row, { key: ' ' })
+    expect(view.getByRole('button', { name: 'Bash List files' })).toBe(row)
+    fireEvent.click(row)
     expect(row.getAttribute('aria-expanded')).toBe('false')
   })
 
@@ -301,7 +303,7 @@ describe('ToolRow', () => {
     const view = render(
       <ToolRow {...rowProps} variant="write" title="Write" summary="作文.md" filePath="作文.md" />,
     )
-    expect(view.container.querySelector('button')).toBeNull()
+    expect(view.getAllByRole('button')).toHaveLength(1)
     const row = view.getByRole('button')
     fireEvent.click(row)
     expect(row.getAttribute('aria-expanded')).toBe('true')

@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-08-26-web-screen-reader-keyboard-accessibility.md
-2026-08-26-web-screen-reader-keyboard-accessibility.md: f95e600444bd2034825bb1a371c93780e719feda
-2026-08-26-web-screen-reader-keyboard-accessibility.zh.md: 82f3a170ab7c643a29e2a2ad4b9fe5f61d7133ef
+2026-08-26-web-screen-reader-keyboard-accessibility.md: d2e42276f4311dccae2ea9bf88dbdcc1d376ebab
+2026-08-26-web-screen-reader-keyboard-accessibility.zh.md: eda5ad650a17f1d58b0d19143d617b8da3f384bb

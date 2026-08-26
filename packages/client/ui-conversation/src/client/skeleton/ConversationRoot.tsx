@@ -139,7 +139,6 @@ export function ConversationRoot({
       ? {
         disabled: true,
         placeholder: t('placeholder.workspace'),
-        workspacePickerOpen: pickerOpen,
         onRequestWorkspace: () => { setPickerOpen(true) },
       }
       : blocked

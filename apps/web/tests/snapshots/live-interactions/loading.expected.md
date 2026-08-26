@@ -1,4 +1,5 @@
 - main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy":
     - button "Reply with a one-sentence description" [disabled]
   - img
@@ -16,10 +17,7 @@
         - button "Copy":
           - img
       - article:
-        - button "Context injection @deepseek-ai/dsh-system-prompt":
-          - img
-          - img
-          - text: Context injection @deepseek-ai/dsh-system-prompt
+        - button "Context injection @deepseek-ai/dsh-system-prompt"
       - article "Agent response":
         - paragraph: partial
       - status: Deep diving...
@@ -31,3 +29,4 @@
     - text: DeepSeek-V4-Flash
     - img
   - button "Stop generating"
+  - separator "Resize sidebar"

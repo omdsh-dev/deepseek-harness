@@ -1,4 +1,5 @@
 - main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy":
     - button "Ask a research subagent to"
     - text: /
@@ -18,10 +19,7 @@
         - button "Copy":
           - img
       - article:
-        - button "Context injection @deepseek-ai/dsh-system-prompt":
-          - img
-          - img
-          - text: Context injection @deepseek-ai/dsh-system-prompt
+        - button "Context injection @deepseek-ai/dsh-system-prompt"
       - article "Agent response":
         - paragraph: partial
       - status: Deep diving...
@@ -31,3 +29,4 @@
   - 'button "Access mode, current: Custom" [disabled]': Custom
   - button "Stop generating"
   - button "Send message" [disabled]
+  - separator "Resize sidebar"

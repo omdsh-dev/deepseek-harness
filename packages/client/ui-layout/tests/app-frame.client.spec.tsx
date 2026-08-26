@@ -233,6 +233,9 @@ describe('AppFrame', () => {
 
   it('exposes named separators and resizes both panels from the keyboard', () => {
     const { frame, instance } = mountFrame()
+    expect(frame.getAttribute('role')).toBeNull()
+    expect(frame.querySelector('h1')?.textContent).toBe('DSH application')
+    expect(frame.querySelector('main')?.contains(frame.querySelector('[role="separator"]'))).toBe(true)
     const sidebar = frame.querySelector<HTMLElement>('[role="separator"][aria-label="Resize sidebar"]')!
     expect(sidebar.getAttribute('aria-orientation')).toBe('vertical')
     expect(sidebar.getAttribute('aria-valuenow')).toBe('280')

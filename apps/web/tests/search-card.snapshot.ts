@@ -66,7 +66,7 @@ describe('assembled search card', () => {
     // toggle. Click it so the card and its recovery footer mount, then serialize the
     // whole row (the card lives inside ToolRow's body wrapper).
     const grepRow = document.querySelector('[data-tool="grep"]')!
-    act(() => { fireEvent.click(grepRow.querySelector('[data-expandable]') ?? grepRow) })
+    act(() => { fireEvent.click(grepRow.querySelector('[data-expandable] > button[aria-expanded]') ?? grepRow) })
     await waitFor(() => {
       expect(grepRow.querySelector('[data-search]')).not.toBeNull()
     }, { timeout: 10_000 })

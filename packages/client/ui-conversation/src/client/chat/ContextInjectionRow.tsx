@@ -34,6 +34,7 @@ export function ContextInjectionRow({ content, source, provenance, form, t }: Co
   // Resolved rather than declared: a form whose fields are unreadable renders
   // the opaque body, and the marker must say what the row actually shows.
   const { rendered, summary, body } = contextBody(form, { content, source, t })
+  const title = t(provenance.role === 'recall' ? 'message.contextRecall' : 'message.contextInjection')
 
   return (
     <DisclosureRow
@@ -42,7 +43,8 @@ export function ContextInjectionRow({ content, source, provenance, form, t }: Co
         ? <span data-context-recall-icon><ReferenceIcon kind="session" /></span>
         : <IconBrowseOutline16 size={14} />}
       chevronClassName={css.chevron}
-      title={t(provenance.role === 'recall' ? 'message.contextRecall' : 'message.contextInjection')}
+      title={title}
+      accessibleName={[title, provenance.label, summary].filter(value => value !== null).join(' ')}
       collapsedContent={provenance.label === null ? undefined : (
         /* ToolRow's separator shape: an aria-hidden dot, so the accessible name
            stays the two readable parts and the two disclosure rows expose one

@@ -1,4 +1,5 @@
 - main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy":
     - button "Reply with a one-sentence description" [disabled]
   - img
@@ -17,10 +18,7 @@
         - button "Copy":
           - img
       - article:
-        - button "Context injection @deepseek-ai/dsh-system-prompt":
-          - img
-          - img
-          - text: Context injection @deepseek-ai/dsh-system-prompt
+        - button "Context injection @deepseek-ai/dsh-system-prompt"
       - article "Agent response":
         - paragraph: partial
         - text: Stopped
@@ -62,3 +60,4 @@
     - img
   - button "Send message" [disabled]
   - text: 1 turns · 1 steps LLM {{duration}} TTFT avg {{duration}}
+  - separator "Resize sidebar"

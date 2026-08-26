@@ -337,7 +337,7 @@ describe('web e2e: seeded history renders through cold resume', () => {
     onTestFailed(() => saveFailureShot(page, 'web-e2e-context-injection'))
     const disclosure = page.getByRole('button', { name: 'Context injection AGENTS.md', exact: true })
     expect(await disclosure.getAttribute('aria-expanded')).toBe('false')
-    const collapsedIcon = disclosure.locator('svg').first()
+    const collapsedIcon = disclosure.locator('..').locator('svg').first()
     const collapsedIconBox = await collapsedIcon.boundingBox()
     expect(collapsedIconBox?.width).toBe(14)
     expect(collapsedIconBox?.height).toBe(14)
@@ -378,7 +378,7 @@ describe('web e2e: seeded history renders through cold resume', () => {
     expect(style).toEqual({
       backgroundColor: 'rgb(249, 250, 251)',
       borderRadius: '8px',
-      color: 'rgb(129, 133, 140)',
+      color: 'rgb(97, 102, 107)',
       fontSize: '11px',
       lineHeight: '16px',
       padding: ['10px', '16px', '12px', '12px'],
@@ -394,7 +394,7 @@ describe('web e2e: seeded history renders through cold resume', () => {
     // Interaction over cold-resumed history: read summaries are host-open
     // file links (not expand-in-place / not details). Runs after the golden
     // capture; still zero model calls.
-    const fileLink = page.locator('[data-variant="read"] button').first()
+    const fileLink = page.locator('[data-variant="read"] button:not([aria-expanded])').first()
     await fileLink.waitFor({ timeout: 10_000 })
     const frame = page.locator('[style*="grid-template-columns"]').first()
     expect(await frame.getAttribute('data-details-collapsed')).toBe('true')
@@ -415,7 +415,7 @@ describe('web e2e: seeded history renders through cold resume', () => {
 
   it.skipIf(MODE === 'record')('a Host open refusal keeps the reason and retries the same path', async () => {
     onTestFailed(() => saveFailureShot(page, 'web-e2e-seeded-file-open-failure'))
-    const fileLink = page.locator('[data-variant="read"] button').first()
+    const fileLink = page.locator('[data-variant="read"] button:not([aria-expanded])').first()
     await fileLink.waitFor({ timeout: 10_000 })
     const openPath = vi.spyOn(scaffold.ctx.apiProxy.host, 'openPath')
       .mockImplementation(async (request, _signal) => ({
@@ -499,7 +499,7 @@ describe('web e2e: seeded history renders through cold resume', () => {
         hasText: `Feedback recorded for session ${SEED_ID}`,
       })
       await row.waitFor({ timeout: 10_000 })
-      const disclosure = row.locator('[data-expandable]')
+      const disclosure = row.locator('[data-expandable] > button[aria-expanded]')
       expect(await disclosure.getAttribute('aria-expanded')).toBe('false')
       await disclosure.click()
       await expect.poll(() => disclosure.getAttribute('aria-expanded')).toBe('true')
@@ -533,7 +533,7 @@ describe('web e2e: seeded history renders through cold resume', () => {
       source: { kind: 'plugin', plugin: 'fixture' },
     }), { surfaceOp: 'append' })
 
-    const disclosure = page.getByRole('button', { name: 'Context injection fixture', exact: true })
+    const disclosure = page.getByRole('button', { name: /^Context injection fixture/ })
     await disclosure.waitFor({ timeout: 10_000 })
     await disclosure.click()
     await expect.poll(() => disclosure.getAttribute('aria-expanded')).toBe('true')

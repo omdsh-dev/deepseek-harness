@@ -208,10 +208,14 @@ function RunHeader({ children, count, name, onToggle, open, status, t }: {
   readonly status: WorkflowRunStatus
   readonly t: WorkflowRunPanelProps['t']
 }) {
+  const title = t('run.title', { name })
+  const countLabel = memberCount(count, t)
+  const statusLabel = t(STATUS_KEYS[status])
   return (
     <StatusDisclosure
       icon={<IconChevronRightOutline14 />}
-      title={t('run.title', { name })}
+      title={title}
+      accessibleName={`${title} ${countLabel} ${statusLabel}`}
       open={open}
       onToggle={onToggle}
       expandOnRowClick
@@ -223,10 +227,10 @@ function RunHeader({ children, count, name, onToggle, open, status, t }: {
       collapsedContent={(
         <>
           <span className={css.separator} aria-hidden />
-          <span className={css.runSummary}>{memberCount(count, t)}</span>
+          <span className={css.runSummary}>{countLabel}</span>
           <span className={css.statusTail} data-status={status}>
             <StateDot state={dotState(status)} />
-            <span>{t(STATUS_KEYS[status])}</span>
+            <span>{statusLabel}</span>
           </span>
         </>
       )}
@@ -287,6 +291,9 @@ function PhaseSection({
   readonly openSession: WorkflowRunInjected['openSession']
   readonly t: WorkflowRunPanelProps['t']
 }) {
+  const title = readablePhase(phase.phase, t)
+  const countLabel = memberCount(phase.members.length, t)
+  const statusLabel = phaseStatusSummary(phase.members, t)
   return (
     <div
       className={css.phase}
@@ -294,7 +301,8 @@ function PhaseSection({
     >
       <StatusDisclosure
         icon={<IconChevronRightOutline14 />}
-        title={readablePhase(phase.phase, t)}
+        title={title}
+        accessibleName={`${title} ${countLabel} ${statusLabel}`}
         open={open}
         onToggle={onToggle}
         expandOnRowClick
@@ -306,8 +314,8 @@ function PhaseSection({
         collapsedContent={(
           <>
             <span className={css.separator} aria-hidden />
-            <span className={css.phaseCount} data-phase-count>{memberCount(phase.members.length, t)}</span>
-            <span className={css.phaseStatus} data-phase-status-text>{phaseStatusSummary(phase.members, t)}</span>
+            <span className={css.phaseCount} data-phase-count>{countLabel}</span>
+            <span className={css.phaseStatus} data-phase-status-text>{statusLabel}</span>
           </>
         )}
       >

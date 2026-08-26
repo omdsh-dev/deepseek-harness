@@ -201,10 +201,12 @@ export function ToolRow({
         chevronClassName={css.chevron}
         icon={leadingFor(state, icon)}
         title={title}
+        accessibleName={[title, summaryText, suffix, status].filter(value => value !== null && value !== '').join(' ')}
         open={open}
         expandable={expandable}
         expandOnRowClick
         keepContentWhenOpen
+        collapsedContentAccessible={fileLink}
         onToggle={toggleExpand}
         collapsedContent={summaryText !== '' && (
           /* An empty summary drops the separator with it (a row that is only

@@ -91,7 +91,7 @@ export function DetailsPanel({ useSession, useSessions, sessionId, useStore, ren
           </svg>
         </button>
       </div>
-      <div className={css.body}>
+      <div className={css.body} role="region" aria-label={t('details.content')} tabIndex={0}>
         {selection === null || callId === undefined
           ? <div className={css.empty}>{t('details.empty')}</div>
           : material === null

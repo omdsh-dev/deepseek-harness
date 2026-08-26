@@ -1,4 +1,5 @@
 - main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy":
     - button "{{workspace}}" [disabled]
   - button "Session log":
@@ -468,3 +469,4 @@
     - img
   - button "Send message" [disabled]
   - text: 28 turns · 28 steps LLM {{duration}}
+  - separator "Resize sidebar"

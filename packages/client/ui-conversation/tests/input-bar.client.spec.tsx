@@ -73,7 +73,6 @@ interface BenchOptions {
   subagent?: Exclude<ConversationSnapshot['subagent'], null>
   disabled?: boolean
   inert?: boolean
-  workspacePickerOpen?: boolean
   onRequestWorkspace?: () => void
   promptError?: ConversationSnapshot['promptError']
   /** Authoritative queue rows served to the machine overlay (empty = none). */
@@ -192,7 +191,6 @@ function bench(over?: BenchOptions) {
     renderSlot,
     variant: over?.variant ?? 'composer',
     ...(over?.inert === true ? { disabled: true } : {}),
-    ...(over?.workspacePickerOpen !== undefined ? { workspacePickerOpen: over.workspacePickerOpen } : {}),
     ...(over?.onRequestWorkspace !== undefined ? { onRequestWorkspace: over.onRequestWorkspace } : {}),
     ...(over?.placeholder !== undefined ? { placeholder: over.placeholder } : {}),
     ...(over?.accessory !== undefined ? { accessory: over.accessory } : {}),
@@ -1077,15 +1075,14 @@ describe('running and lock semantics', () => {
     const onRequestWorkspace = vi.fn()
     const { view, textarea } = bench({
       inert: true,
-      workspacePickerOpen: false,
       onRequestWorkspace,
       placeholder: '选择一个工作区开始',
     })
     expect(textarea.disabled).toBe(false)
     expect(textarea.readOnly).toBe(true)
-    expect(textarea.getAttribute('aria-haspopup')).toBe('menu')
+    expect(textarea.getAttribute('aria-haspopup')).toBe('dialog')
     expect(textarea.getAttribute('aria-label')).toBe('选择工作区')
-    expect(textarea.getAttribute('aria-expanded')).toBe('false')
+    expect(textarea.getAttribute('aria-expanded')).toBeNull()
     expect((view.getByLabelText('命令') as HTMLButtonElement).disabled).toBe(true)
 
     fireEvent.click(textarea)

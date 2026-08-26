@@ -21,6 +21,7 @@
     - img
     - text: Settings
 - main:
+  - heading "DSH application" [level=1]
   - text: Into the Unknown Preview
   - button "Choose workspace":
     - img
@@ -40,8 +41,8 @@
     - text: DeepSeek-V4-Flash
     - img
   - button "Send message" [disabled]
+  - separator "Resize sidebar"
 - complementary "Details":
   - text: Details
   - button "Close details"
-  - text: Click a tool row in the message flow to view its details
-- separator "Resize sidebar"
+  - region "Details content": Click a tool row in the message flow to view its details

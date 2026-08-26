@@ -1,4 +1,5 @@
 - main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy":
     - button "Math rendering" [disabled]
   - button "Session log":
@@ -54,3 +55,4 @@
     - img
   - button "Send message" [disabled]
   - text: 1 turns · 1 steps LLM {{duration}}
+  - separator "Resize sidebar"

@@ -339,7 +339,7 @@ describe('MessageItem arms', () => {
     const fields = [...ctxView.container.querySelectorAll('[data-context-fields] dt')].map(node => node.textContent)
     expect(fields).toEqual(['plugin', 'empty', 'list'])
 
-    fireEvent.keyDown(disclosure, { key: ' ' })
+    fireEvent.click(disclosure)
     expect(disclosure.getAttribute('aria-expanded')).toBe('false')
   })
 

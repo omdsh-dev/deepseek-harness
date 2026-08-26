@@ -81,7 +81,7 @@ export function InputBar({
   resolveSubmitMode, toggleCommandMenu, stop, command, t,
   renderSlot, useNotices, useLexicon, useMenuLauncher,
   useProjection, sessionId, variant, disabled: inert = false, blocked,
-  workspacePickerOpen = false, onRequestWorkspace,
+  onRequestWorkspace,
   placeholder, accessory, overlay, leftItems, rightItems, footer,
 }: InputBarProps) {
   const input = useInput(s => s)
@@ -759,8 +759,11 @@ export function InputBar({
               disabled={textareaDisabled}
               readOnly={machineBusy || workspaceTrigger}
               aria-label={composerLabel}
-              aria-haspopup={workspaceTrigger ? 'menu' : undefined}
-              aria-expanded={workspaceTrigger ? workspacePickerOpen : undefined}
+              // This remains a textbox-shaped secondary trigger so the
+              // resident composer never remounts. Opening it transfers focus
+              // into a modal dialog, so expanded state does not belong on the
+              // textarea role (and is not an allowed textbox attribute).
+              aria-haspopup={workspaceTrigger ? 'dialog' : undefined}
               data-phase={input?.phase ?? 'inert'}
               placeholder={inputPlaceholder}
               rows={2}

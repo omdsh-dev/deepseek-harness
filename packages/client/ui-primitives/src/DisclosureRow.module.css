@@ -20,6 +20,37 @@
   cursor: pointer;
 }
 
+/* The native button is a sibling behind the visible row content. Text and
+   icons let pointer events reach it; genuine controls inside collapsedContent
+   opt back in above it, avoiding nested interactive descendants. */
+.rowToggle {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.row > :not(.rowToggle) {
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.row > :not(.rowToggle) :is(button, a, input, select, textarea) {
+  position: relative;
+  z-index: 2;
+  pointer-events: auto;
+}
+
+.row:has(.rowToggle:focus-visible) {
+  outline: 2px solid var(--dsw-alias-brand-primary);
+  outline-offset: 1px;
+  border-radius: 4px;
+}
+
 .leading {
   position: relative;
   flex: none;
@@ -66,4 +97,9 @@ button.leading {
   font-size: 14px;
   line-height: 24px;
   color: var(--dsw-alias-label-secondary);
+}
+
+/* Keep slotted summary content from introducing an extra layout box. */
+.contentLabel {
+  display: contents;
 }

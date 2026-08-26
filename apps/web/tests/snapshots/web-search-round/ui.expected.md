@@ -1,4 +1,5 @@
 - main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy":
     - button "Use web_search once with queries" [disabled]
   - img
@@ -17,15 +18,9 @@
         - button "Copy":
           - img
       - article:
-        - button "Context injection @deepseek-ai/dsh-system-prompt":
-          - img
-          - img
-          - text: Context injection @deepseek-ai/dsh-system-prompt
+        - button "Context injection @deepseek-ai/dsh-system-prompt"
       - article:
-        - button "Search DeepSeek Harness snapshot search, DeepSeek Harness multi-query search":
-          - img
-          - img
-          - text: Search DeepSeek Harness snapshot search, DeepSeek Harness multi-query search
+        - button "Search DeepSeek Harness snapshot search, DeepSeek Harness multi-query search"
       - article "Agent response":
         - paragraph: SEARCH_DONE
       - article:
@@ -48,3 +43,4 @@
   - button "0% of context used"
   - button "Send message" [disabled]
   - text: 1 turns · 2 steps LLM {{duration}} · Tool call {{duration}} TTFT avg {{duration}} · {{throughput}} tok/s Cache hit 0% Input 22 tok · Output 7 tok
+  - separator "Resize sidebar"

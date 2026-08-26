@@ -269,7 +269,7 @@ describe('web e2e: shipped default web search', () => {
 
   it.skipIf(MODE === 'record')('scrolls the capped source list inside the fixed-height container', async () => {
     onTestFailed(() => saveFailureShot(page, 'web-e2e-search-sources-scroll'))
-    const row = page.locator('[data-tool="web_search"] [data-expandable]').first()
+    const row = page.locator('[data-tool="web_search"] [data-expandable] > button[aria-expanded]').first()
     await row.click()
     await expect.poll(() => row.getAttribute('aria-expanded'), { timeout: 5_000 }).toBe('true')
 

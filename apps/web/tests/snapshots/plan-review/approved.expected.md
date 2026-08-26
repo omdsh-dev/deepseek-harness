@@ -1,4 +1,5 @@
 - main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy":
     - 'button "Plan a small change: add" [disabled]'
   - img
@@ -12,37 +13,23 @@
   - tabpanel "Chat":
     - status: Agent response complete
     - log "Conversation messages":
-      - article:
-        - img
-        - text: plan Plan mode on. Use /plan off to leave.
+      - article: plan Plan mode on. Use /plan off to leave.
       - article "User steering message":
         - text: "Plan a small change: add a --greeting flag to a CLI. Do not read or write any files. Call exit_plan_mode with a short plan of at most five bullet points. Once the plan is approved, reply with the single word DONE and stop. {{clock}}"
         - button "Copy":
           - img
       - article:
-        - button "Context injection @deepseek-ai/dsh-system-prompt":
-          - img
-          - img
-          - text: Context injection @deepseek-ai/dsh-system-prompt
+        - button "Context injection @deepseek-ai/dsh-system-prompt"
       - article "Agent response":
-        - 'button "Think The user wants me to plan a small change to add a `--greeting` flag to a CLI. They explicitly told me not to read or write any files, and to call exit_plan_mode with a short plan. Let me do that directly."':
-          - img
-          - img
-          - text: "Think The user wants me to plan a small change to add a `--greeting` flag to a CLI. They explicitly told me not to read or write any files, and to call exit_plan_mode with a short plan. Let me do that directly."
+        - 'button "Think The user wants me to plan a small change to add a `--greeting` flag to a CLI. They explicitly told me not to read or write any files, and to call exit_plan_mode with a short plan. Let me do that directly."'
         - paragraph:
           - text: Since the user has explicitly asked me not to read or write any files and to go straight to planning, I'll proceed with
           - code: exit_plan_mode
           - text: .
       - article:
-        - 'button "Tool call exit_plan_mode · # Add `--greeting` flag to CLI"':
-          - img
-          - img
-          - text: "Tool call exit_plan_mode · # Add `--greeting` flag to CLI"
+        - 'button "Tool call exit_plan_mode · # Add `--greeting` flag to CLI"'
       - article "Agent response":
-        - 'button "Think The plan was approved. The user''s last instruction says: \"Once the plan is approved, reply with the single word DONE and stop.\" So I should just reply with DONE and stop."':
-          - img
-          - img
-          - text: "Think The plan was approved. The user's last instruction says: \"Once the plan is approved, reply with the single word DONE and stop.\" So I should just reply with DONE and stop."
+        - 'button "Think The plan was approved. The user''s last instruction says: \"Once the plan is approved, reply with the single word DONE and stop.\" So I should just reply with DONE and stop."'
         - paragraph: DONE
       - article:
         - button "Copy":
@@ -64,3 +51,4 @@
   - button "4% of context used"
   - button "Send message" [disabled]
   - text: 1 turns · 2 steps LLM {{duration}} · Tool call {{duration}} TTFT avg {{duration}} · {{throughput}} tok/s Cache hit 51% Input 10.2K tok · Output 346 tok
+  - separator "Resize sidebar"

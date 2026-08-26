@@ -532,8 +532,6 @@ export interface ComposerBarOwnerProps {
    * its normal DOM so the Workspace pick transitions in place.
    */
   disabled?: boolean
-  /** Whether the shared Workspace picker menu is expanded, regardless of which trigger opened it. */
-  workspacePickerOpen?: boolean
   /** Open the existing Workspace picker from the inert textarea. */
   onRequestWorkspace?: () => void
   placeholder?: string

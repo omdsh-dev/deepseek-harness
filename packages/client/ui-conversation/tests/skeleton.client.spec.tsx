@@ -326,7 +326,7 @@ describe('ConversationRoot resident composer', () => {
     const box = b.view.getByRole('textbox') as HTMLTextAreaElement
     expect(box.disabled).toBe(false)
     expect(box.readOnly).toBe(true)
-    expect(box.getAttribute('aria-haspopup')).toBe('menu')
+    expect(box.getAttribute('aria-haspopup')).toBe('dialog')
     expect(box.placeholder).not.toBe('select a model first')
     const modelSeat = b.seatOwners.filter(call => call.key === 'conversation.input.model').at(-1)?.owner
     expect(modelSeat).toEqual({ locked: true })

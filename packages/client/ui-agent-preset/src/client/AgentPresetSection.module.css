@@ -185,7 +185,8 @@
   margin-top: auto;
   font-family: var(--dsw-font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
   font-size: 11px;
-  color: var(--dsw-alias-label-dimmed);
+  /* This is meaningful, selectable text, not a decorative disabled trace. */
+  color: var(--dsw-alias-label-secondary);
 }
 
 .cardFoot {

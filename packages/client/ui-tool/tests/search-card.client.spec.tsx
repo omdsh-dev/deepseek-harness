@@ -190,7 +190,7 @@ describe('chat row search body (GenericToolCard fallback)', () => {
   })
   /** The whole summary row is the expand toggle (ToolRow's unified interaction). */
   const toggleRow = (view: { container: HTMLElement }) => {
-    fireEvent.click(view.container.querySelector('[data-expandable]')!)
+    fireEvent.click(view.container.querySelector('[data-expandable] > button[aria-expanded]')!)
   }
 
   it('the expanded body is the grouped matches, capped tighter than the panel', () => {
@@ -241,7 +241,7 @@ describe('SearchRow keyed card', () => {
 
   /** The whole summary row is the expand toggle (ToolRow's unified interaction). */
   const toggleRow = (view: { container: HTMLElement }) => {
-    fireEvent.click(view.container.querySelector('[data-expandable]')!)
+    fireEvent.click(view.container.querySelector('[data-expandable] > button[aria-expanded]')!)
   }
 
   it('collapses to the summary row; expanding reveals the grep card', () => {

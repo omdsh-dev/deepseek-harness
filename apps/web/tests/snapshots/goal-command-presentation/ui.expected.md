@@ -1,4 +1,5 @@
 - main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy":
     - button "workspace" [disabled]
   - img
@@ -14,10 +15,7 @@
       - article:
         - group "Command input": /goal
       - article:
-        - 'button "goal No goal is currently set. Usage: /goal [<objective>|clear|edit <objective>|pause|resume]"':
-          - img
-          - img
-          - text: "goal No goal is currently set. Usage: /goal [<objective>|clear|edit <objective>|pause|resume]"
+        - 'button "goal No goal is currently set. Usage: /goal [<objective>|clear|edit <objective>|pause|resume]"'
   - textbox "Message the agent"
   - button "Commands":
     - img
@@ -26,3 +24,4 @@
     - text: DeepSeek-V4-Flash
     - img
   - button "Send message" [disabled]
+  - separator "Resize sidebar"

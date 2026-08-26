@@ -54,6 +54,7 @@ export function GenericCommandCard({ node, t, runningSummary }: GenericCommandCa
         chevronClassName={css.chevron}
         icon={leadingFor(state)}
         title={title}
+        accessibleName={`${title} ${summary}`}
         open={open}
         expandable={body !== null}
         expandOnRowClick

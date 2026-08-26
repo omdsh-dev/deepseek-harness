@@ -202,8 +202,8 @@
 }
 
 .configTag[data-enabled='true'] {
-  background: color-mix(in srgb, var(--dsw-alias-state-success-primary) 10%, transparent);
-  color: var(--dsw-alias-state-success-primary);
+  background: var(--dsw-alias-state-success-tertiary);
+  color: var(--dsw-alias-state-success-label);
 }
 
 .chevron {

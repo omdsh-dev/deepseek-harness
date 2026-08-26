@@ -1,4 +1,5 @@
 - main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy":
     - button "Use the ask_user_question tool to" [disabled]
   - img
@@ -17,29 +18,17 @@
         - button "Copy":
           - img
       - article:
-        - button "Context injection @deepseek-ai/dsh-system-prompt":
-          - img
-          - img
-          - text: Context injection @deepseek-ai/dsh-system-prompt
+        - button "Context injection @deepseek-ai/dsh-system-prompt"
       - article "Agent response":
-        - button "Think The user wants me to use the ask_user_question tool to ask them a specific question with the given parameters. Let me do exactly that.":
-          - img
-          - img
-          - text: Think The user wants me to use the ask_user_question tool to ask them a specific question with the given parameters. Let me do exactly that.
+        - button "Think The user wants me to use the ask_user_question tool to ask them a specific question with the given parameters. Let me do exactly that."
       - article:
-        - button "Ask question 1/1 answered":
-          - img
-          - img
-          - text: Ask question 1/1 answered
+        - button "Ask question 1/1 answered"
       - article "User steering message":
         - text: "Interjection: include the word BANANA in your final reply. {{clock}}"
         - button "Copy":
           - img
       - article "Agent response":
-        - button "Think The user selected \"Yes\" and wants me to include the word \"BANANA\" in my final reply. Let me acknowledge their answer.":
-          - img
-          - img
-          - text: Think The user selected "Yes" and wants me to include the word "BANANA" in my final reply. Let me acknowledge their answer.
+        - button "Think The user selected \"Yes\" and wants me to include the word \"BANANA\" in my final reply. Let me acknowledge their answer."
         - paragraph: Great, let's move forward. BANANA!
       - article:
         - button "Copy":
@@ -61,3 +50,4 @@
   - button "6% of context used"
   - button "Send message" [disabled]
   - text: 1 turns · 2 steps LLM {{duration}} · Tool call {{duration}} TTFT avg {{duration}} · {{throughput}} tok/s Cache hit 98% Input 15.8K tok · Output 156 tok
+  - separator "Resize sidebar"

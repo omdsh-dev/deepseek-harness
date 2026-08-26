@@ -1,4 +1,4 @@
-import { type KeyboardEvent, type MouseEvent, type ReactNode } from 'react'
+import { type MouseEvent, type ReactNode } from 'react'
 import clsx from 'clsx'
 import { IconChevronDownOutline14 } from './icons/index.tsx'
 import css from './DisclosureRow.module.css'
@@ -7,6 +7,8 @@ import css from './DisclosureRow.module.css'
 export interface DisclosureRowProps {
   icon: ReactNode
   title: string
+  /** Stable spoken name for the disclosure button; defaults to `title`. */
+  accessibleName?: string | undefined
   open: boolean
   expandable: boolean
   onToggle: () => void
@@ -17,6 +19,8 @@ export interface DisclosureRowProps {
   /** Keeps `collapsedContent` inline while open. */
   keepContentWhenOpen?: boolean | undefined
   collapsedContent?: ReactNode
+  /** Keep focusable/actionable collapsed content in the accessibility tree. */
+  collapsedContentAccessible?: boolean | undefined
   children?: ReactNode
   className?: string | undefined
   rowClassName?: string | undefined
@@ -33,6 +37,7 @@ export interface DisclosureRowProps {
 export function DisclosureRow({
   icon,
   title,
+  accessibleName = title,
   open,
   expandable,
   onToggle,
@@ -40,6 +45,7 @@ export function DisclosureRow({
   previewChevron = expandable,
   keepContentWhenOpen = false,
   collapsedContent,
+  collapsedContentAccessible = false,
   children,
   className,
   rowClassName,
@@ -50,11 +56,6 @@ export function DisclosureRow({
   const rowExpands = expandable && expandOnRowClick
   const toggleFromLeading = (event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation()
-    onToggle()
-  }
-  const toggleFromKeyboard = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (!rowExpands || (event.key !== 'Enter' && event.key !== ' ')) return
-    event.preventDefault()
     onToggle()
   }
   const collapsedLeading = previewChevron
@@ -75,28 +76,42 @@ export function DisclosureRow({
         className={clsx(css.row, rowClassName)}
         data-disclosure-row
         data-expandable={rowExpands || undefined}
-        role={rowExpands ? 'button' : undefined}
-        tabIndex={rowExpands ? 0 : undefined}
-        aria-expanded={rowExpands ? open : undefined}
-        onClick={rowExpands ? onToggle : undefined}
-        onKeyDown={rowExpands ? toggleFromKeyboard : undefined}
       >
+        {rowExpands && (
+          // A sibling overlay keeps the whole visual row clickable without
+          // wrapping file/action buttons inside another interactive control.
+          <button
+            type="button"
+            className={css.rowToggle}
+            aria-label={accessibleName}
+            aria-expanded={open}
+            onClick={onToggle}
+          />
+        )}
         {expandable && !rowExpands ? (
           <button
             type="button"
             className={clsx(css.leading, leadingClassName)}
+            aria-label={accessibleName}
             aria-expanded={open}
             onClick={toggleFromLeading}
           >
             {leading}
           </button>
         ) : (
-          <span className={clsx(css.leading, leadingClassName)}>
+          <span className={clsx(css.leading, leadingClassName)} aria-hidden="true">
             {leading}
           </span>
         )}
-        <span className={clsx(css.title, titleClassName)}>{title}</span>
-        {(keepContentWhenOpen || !open) && collapsedContent}
+        <span className={clsx(css.title, titleClassName)} aria-hidden={expandable || undefined}>{title}</span>
+        {(keepContentWhenOpen || !open) && (
+          <span
+            className={css.contentLabel}
+            aria-hidden={expandable && !collapsedContentAccessible ? true : undefined}
+          >
+            {collapsedContent}
+          </span>
+        )}
       </div>
       {open && children}
     </div>

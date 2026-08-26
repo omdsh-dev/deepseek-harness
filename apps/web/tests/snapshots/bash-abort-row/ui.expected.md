@@ -1,4 +1,5 @@
 - main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy":
     - 'button "Run two shell commands: wait" [disabled]'
   - button "Session log":
@@ -14,10 +15,7 @@
         - button "Copy":
           - img
       - article:
-        - button "Context injection @deepseek-ai/dsh-system-prompt":
-          - img
-          - img
-          - text: Context injection @deepseek-ai/dsh-system-prompt
+        - button "Context injection @deepseek-ai/dsh-system-prompt"
       - article:
         - 'button "Failed Bash Error: tool call aborted" [expanded]':
           - img
@@ -38,3 +36,4 @@
     - img
   - button "Send message" [disabled]
   - text: 1 turns · 1 steps LLM {{duration}} · Tool call {{duration}} TTFT avg {{duration}} · {{throughput}} tok/s Cache hit 0% Input 10 tok · Output 10 tok
+  - separator "Resize sidebar"

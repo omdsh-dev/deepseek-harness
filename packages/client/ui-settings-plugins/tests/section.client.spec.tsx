@@ -72,7 +72,9 @@ function renderConfigurable(namespaces: string[], cards: Record<string, string> 
     useConfigurablePlugins: bindSnapshotSelector(store),
     renderSlot: (_name: string, _owner: object, opts?: { entryKey?: string }) => {
       const card = opts?.entryKey === undefined ? undefined : cards[opts.entryKey]
-      return card === undefined ? null : <li>{card}</li>
+      return card === undefined
+        ? null
+        : <div data-slot="settings.plugin.item"><div role="listitem">{card}</div></div>
     },
   } as unknown as ConfigurablePluginsTabProps
   render(<ConfigurablePluginsTab {...props} />)
@@ -180,7 +182,9 @@ describe('ConfigurablePluginsTab', () => {
   it('dispatches one card per namespace, keyed by it', () => {
     renderConfigurable(['bash', 'agent-loop'], { bash: 'shell', 'agent-loop': 'loop' })
 
+    expect(screen.getByRole('list')).toBeTruthy()
     expect(screen.getAllByRole('listitem').map(item => item.textContent)).toEqual(['shell', 'loop'])
+    expect(screen.getAllByRole('listitem').every(item => item.closest('[role="list"]') !== null)).toBe(true)
     expect(screen.queryByText(en.empty)).toBeNull()
   })
 })

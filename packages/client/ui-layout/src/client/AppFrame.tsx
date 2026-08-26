@@ -220,47 +220,47 @@ export function AppFrame({
           width: cols.sidebar,
         })}
       </div>
-      <>
-        {/* Both column occupants stay at fixed tree positions from first
-            paint — no loading gate: a bare status line reads worse than
-            the shell's own pending rendering. The conversation
-            is session-maybe; the strict details entry naturally renders
-            empty while no session is current. */}
-        <CenterColumn>{renderSlot('conversation', {})}</CenterColumn>
-        <DetailsColumn>{renderSlot('details', {})}</DetailsColumn>
-      </>
-      <div className={css.overlayLayer} data-shell-overlay>
-        {renderSlot('shell.overlay', {})}
-      </div>
-      {/* The collapsed rail is fixed-width: no resize handle while closed. */}
-      {!sidebarCollapsed && (
-        <DragHandle
-          side="sidebar"
-          left={cols.sidebar}
-          value={cols.sidebar}
-          min={SIDEBAR_MIN}
-          max={SIDEBAR_MAX}
-          label={t('resize.sidebar')}
-          onResize={actions.setSidebar}
-          onStart={onSidebarStart}
-          onDrag={onSidebarDrag}
-          onEnd={onDragEnd}
-        />
-      )}
-      {cols.details > 0 && (
-        <DragHandle
-          side="details"
-          left={viewport - cols.details}
-          value={cols.details}
-          min={DETAILS_MIN}
-          max={DETAILS_MAX}
-          label={t('resize.details')}
-          onResize={actions.setDetails}
-          onStart={onDetailsStart}
-          onDrag={onDetailsDrag}
-          onEnd={onDragEnd}
-        />
-      )}
+      {/* Both column occupants stay at fixed tree positions from first paint.
+          Frame-level controls live inside main so every focusable element is
+          owned by a landmark while their absolute geometry still anchors to
+          the positioned frame. */}
+      <CenterColumn>
+        <h1 className={css.visuallyHidden}>{t('application')}</h1>
+        {renderSlot('conversation', {})}
+        <div className={css.overlayLayer} data-shell-overlay>
+          {renderSlot('shell.overlay', {})}
+        </div>
+        {/* The collapsed rail is fixed-width: no resize handle while closed. */}
+        {!sidebarCollapsed && (
+          <DragHandle
+            side="sidebar"
+            left={cols.sidebar}
+            value={cols.sidebar}
+            min={SIDEBAR_MIN}
+            max={SIDEBAR_MAX}
+            label={t('resize.sidebar')}
+            onResize={actions.setSidebar}
+            onStart={onSidebarStart}
+            onDrag={onSidebarDrag}
+            onEnd={onDragEnd}
+          />
+        )}
+        {cols.details > 0 && (
+          <DragHandle
+            side="details"
+            left={viewport - cols.details}
+            value={cols.details}
+            min={DETAILS_MIN}
+            max={DETAILS_MAX}
+            label={t('resize.details')}
+            onResize={actions.setDetails}
+            onStart={onDetailsStart}
+            onDrag={onDetailsDrag}
+            onEnd={onDragEnd}
+          />
+        )}
+      </CenterColumn>
+      <DetailsColumn>{renderSlot('details', {})}</DetailsColumn>
     </div>
   )
 }

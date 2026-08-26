@@ -333,18 +333,18 @@ describe('WorkflowRunPanel', () => {
     expect(screen.queryByRole('button', { name: /Research/ })).toBeNull()
     fireEvent.keyDown(runHeader, { key: 'ArrowDown' })
     expect(runHeader.getAttribute('aria-expanded')).toBe('false')
-    fireEvent.keyDown(runHeader, { key: ' ' })
+    fireEvent.click(runHeader)
     const updatedPhase = screen.getByRole('button', { name: /Research/ })
     expect(updatedPhase.getAttribute('aria-expanded')).toBe('false')
     expect(screen.getByText('运行中 2')).toBeTruthy()
-    fireEvent.keyDown(updatedPhase, { key: 'Enter' })
+    fireEvent.click(updatedPhase)
     expect(screen.getByText('worker')).toBeTruthy()
     expect(screen.getByText('second')).toBeTruthy()
 
     fireEvent.click(runHeader)
     expect(runHeader.getAttribute('aria-expanded')).toBe('false')
     expect(screen.queryByRole('button', { name: /Research/ })).toBeNull()
-    fireEvent.keyDown(runHeader, { key: ' ' })
+    fireEvent.click(runHeader)
     expect(screen.getByRole('button', { name: /Research/ }).getAttribute('aria-expanded')).toBe('true')
   })
 
@@ -355,7 +355,7 @@ describe('WorkflowRunPanel', () => {
     const view = render(<WorkflowRunPanel {...panelProps(running)} />)
     const runningPhase = screen.getByRole('button', { name: /未分阶段/ })
     fireEvent.click(runningPhase)
-    fireEvent.keyDown(runningPhase, { key: 'Enter' })
+    fireEvent.click(runningPhase)
     expect(screen.getByText('worker')).toBeTruthy()
 
     const phaseCompleted: WorkflowRunChatData = {

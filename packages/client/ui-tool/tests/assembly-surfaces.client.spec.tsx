@@ -150,7 +150,7 @@ describe('terminal card assembly', () => {
     const fallback = view.container.querySelector('[data-tool="fx-bash"]')
     expect(fallback).not.toBeNull()
     expect(fallback!.querySelector('[data-terminal]')).toBeNull()
-    fireEvent.click(fallback!.querySelector('[data-expandable]')!)
+    fireEvent.click(fallback!.querySelector('[data-expandable] > button[aria-expanded]')!)
     await waitFor(() => {
       expect(fallback!.querySelector('[data-terminal]')).not.toBeNull()
     })

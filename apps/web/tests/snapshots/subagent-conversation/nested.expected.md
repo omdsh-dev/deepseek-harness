@@ -1,4 +1,5 @@
 - main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy":
     - button "Ask a research subagent to"
     - text: /
@@ -21,3 +22,4 @@
   - status:
     - strong: This subagent is read-only for now
     - text: The parent session is offline; reopen it to continue sending messages.
+  - separator "Resize sidebar"

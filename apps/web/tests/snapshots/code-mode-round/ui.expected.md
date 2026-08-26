@@ -1,4 +1,5 @@
 - main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy":
     - 'button "Using ONE run_code program: run" [disabled]'
   - img
@@ -17,30 +18,16 @@
         - button "Copy":
           - img
       - article:
-        - button "Context injection @deepseek-ai/dsh-system-prompt":
-          - img
-          - img
-          - text: Context injection @deepseek-ai/dsh-system-prompt
+        - button "Context injection @deepseek-ai/dsh-system-prompt"
       - article "Agent response":
-        - 'button "Think The user wants me to write a single `run_code` program that:"':
-          - img
-          - img
-          - text: "Think The user wants me to write a single `run_code` program that:"
+        - 'button "Think The user wants me to write a single `run_code` program that:"'
       - article:
-        - button "Code Run bash echo and catch missing file read":
-          - img
-          - img
-          - text: Code Run bash echo and catch missing file read
+        - button "Code Run bash echo and catch missing file read"
         - img
         - text: Bash Echo CODE_ROUND_OK Failed
-        - 'button "Read Error: cannot read \"{{cwd}}/workspace/missing.txt\": not found"':
-          - img
-          - text: "Read Error: cannot read \"{{cwd}}/workspace/missing.txt\": not found"
+        - 'button "Read Error: cannot read \"{{cwd}}/workspace/missing.txt\": not found Failed"'
       - article "Agent response":
-        - button "Think The program ran successfully. Let me now reply DONE as instructed.":
-          - img
-          - img
-          - text: Think The program ran successfully. Let me now reply DONE as instructed.
+        - button "Think The program ran successfully. Let me now reply DONE as instructed."
         - paragraph: DONE
       - article:
         - button "Copy":
@@ -62,3 +49,4 @@
   - button "7% of context used"
   - button "Send message" [disabled]
   - text: 1 turns · 2 steps LLM {{duration}} · Tool call {{duration}} TTFT avg {{duration}} · {{throughput}} tok/s Cache hit 52% Input 17.2K tok · Output 252 tok
+  - separator "Resize sidebar"

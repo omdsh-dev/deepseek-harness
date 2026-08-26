@@ -8,6 +8,20 @@ the deliberate composition divergences from `dsh web` — are documented in
 [`scaffold.ts`](scaffold.ts) and the
 [browser e2e Agent Note](../../../.agents/notes/implemented/testing/2026-07-24-web-gui-browser-e2e-lane.md).
 
+## Accessibility conformance lane
+
+`accessibility-conformance.e2e.ts` injects axe-core into the assembled production
+Web composition instead of scanning an isolated component. It covers the empty
+shell, every Settings section, both plugin tabs, a seeded conversation, expanded
+tool output, open model and access menus, and light and dark themes. This makes
+computed color, slot wrappers, landmark ownership, and browser DOM repair part
+of the regression gate.
+
+The lane fails on every reported axe violation; it does not disable contrast or
+other rules. It remains an automated browser check, not certification of
+VoiceOver, NVDA, or JAWS speech. Assistive-technology runs must separately
+record the spoken name, role, state, focus movement, and pass/fail result.
+
 ## These are Host-face tests
 
 They type-check in the root `tsconfig.host.json`, not in the Client aggregate,

@@ -1,4 +1,5 @@
 - main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy":
     - button "Use the ask_user_question tool to" [disabled]
   - img
@@ -17,20 +18,11 @@
         - button "Copy":
           - img
       - article:
-        - button "Context injection @deepseek-ai/dsh-system-prompt":
-          - img
-          - img
-          - text: Context injection @deepseek-ai/dsh-system-prompt
+        - button "Context injection @deepseek-ai/dsh-system-prompt"
       - article "Agent response":
-        - button "Think The user wants me to ask them a checkpoint question first, then continue with whatever they interject. Let me do exactly that.":
-          - img
-          - img
-          - text: Think The user wants me to ask them a checkpoint question first, then continue with whatever they interject. Let me do exactly that.
+        - button "Think The user wants me to ask them a checkpoint question first, then continue with whatever they interject. Let me do exactly that."
       - article:
-        - button "Ask question 1/1 answered":
-          - img
-          - img
-          - text: Ask question 1/1 answered
+        - button "Ask question 1/1 answered"
       - article "User steering message":
         - text: "Interjection: include the word BANANA in your final reply. {{clock}}"
         - button "Copy":
@@ -61,3 +53,4 @@
   - button "0% of context used"
   - button "Send message" [disabled]
   - text: 1 turns · 2 steps LLM {{duration}} · Tool call {{duration}} TTFT avg {{duration}} · {{throughput}} tok/s Cache hit 0% Input 20 tok · Output 20 tok
+  - separator "Resize sidebar"

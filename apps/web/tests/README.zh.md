@@ -7,6 +7,17 @@
 [`scaffold.ts`](scaffold.ts) 和
 [浏览器 e2e Agent Note](../../../.agents/notes/implemented/testing/2026-07-24-web-gui-browser-e2e-lane.zh.md)中。
 
+## 无障碍合规 lane
+
+`accessibility-conformance.e2e.ts` 把 axe-core 注入组装后的生产 Web 组合，而不是只扫描隔离组件。
+它覆盖空外壳、每个设置分区、两个插件标签页、带种子数据的会话、展开的工具输出、打开的模型与
+访问菜单，以及浅色和深色主题。因此，计算后颜色、slot 包装层、地标归属和浏览器 DOM 修复都会
+进入回归门禁。
+
+该 lane 会对 axe 报告的每一项违规失败，不关闭对比度或其他规则。它仍是自动浏览器检查，并不
+认证 VoiceOver、NVDA 或 JAWS 的实际朗读。辅助技术实测必须另外记录朗读名称、角色、状态、焦点
+移动和通过／失败结果。
+
 ## 这些是 Host 面的测试
 
 它们在根 `tsconfig.host.json` 中做类型检查，而不在 Client aggregate 中，因为它们直接读取

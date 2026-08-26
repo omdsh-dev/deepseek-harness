@@ -244,7 +244,7 @@ describe('run_code sub-calls through the real chat machinery', () => {
     const b = await bench(snapshotWith([codeResult(10, parent)], []))
     const view = mountApp(b.slots)
     // The code row is expandable via the whole summary row (body = the program).
-    const toggle = view.container.querySelector('[data-variant="code"] [data-expandable]')
+    const toggle = view.container.querySelector('[data-variant="code"] [data-expandable] > button[aria-expanded]')
     expect(toggle).not.toBeNull()
     fireEvent.click(toggle!)
     // Shiki splits the program into token spans inside one <pre class="shiki">:

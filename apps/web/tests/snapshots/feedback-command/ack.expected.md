@@ -1,4 +1,5 @@
 - main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy":
     - button "Reply with the single word" [disabled]
   - img
@@ -17,15 +18,9 @@
         - button "Copy":
           - img
       - article:
-        - button "Context injection @deepseek-ai/dsh-system-prompt":
-          - img
-          - img
-          - text: Context injection @deepseek-ai/dsh-system-prompt
+        - button "Context injection @deepseek-ai/dsh-system-prompt"
       - article "Agent response":
-        - button "Think The user wants me to reply with a single word. Let me comply.":
-          - img
-          - img
-          - text: Think The user wants me to reply with a single word. Let me comply.
+        - button "Think The user wants me to reply with a single word. Let me comply."
         - paragraph: LIGHTHOUSE
       - article:
         - button "Copy":
@@ -38,10 +33,7 @@
           - img
         - text: {{clock}} Ran for {{duration}} TTFT {{duration}} {{throughput}} tok/s
       - article:
-        - 'button "feedback Feedback recorded for session session-{{uuid}} Anonymous user: {{uuid}}. Session sharing is enabled."':
-          - img
-          - img
-          - text: "feedback Feedback recorded for session session-{{uuid}} Anonymous user: {{uuid}}. Session sharing is enabled."
+        - 'button "feedback Feedback recorded for session session-{{uuid}} Anonymous user: {{uuid}}. Session sharing is enabled."'
   - textbox "Message the agent"
   - button "Commands":
     - img
@@ -52,3 +44,4 @@
   - button "6% of context used"
   - button "Send message" [disabled]
   - text: 1 turns · 1 steps LLM {{duration}} TTFT avg {{duration}} · {{throughput}} tok/s Cache hit 99% Input 7.8K tok · Output 21 tok
+  - separator "Resize sidebar"

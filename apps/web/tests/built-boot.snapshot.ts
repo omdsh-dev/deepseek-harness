@@ -97,7 +97,7 @@ it('boots the built plugin graph and renders a fixture session end to end', asyn
   const mutationRows = [...document.querySelectorAll('[data-variant="write"],[data-variant="edit"]')]
   expect(mutationRows.length).toBeGreaterThan(0)
   for (const row of mutationRows) {
-    const toggle = row.querySelector('[data-expandable]')
+    const toggle = row.querySelector('[data-expandable] > button[aria-expanded]')
     if (toggle !== null) act(() => { fireEvent.click(toggle) })
   }
   const diffCards = [...document.querySelectorAll('[data-diff]')]
@@ -118,7 +118,7 @@ it('boots the built plugin graph and renders a fixture session end to end', asyn
     return row!
   }, { timeout: 10_000 })
   // Expand the web_search row to prove its WebBlock card renders end to end.
-  const webToggle = webSearchRow.querySelector('[data-expandable]')
+  const webToggle = webSearchRow.querySelector('[data-expandable] > button[aria-expanded]')
   if (webToggle !== null) act(() => { fireEvent.click(webToggle) })
   await waitFor(() => {
     expect(webSearchRow.querySelector('[data-web]')).not.toBeNull()

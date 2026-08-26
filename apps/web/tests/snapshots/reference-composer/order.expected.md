@@ -1,4 +1,5 @@
 - main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy":
     - button "Reference order target" [disabled]
   - button "Session log":
@@ -14,9 +15,7 @@
         - button "Copy":
           - img
       - article:
-        - button "Session recall Research notes":
-          - img
-          - text: Session recall Research notes
+        - button "Session recall Research notes"
       - article
   - textbox "Message the agent"
   - button "Commands":
@@ -26,3 +25,4 @@
     - text: DeepSeek-V4-Flash
     - img
   - button "Send message" [disabled]
+  - separator "Resize sidebar"

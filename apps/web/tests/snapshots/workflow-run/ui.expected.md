@@ -4,29 +4,15 @@
     - button "Copy":
       - img
   - article:
-    - button "Context injection @deepseek-ai/dsh-system-prompt":
-      - img
-      - img
-      - text: Context injection @deepseek-ai/dsh-system-prompt
+    - button "Context injection @deepseek-ai/dsh-system-prompt"
   - article "Agent response":
-    - button "Think The user wants me to use the workflow tool exactly once with specific parameters. Let me carefully follow the instructions:":
-      - img
-      - img
-      - text: "Think The user wants me to use the workflow tool exactly once with specific parameters. Let me carefully follow the instructions:"
+    - button "Think The user wants me to use the workflow tool exactly once with specific parameters. Let me carefully follow the instructions:"
   - article:
-    - button "Tool call workflow ·":
-      - img
-      - img
-      - text: Tool call workflow ·
+    - button "Tool call workflow ·"
   - article:
-    - button "snapshot-flow 1 member Completed":
-      - img
-      - text: snapshot-flow 1 member Completed
+    - button "snapshot-flow 1 member Completed"
   - article "Agent response":
-    - button "Think The workflow returned successfully with the reply \"WF_CHILD_OK\". Now I need to reply with exactly \"WORKFLOW_DONE\" and stop.":
-      - img
-      - img
-      - text: Think The workflow returned successfully with the reply "WF_CHILD_OK". Now I need to reply with exactly "WORKFLOW_DONE" and stop.
+    - button "Think The workflow returned successfully with the reply \"WF_CHILD_OK\". Now I need to reply with exactly \"WORKFLOW_DONE\" and stop."
     - paragraph: WORKFLOW_DONE
   - article:
     - button "Copy":

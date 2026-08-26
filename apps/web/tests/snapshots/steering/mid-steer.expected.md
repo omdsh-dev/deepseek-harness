@@ -1,4 +1,5 @@
 - main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy":
     - button "Use the ask_user_question tool to" [disabled]
   - img
@@ -16,21 +17,12 @@
         - button "Copy":
           - img
       - article:
-        - button "Context injection @deepseek-ai/dsh-system-prompt":
-          - img
-          - img
-          - text: Context injection @deepseek-ai/dsh-system-prompt
+        - button "Context injection @deepseek-ai/dsh-system-prompt"
       - article "Agent response":
-        - button "Think The user wants me to use the ask_user_question tool to ask them a specific question with the given parameters. Let me do exactly that.":
-          - img
-          - img
-          - text: Think The user wants me to use the ask_user_question tool to ask them a specific question with the given parameters. Let me do exactly that.
+        - button "Think The user wants me to use the ask_user_question tool to ask them a specific question with the given parameters. Let me do exactly that."
       - article:
         - text: Running
-        - button "Ask question waiting":
-          - img
-          - img
-          - text: Ask question waiting
+        - button "Ask question waiting Running"
       - status: Deep diving...
       - text: "Interjection: include the word BANANA in your final reply."
       - button "Copy":
@@ -55,3 +47,4 @@
     - status
     - button "Skip this question"
     - button "Submit" [disabled]
+  - separator "Resize sidebar"

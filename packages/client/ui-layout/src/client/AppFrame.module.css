@@ -10,6 +10,19 @@
   transition: grid-template-columns var(--ds-transition-duration-slow) var(--ds-ease-in-out);
 }
 
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  border: 0;
+  white-space: nowrap;
+}
+
 /* Dragging writes widths at pointer cadence; easing them would detach the
    column from the handle. */
 .frame[data-dragging] {
@@ -104,7 +117,7 @@
   opacity: 1;
 }
 
-.detailsCol:hover ~ .handle[data-side='details']::after,
+.frame:has(.detailsCol:hover) .handle[data-side='details']::after,
 .handle[data-side='details']:hover::after,
 .handle[data-side='details'][data-dragging='true']::after {
   opacity: 1;

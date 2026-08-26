@@ -50,10 +50,11 @@ describe('web e2e: cold blank Session visibility', () => {
 
   it('keeps the verified cold blank Session out of the sidebar', async () => {
     onTestFailed(() => saveFailureShot(page, 'web-e2e-cold-blank-session'))
-    const tree = page.getByRole('tree', { name: 'Sessions' })
-    await tree.waitFor({ timeout: 30_000 })
-    expect(await tree.getByText(WORKSPACE_NAME, { exact: true }).count()).toBe(0)
-    const sidebar = await captureStableAria(page, '[role="tree"][aria-label="Sessions"]', scaffold.workspaceCwd)
+    const list = page.locator('[data-session-list]')
+    await list.getByText('No sessions yet', { exact: true }).waitFor({ timeout: 30_000 })
+    expect(await page.getByRole('tree', { name: 'Sessions' }).count()).toBe(0)
+    expect(await list.getByText(WORKSPACE_NAME, { exact: true }).count()).toBe(0)
+    const sidebar = await captureStableAria(page, '[data-session-list]', scaffold.workspaceCwd)
     await compareOrRefreshGolden(SIDEBAR_EXPECTED, sidebar, MODE)
     expect(tripwire.pageErrors).toEqual([])
   })

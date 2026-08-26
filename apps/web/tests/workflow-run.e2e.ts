@@ -77,13 +77,13 @@ describe.skipIf(MODE === 'record')('web e2e: durable workflow run in Chat', () =
 
     const workflow = page.locator('[data-workflow-run][data-run-status="running"]')
     await workflow.waitFor({ timeout: 30_000 })
-    const disclosures = workflow.locator('[data-disclosure-row]')
+    const disclosures = workflow.locator('[data-disclosure-row] > button[aria-expanded]')
     await disclosures.nth(1).waitFor({ timeout: 15_000 })
     const runDisclosure = disclosures.nth(0)
     const phaseDisclosure = disclosures.nth(1)
-    expect(await runDisclosure.getAttribute('role')).toBe('button')
+    expect(await runDisclosure.evaluate(element => element.tagName)).toBe('BUTTON')
     expect(await runDisclosure.getAttribute('aria-expanded')).toBe('true')
-    expect(await phaseDisclosure.getAttribute('role')).toBe('button')
+    expect(await phaseDisclosure.evaluate(element => element.tagName)).toBe('BUTTON')
     expect(await phaseDisclosure.getAttribute('aria-expanded')).toBe('true')
     expect(await runDisclosure.evaluate(element => getComputedStyle(element).cursor)).toBe('pointer')
     expect(await phaseDisclosure.evaluate(element => getComputedStyle(element).cursor)).toBe('pointer')
@@ -117,7 +117,7 @@ describe.skipIf(MODE === 'record')('web e2e: durable workflow run in Chat', () =
       const disclosures = element.querySelectorAll('[data-disclosure-row]')
       const runHeader = disclosures[0]
       const phaseHeader = disclosures[1]
-      const phaseTitle = phaseHeader?.children.item(1) as HTMLElement | null
+      const phaseTitle = phaseHeader?.querySelector('[class*="phaseTitle"]') as HTMLElement | null
       const phaseStatus = element.querySelector('[data-phase-status-text]')
       const originalPhaseTitle = phaseTitle?.textContent ?? ''
       if (phaseTitle !== null) phaseTitle.textContent = 'A phase name long enough to require ellipsis in the narrow layout'

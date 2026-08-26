@@ -1,4 +1,5 @@
 - main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy":
     - button "Use the bash tool to" [disabled]
   - img
@@ -17,25 +18,16 @@
         - button "Copy":
           - img
       - article:
-        - button "Context injection @deepseek-ai/dsh-system-prompt":
-          - img
-          - img
-          - text: Context injection @deepseek-ai/dsh-system-prompt
+        - button "Context injection @deepseek-ai/dsh-system-prompt"
       - article "Agent response":
-        - button "Think The user wants me to run a simple bash command and reply with \"DONE\".":
-          - img
-          - img
-          - text: Think The user wants me to run a simple bash command and reply with "DONE".
+        - button "Think The user wants me to run a simple bash command and reply with \"DONE\"."
       - article:
         - button "Bash Echo the test string":
           - img
           - img
           - text: Bash Echo the test string
       - article "Agent response":
-        - button "Think The command executed successfully and output \"WEB_E2E_OK\". I just need to reply with \"DONE\".":
-          - img
-          - img
-          - text: Think The command executed successfully and output "WEB_E2E_OK". I just need to reply with "DONE".
+        - button "Think The command executed successfully and output \"WEB_E2E_OK\". I just need to reply with \"DONE\"."
         - paragraph: DONE
       - article:
         - button "Copy":
@@ -57,3 +49,4 @@
   - button "6% of context used"
   - button "Send message" [disabled]
   - text: 1 turns · 2 steps LLM {{duration}} · Tool call {{duration}} TTFT avg {{duration}} · {{throughput}} tok/s Cache hit 99% Input 15.7K tok · Output 111 tok
+  - separator "Resize sidebar"

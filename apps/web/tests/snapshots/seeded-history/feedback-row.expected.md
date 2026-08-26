@@ -1,4 +1,5 @@
 - main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy":
     - button "Use the read tool twice" [disabled]
   - button "Session log":
@@ -14,27 +15,15 @@
         - button "Copy":
           - img
       - article "Agent response":
-        - button "Think The user wants me to read a.txt and b.txt, then reply with \"DONE\". Let me do both reads in parallel.":
-          - img
-          - img
-          - text: Think The user wants me to read a.txt and b.txt, then reply with "DONE". Let me do both reads in parallel.
+        - button "Think The user wants me to read a.txt and b.txt, then reply with \"DONE\". Let me do both reads in parallel."
       - article:
-        - button "Read a.txt":
-          - img
-          - img
-          - text: Read
-          - button "a.txt"
+        - button "Read a.txt"
+        - button "a.txt"
       - article:
-        - button "Read b.txt":
-          - img
-          - img
-          - text: Read
-          - button "b.txt"
+        - button "Read b.txt"
+        - button "b.txt"
       - article "Agent response":
-        - button "Think Both files have been read. a.txt contains \"alpha\" and b.txt contains \"beta\". I'll now reply with DONE as instructed.":
-          - img
-          - img
-          - text: Think Both files have been read. a.txt contains "alpha" and b.txt contains "beta". I'll now reply with DONE as instructed.
+        - button "Think Both files have been read. a.txt contains \"alpha\" and b.txt contains \"beta\". I'll now reply with DONE as instructed."
         - paragraph: DONE
       - article:
         - button "Copy":
@@ -50,17 +39,10 @@
         - button "compact Compacted 5 history items (~{{tokens}} tokens)"
       - article
       - article:
-        - button "Context injection AGENTS.md":
-          - img
-          - img
-          - text: Context injection AGENTS.md
+        - button "Context injection AGENTS.md"
+      - article: permission preset read-only
       - article:
-        - img
-        - text: permission preset read-only
-      - article:
-        - 'button "feedback Feedback recorded for session {{seededId}} Anonymous user: {{uuid}}. Session sharing is not configured." [expanded]':
-          - img
-          - text: "feedback Feedback recorded for session {{seededId}} Anonymous user: {{uuid}}. Session sharing is not configured."
+        - 'button "feedback Feedback recorded for session {{seededId}} Anonymous user: {{uuid}}. Session sharing is not configured." [expanded]'
         - text: "Feedback recorded for session {{seededId}} Anonymous user: {{uuid}}. Session sharing is not configured."
   - textbox "Message the agent"
   - button "Commands":
@@ -71,3 +53,4 @@
     - img
   - button "Send message" [disabled]
   - text: 1 turns · 2 steps LLM {{duration}} · Tool call {{duration}} TTFT avg {{duration}} · {{throughput}} tok/s Cache hit 98% Input 15.8K tok · Output 135 tok
+  - separator "Resize sidebar"

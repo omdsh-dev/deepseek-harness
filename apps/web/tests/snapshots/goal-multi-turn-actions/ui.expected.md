@@ -1,4 +1,5 @@
 - main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy":
     - button "workspace" [disabled]
   - img
@@ -15,79 +16,49 @@
       - article:
         - group "Command input": /goal 做两个turn，每个turn输出随机一个包的文件结构。注意你做完一个turn之后，直接输出内容，停止，我们的系统会帮你再开一个turn，你看着做一个类似的
       - article:
-        - 'button "goal Goal created Status: active Objective: 做两个turn，每个turn输出随机一个包的文件结构。注意你做完一个turn之后，直接输出内容，停止，我们的系统会帮你再开一个turn，你看着做一个类似的 Rounds: 0/256 Activation: armed Commands: /goal edit <objective>, /goal pause, /goal clear"':
-          - img
-          - img
-          - text: "goal Goal created Status: active Objective: 做两个turn，每个turn输出随机一个包的文件结构。注意你做完一个turn之后，直接输出内容，停止，我们的系统会帮你再开一个turn，你看着做一个类似的 Rounds: 0/256 Activation: armed Commands: /goal edit <objective>, /goal pause, /goal clear"
+        - 'button "goal Goal created Status: active Objective: 做两个turn，每个turn输出随机一个包的文件结构。注意你做完一个turn之后，直接输出内容，停止，我们的系统会帮你再开一个turn，你看着做一个类似的 Rounds: 0/256 Activation: armed Commands: /goal edit <objective>, /goal pause, /goal clear"'
       - article:
-        - button "Context injection goal":
-          - img
-          - img
-          - text: Context injection goal
+        - button "Context injection goal"
       - article:
-        - button "Context injection @deepseek-ai/dsh-system-prompt":
-          - img
-          - img
-          - text: Context injection @deepseek-ai/dsh-system-prompt
+        - button "Context injection @deepseek-ai/dsh-system-prompt"
       - article "Agent response":
-        - 'button "Think The user''s goal is: \"做两个turn，每个turn输出随机一个包的文件结构。注意你做完一个turn之后，直接输出内容，停止，我们的系统会帮你再开一个turn，你看着做一个类似的\" — which translates to: \"Do two turns, each turn output the file structure of a random package. Note that after you finish one turn, directly output the content and stop; our system will help you open another turn, and you just do something similar.\""':
-          - img
-          - img
-          - text: "Think The user's goal is: \"做两个turn，每个turn输出随机一个包的文件结构。注意你做完一个turn之后，直接输出内容，停止，我们的系统会帮你再开一个turn，你看着做一个类似的\" — which translates to: \"Do two turns, each turn output the file structure of a random package. Note that after you finish one turn, directly output the content and stop; our system will help you open another turn, and you just do something similar.\""
+        - 'button "Think The user''s goal is: \"做两个turn，每个turn输出随机一个包的文件结构。注意你做完一个turn之后，直接输出内容，停止，我们的系统会帮你再开一个turn，你看着做一个类似的\" — which translates to: \"Do two turns, each turn output the file structure of a random package. Note that after you finish one turn, directly output the content and stop; our system will help you open another turn, and you just do something similar.\""'
       - article:
         - button "Bash Show working directory and its contents":
           - img
           - img
           - text: Bash Show working directory and its contents
       - article:
-        - 'button "Tool call get_goal · {}"':
-          - img
-          - img
-          - text: "Tool call get_goal · {}"
+        - 'button "Tool call get_goal · {}"'
       - article "Agent response":
-        - 'button "Think There''s a `packages` directory. Let me look inside to see what packages are available."':
-          - img
-          - img
-          - text: "Think There's a `packages` directory. Let me look inside to see what packages are available."
+        - 'button "Think There''s a `packages` directory. Let me look inside to see what packages are available."'
       - article:
         - button "Bash List packages directory contents":
           - img
           - img
           - text: Bash List packages directory contents
       - article "Agent response":
-        - button "Think There are 4 packages:":
-          - img
-          - img
-          - text: "Think There are 4 packages:"
+        - button "Think There are 4 packages:"
       - article:
         - button "Failed Bash Randomly pick one package directory":
           - img
           - text: Failed Bash Randomly pick one package directory
       - article "Agent response":
-        - 'button "Think shuf is not available on macOS. I''ll use a different approach for random selection. Let me use $RANDOM in bash or use `sort -R` or Python."':
-          - img
-          - img
-          - text: "Think shuf is not available on macOS. I'll use a different approach for random selection. Let me use $RANDOM in bash or use `sort -R` or Python."
+        - 'button "Think shuf is not available on macOS. I''ll use a different approach for random selection. Let me use $RANDOM in bash or use `sort -R` or Python."'
       - article:
         - button "Bash Randomly select one package with Python":
           - img
           - img
           - text: Bash Randomly select one package with Python
       - article "Agent response":
-        - 'button "Think The random pick for turn 1 is `packages/context/session-reference`. Now I''ll output its file structure. Let me get the file tree."':
-          - img
-          - img
-          - text: "Think The random pick for turn 1 is `packages/context/session-reference`. Now I'll output its file structure. Let me get the file tree."
+        - 'button "Think The random pick for turn 1 is `packages/context/session-reference`. Now I''ll output its file structure. Let me get the file tree."'
       - article:
         - button "Bash List all files in session-reference package":
           - img
           - img
           - text: Bash List all files in session-reference package
       - article "Agent response":
-        - 'button "Think Turn 1 is done. Per the objective: \"你做完一个turn之后，直接输出内容，停止\" — after finishing a turn, directly output the content and stop. The system will open another turn."':
-          - img
-          - img
-          - text: "Think Turn 1 is done. Per the objective: \"你做完一个turn之后，直接输出内容，停止\" — after finishing a turn, directly output the content and stop. The system will open another turn."
+        - 'button "Think Turn 1 is done. Per the objective: \"你做完一个turn之后，直接输出内容，停止\" — after finishing a turn, directly output the content and stop. The system will open another turn."'
         - paragraph:
           - strong: Turn 1 / 2
           - text: — 随机选中的包：
@@ -109,25 +80,16 @@
           - img
         - text: {{clock}} Ran for {{duration}} TTFT {{duration}} {{throughput}} tok/s
       - article:
-        - button "Context injection goal":
-          - img
-          - img
-          - text: Context injection goal
+        - button "Context injection goal"
       - article "Agent response":
-        - 'button "Think This is turn 2 of 2. I need to randomly pick another package and output its file structure. In the first turn I picked `packages/context/session-reference`. Let me pick a different one randomly this time."':
-          - img
-          - img
-          - text: "Think This is turn 2 of 2. I need to randomly pick another package and output its file structure. In the first turn I picked `packages/context/session-reference`. Let me pick a different one randomly this time."
+        - 'button "Think This is turn 2 of 2. I need to randomly pick another package and output its file structure. In the first turn I picked `packages/context/session-reference`. Let me pick a different one randomly this time."'
       - article:
         - button "Bash Randomly select another package with Python":
           - img
           - img
           - text: Bash Randomly select another package with Python
       - article "Agent response":
-        - 'button "Think The random pick returned the same package as turn 1. Since turn 1 already covered `session-reference`, it would be better to pick a different one for variety. Let me re-roll, excluding the already-covered package."':
-          - img
-          - img
-          - text: "Think The random pick returned the same package as turn 1. Since turn 1 already covered `session-reference`, it would be better to pick a different one for variety. Let me re-roll, excluding the already-covered package."
+        - 'button "Think The random pick returned the same package as turn 1. Since turn 1 already covered `session-reference`, it would be better to pick a different one for variety. Let me re-roll, excluding the already-covered package."'
       - article:
         - button "Bash Re-roll excluding the package from turn 1":
           - img
@@ -139,10 +101,7 @@
           - img
           - text: Bash List all files in token-meter package
       - article "Agent response":
-        - 'button "Think This is turn 2 of 2. I''ve output the file structure for `packages/llm/token-meter`. Both turns are done. I should output the content, stop, and then mark the goal as complete since both turns are finished."':
-          - img
-          - img
-          - text: "Think This is turn 2 of 2. I've output the file structure for `packages/llm/token-meter`. Both turns are done. I should output the content, stop, and then mark the goal as complete since both turns are finished."
+        - 'button "Think This is turn 2 of 2. I''ve output the file structure for `packages/llm/token-meter`. Both turns are done. I should output the content, stop, and then mark the goal as complete since both turns are finished."'
         - paragraph:
           - strong: Turn 2 / 2
           - text: — 随机选中的包：
@@ -159,22 +118,13 @@
           - code: token-meter
           - text: ）。这一轮到此结束。
       - article:
-        - 'button "Tool call get_goal · {}"':
-          - img
-          - img
-          - text: "Tool call get_goal · {}"
+        - 'button "Tool call get_goal · {}"'
       - article "Agent response":
         - paragraph: 两个 turn 均已完成，目标达成，标记 goal 为完成。
       - article:
-        - button "Tool call update_goal · goal-{{uuid}}":
-          - img
-          - img
-          - text: Tool call update_goal · goal-{{uuid}}
+        - button "Tool call update_goal · goal-{{uuid}}"
       - article:
-        - 'button "Context injection tool-goal complete: 做两个turn，每个turn输出随机一个包的文件结构。注意你做完一个turn之后，直接输出内容，停止，我们的系统会帮你再开一个turn，你看着做一个类似的"':
-          - img
-          - img
-          - text: "Context injection tool-goal complete: 做两个turn，每个turn输出随机一个包的文件结构。注意你做完一个turn之后，直接输出内容，停止，我们的系统会帮你再开一个turn，你看着做一个类似的"
+        - 'button "Context injection tool-goal complete: 做两个turn，每个turn输出随机一个包的文件结构。注意你做完一个turn之后，直接输出内容，停止，我们的系统会帮你再开一个turn，你看着做一个类似的"'
       - article "Agent response":
         - paragraph: 两个 turn 都完成了 ✅
         - paragraph:
@@ -245,3 +195,4 @@
   - button "9% of context used"
   - button "Send message" [disabled]
   - text: 2 turns · 12 steps LLM {{duration}} · Tool call {{duration}} TTFT avg {{duration}} · {{throughput}} tok/s Cache hit 91% Input 113K tok · Output 2.4K tok
+  - separator "Resize sidebar"

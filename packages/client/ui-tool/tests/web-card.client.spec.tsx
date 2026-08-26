@@ -137,7 +137,7 @@ describe('chat row web body', () => {
 
   /** The whole summary row is the expand toggle (ToolRow's unified interaction). */
   const toggleRow = (view: { container: HTMLElement }) => {
-    fireEvent.click(view.container.querySelector('[data-expandable]')!)
+    fireEvent.click(view.container.querySelector('[data-expandable] > button[aria-expanded]')!)
   }
 
   it('the WebRow collapses to the summary row, expanding to the full search card', () => {

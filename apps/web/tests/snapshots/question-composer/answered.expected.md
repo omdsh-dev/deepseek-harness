@@ -1,4 +1,5 @@
 - main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy":
     - button "Use the ask_user_question tool to" [disabled]
   - img
@@ -17,25 +18,13 @@
         - button "Copy":
           - img
       - article:
-        - button "Context injection @deepseek-ai/dsh-system-prompt":
-          - img
-          - img
-          - text: Context injection @deepseek-ai/dsh-system-prompt
+        - button "Context injection @deepseek-ai/dsh-system-prompt"
       - article "Agent response":
-        - button "Think The user wants me to use the ask_user_question tool with specific parameters. Let me do exactly that.":
-          - img
-          - img
-          - text: Think The user wants me to use the ask_user_question tool with specific parameters. Let me do exactly that.
+        - button "Think The user wants me to use the ask_user_question tool with specific parameters. Let me do exactly that."
       - article:
-        - button "Ask question 1/1 answered":
-          - img
-          - img
-          - text: Ask question 1/1 answered
+        - button "Ask question 1/1 answered"
       - article "Agent response":
-        - button "Think The user answered \"Blue\". I should now reply with the single word DONE and stop.":
-          - img
-          - img
-          - text: Think The user answered "Blue". I should now reply with the single word DONE and stop.
+        - button "Think The user answered \"Blue\". I should now reply with the single word DONE and stop."
         - paragraph: DONE
       - article:
         - button "Copy":
@@ -57,3 +46,4 @@
   - button "3% of context used"
   - button "Send message" [disabled]
   - text: 1 turns · 2 steps LLM {{duration}} · Tool call {{duration}} TTFT avg {{duration}} · {{throughput}} tok/s Cache hit 95% Input 8.6K tok · Output 180 tok
+  - separator "Resize sidebar"

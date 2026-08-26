@@ -802,9 +802,11 @@ describe('WorkspaceBrowser', () => {
     try {
       const b = mount()
       expect(screen.getByText('暂无会话')).toBeTruthy()
+      expect(screen.queryByRole('tree', { name: '会话' })).toBeNull()
       b.store.actions.setGroupBy('flat')
       rerender(b, {})
       expect(screen.getByText('暂无会话')).toBeTruthy()
+      expect(screen.queryByRole('tree', { name: '会话' })).toBeNull()
       fireEvent.change(screen.getByPlaceholderText('搜索会话…'), { target: { value: 'x' } })
       expect(screen.getByText('正在搜索会话历史…')).toBeTruthy()
       await act(async () => { await vi.advanceTimersByTimeAsync(250) })

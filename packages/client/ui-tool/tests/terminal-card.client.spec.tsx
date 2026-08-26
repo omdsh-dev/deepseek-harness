@@ -247,7 +247,7 @@ describe('chat row terminal body', () => {
 
   /** The whole summary row is the expand toggle (ToolRow's unified interaction). */
   const toggleRow = (view: { container: HTMLElement }) => {
-    fireEvent.click(view.container.querySelector('[data-expandable]')!)
+    fireEvent.click(view.container.querySelector('[data-expandable] > button[aria-expanded]')!)
   }
 
   it('the expanded body is the command output inside the row scroll container', () => {
