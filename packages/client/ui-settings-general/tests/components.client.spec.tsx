@@ -6,6 +6,7 @@ import type { GeneralSectionComponentProps } from '../src/client/GeneralSection.
 import { GeneralSection } from '../src/client/GeneralSection.tsx'
 import { CloseLabel, HeaderContent, TriggerContent } from '../src/client/chrome.tsx'
 import type { TriggerContentProps } from '../src/client/chrome.tsx'
+import css from '../src/client/chrome.module.css'
 import { SettingsDocumentAction } from '../src/client/SettingsDocumentAction.tsx'
 import { SettingsDescribeMirror } from '@deepseek-ai/dsh-client-ui-settings/src/client/settings-mirror.ts'
 import { SettingsDocumentStore } from '../src/client/settings-document-store.ts'
@@ -34,10 +35,10 @@ describe('chrome content', () => {
     expect(screen.getByText('Settings')).toBeTruthy()
   })
 
-  it('TriggerContent drops the label in the rail state', () => {
+  it('TriggerContent visually hides but retains the label in the rail state', () => {
     const { container } = render(<TriggerContent {...kit} wide={false} t={t} />)
     expect(container.querySelector('svg')).toBeTruthy()
-    expect(screen.queryByText('Settings')).toBeNull()
+    expect(screen.getByText('Settings').className).toBe(css.hiddenLabel)
   })
 
   it('HeaderContent and CloseLabel render their translated text', () => {

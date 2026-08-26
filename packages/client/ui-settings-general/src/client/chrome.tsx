@@ -1,6 +1,8 @@
 /**
  * Shell chrome content registered into the shell's trigger/header seats: the
- * trigger row icon + label (figma sidebar foot) and the panel title text.
+ * trigger row icon + label (figma sidebar foot) and the panel title text. The
+ * label remains visually hidden in the rail so the surrounding button keeps
+ * its accessible name.
  * The shell renders the surrounding chrome (button, nav heading row) and
  * reads each entry's `label` option for aria text.
  */
@@ -15,7 +17,7 @@ export type TriggerContentProps = PropsRuntime<'settings.trigger'> & PropsLocale
 export type HeaderContentProps = PropsRuntime<'settings.header'> & PropsLocale<'settings'>
 
 /**
- * Render the trigger row content (icon; label only in the wide column).
+ * Render the trigger row content (icon; visible label only in the wide column).
  * @param props - composed slot props.
  * @returns the trigger content fragment.
  */
