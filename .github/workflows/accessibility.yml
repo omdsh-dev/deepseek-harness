@@ -74,6 +74,11 @@ jobs:
       - name: Install Playwright Chromium
         run: pnpm --filter @deepseek-ai/dsh-web-frontend exec playwright install --with-deps chromium
 
+      - name: Install sandbox backend
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes bubblewrap
+
       - name: Replay browser snapshots
         env:
           DSH_SNAPSHOT: replay

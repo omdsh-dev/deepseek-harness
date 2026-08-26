@@ -1157,8 +1157,11 @@ export function WorkspaceBrowser({
               className={clsx(css.search, searchExpanded && css.searchExpanded)}
               onClick={() => {
                 setWsPickerOpen(false)
-                setSearchExpanded(true)
-                searchInput.current?.focus()
+                if (searchExpanded) {
+                  searchInput.current?.focus()
+                } else {
+                  setSearchExpanded(true)
+                }
               }}
             >
               <Tooltip label={t('search')} side="bottom" delayMs={500} disabled={searchExpanded}>
@@ -1181,6 +1184,7 @@ export function WorkspaceBrowser({
                 className={css.searchInput}
                 type="text"
                 aria-label={t('search.placeholder')}
+                aria-hidden={searchExpanded ? undefined : true}
                 placeholder={t('search.placeholder')}
                 maxLength={SEARCH_QUERY_MAX_CODE_UNITS}
                 value={query}

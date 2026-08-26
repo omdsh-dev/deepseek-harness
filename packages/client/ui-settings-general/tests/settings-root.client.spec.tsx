@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import type { SettingsRootComponentProps } from '../src/client/shell-contract.ts'
 import { SettingsRoot } from '../src/client/SettingsRoot.tsx'
+import { TriggerContent, type TriggerContentProps } from '../src/client/chrome.tsx'
 
 afterEach(cleanup)
 
@@ -94,6 +95,16 @@ describe('SettingsRoot trigger', () => {
   it('hands the rail state to the trigger seat', () => {
     const { renderSlot } = mount({ wide: false })
     expect(renderSlot).toHaveBeenCalledWith('settings.trigger', { wide: false })
+  })
+
+  it('keeps the rail trigger named when its visible label is hidden', () => {
+    render(
+      <button type="button">
+        <TriggerContent {...({ wide: false, t: () => 'Settings' } as TriggerContentProps)} />
+      </button>,
+    )
+
+    expect(screen.getByRole('button', { name: 'Settings' })).toBeTruthy()
   })
 })
 
