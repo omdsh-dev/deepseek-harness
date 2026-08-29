@@ -3,6 +3,10 @@ import type { KeyboardEvent } from 'react'
 /**
  * Own horizontal tab-list movement and move DOM focus with the active tab.
  * The caller supplies the non-empty ordered tab ledger and its activation rule.
+ * @param event - Keyboard event raised by the currently focused tab.
+ * @param tabs - Non-empty ordered tab ledger rendered by the enclosing tablist.
+ * @param currentIndex - Index of the tab that currently owns DOM focus.
+ * @param activate - Consumer-owned activation operation for the destination tab.
  */
 export function moveHorizontalTabFocus<Item, Target extends HTMLElement>(
   event: KeyboardEvent<Target>,
