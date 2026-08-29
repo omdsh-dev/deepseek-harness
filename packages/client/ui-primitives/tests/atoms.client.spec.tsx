@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
+import { useState } from 'react'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { Button, ConnectionBanner, Input, Menu, Modal, Pill } from '@deepseek-ai/dsh-client-ui-primitives'
+import { Button, ConnectionBanner, Input, Menu, Modal, Pill, Tooltip } from '@deepseek-ai/dsh-client-ui-primitives'
 import { POINTER_GRACE_MS } from '../src/pointer-grace.ts'
 
 afterEach(cleanup)
@@ -87,6 +88,95 @@ describe('Menu', () => {
     expect(onClose).toHaveBeenCalledTimes(1)
     fireEvent.pointerDown(document.body)
     expect(onClose).toHaveBeenCalledTimes(2)
+  })
+
+  it('implements menu-button focus entry, roving arrow keys, typeahead, Tab exit, and Escape restoration', async () => {
+    function Harness() {
+      const [open, setOpen] = useState(false)
+      return (
+        <>
+          <Menu
+            open={open}
+            anchor={<button type="button" onClick={() => { setOpen(value => !value) }}>Choose</button>}
+            items={[
+              { id: 'a', label: 'Alpha' },
+              { id: 'b', label: 'Beta', disabled: true },
+              { id: 'g', label: 'Gamma' },
+            ]}
+            onSelect={() => { setOpen(false) }}
+            onClose={() => { setOpen(false) }}
+          />
+          <button type="button">After</button>
+        </>
+      )
+    }
+
+    render(<Harness />)
+    const trigger = screen.getByRole('button', { name: 'Choose' })
+    expect(trigger.getAttribute('aria-haspopup')).toBe('menu')
+    expect(trigger.getAttribute('aria-expanded')).toBe('false')
+    await act(async () => {
+      fireEvent.keyDown(trigger, { key: 'ArrowDown' })
+      await Promise.resolve()
+    })
+    const alpha = screen.getByRole('menuitem', { name: 'Alpha' })
+    const gamma = screen.getByRole('menuitem', { name: 'Gamma' })
+    expect(trigger.getAttribute('aria-controls')).toBe(screen.getByRole('menu').id)
+    expect(document.activeElement).toBe(alpha)
+    expect(alpha.tabIndex).toBe(-1)
+    fireEvent.keyDown(alpha, { key: 'ArrowDown' })
+    expect(document.activeElement).toBe(gamma)
+    fireEvent.keyDown(gamma, { key: 'Home' })
+    expect(document.activeElement).toBe(alpha)
+    fireEvent.keyDown(alpha, { key: 'g' })
+    expect(document.activeElement).toBe(gamma)
+    await act(async () => {
+      fireEvent.keyDown(gamma, { key: 'Escape' })
+      await Promise.resolve()
+    })
+    expect(screen.queryByRole('menu')).toBeNull()
+    expect(document.activeElement).toBe(trigger)
+
+    await act(async () => {
+      fireEvent.click(trigger)
+      await Promise.resolve()
+    })
+    const reopenedAlpha = screen.getByRole('menuitem', { name: 'Alpha' })
+    await act(async () => {
+      fireEvent.keyDown(reopenedAlpha, { key: 'Tab' })
+      await Promise.resolve()
+    })
+    expect(screen.queryByRole('menu')).toBeNull()
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'After' }))
+  })
+
+  it('preserves the menu-button contract through a Tooltip anchor', async () => {
+    function Harness() {
+      const [open, setOpen] = useState(false)
+      return (
+        <Menu
+          open={open}
+          anchor={(
+            <Tooltip label="Choose an item">
+              <button type="button" onClick={() => { setOpen(value => !value) }}>Choose</button>
+            </Tooltip>
+          )}
+          items={items}
+          onSelect={() => { setOpen(false) }}
+          onClose={() => { setOpen(false) }}
+        />
+      )
+    }
+
+    render(<Harness />)
+    const trigger = screen.getByRole('button', { name: 'Choose' })
+    expect(trigger.getAttribute('aria-haspopup')).toBe('menu')
+    await act(async () => {
+      fireEvent.keyDown(trigger, { key: 'ArrowDown' })
+      await Promise.resolve()
+    })
+    expect(trigger.getAttribute('aria-controls')).toBe(screen.getByRole('menu').id)
+    expect(document.activeElement).toBe(screen.getByRole('menuitem', { name: 'Alpha' }))
   })
 
   it('inside pointerdown does not close', () => {
@@ -280,6 +370,34 @@ describe('Menu', () => {
     expect(screen.queryByRole('menuitem', { name: 'Create ok' })).toBeNull()
   })
 
+  it('enters and leaves a submenu with ArrowRight and ArrowLeft', async () => {
+    render(
+      <Menu
+        open
+        anchor={<button type="button">trigger</button>}
+        items={[
+          { id: 'plain', label: 'Plain' },
+          { id: 'parent', label: 'Parent', submenu: [{ id: 'child', label: 'Child' }] },
+        ]}
+        onSelect={() => {}}
+        onClose={() => {}}
+      />)
+    const parent = screen.getByRole('menuitem', { name: 'Parent' })
+    parent.focus()
+    await act(async () => {
+      fireEvent.keyDown(parent, { key: 'ArrowRight' })
+      await Promise.resolve()
+    })
+    const child = screen.getByRole('menuitem', { name: 'Child' })
+    expect(document.activeElement).toBe(child)
+    await act(async () => {
+      fireEvent.keyDown(child, { key: 'ArrowLeft' })
+      await Promise.resolve()
+    })
+    expect(screen.queryByRole('menuitem', { name: 'Child' })).toBeNull()
+    expect(document.activeElement).toBe(parent)
+  })
+
   it('portal mode prefers getAnchorRect over measuring its own wrapper', () => {
     const rect = { left: 40, right: 72, top: 100, bottom: 128, width: 32, height: 28, x: 40, y: 100, toJSON: () => ({}) } as DOMRect
     render(
@@ -409,13 +527,110 @@ describe('Modal', () => {
 
   it('renders headless content without the default close chrome', () => {
     render(
-      <Modal open onClose={() => {}} title="Custom surface" headless>
-        <span>Custom body</span>
+      <Modal open onClose={() => {}} title="Custom surface" labelledBy="custom-title" headless>
+        <h2 id="custom-title">Custom body</h2>
       </Modal>,
     )
-    expect(screen.getByRole('dialog', { name: 'Custom surface' })).toBeDefined()
+    expect(screen.getByRole('dialog', { name: 'Custom body' })).toBeDefined()
     expect(screen.getByText('Custom body')).toBeDefined()
     expect(screen.queryByRole('button')).toBeNull()
+  })
+
+  it('contains focus, makes the app inert, and restores the opening control', () => {
+    const appRoot = document.createElement('div')
+    appRoot.id = 'root'
+    const opener = document.createElement('button')
+    appRoot.append(opener)
+    document.body.append(appRoot)
+    opener.focus()
+
+    const { rerender } = render(
+      <Modal open onClose={() => {}} title="Focusable dialog" closeLabel="Close">
+        <input autoFocus aria-label="First" />
+        <button type="button">Last</button>
+      </Modal>,
+    )
+    const first = screen.getByRole('textbox', { name: 'First' })
+    const last = screen.getByRole('button', { name: 'Last' })
+    const dialogFirst = screen.getByRole('button', { name: 'Close' })
+    expect(appRoot.inert).toBe(true)
+    expect(document.activeElement).toBe(first)
+
+    dialogFirst.focus()
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true })
+    expect(document.activeElement).toBe(last)
+    fireEvent.keyDown(document, { key: 'Tab' })
+    expect(document.activeElement).toBe(dialogFirst)
+
+    first.focus()
+    expect(fireEvent.keyDown(document, { key: 'Tab' })).toBe(true)
+    expect(document.activeElement).toBe(first)
+    opener.focus()
+    fireEvent.keyDown(document, { key: 'Tab' })
+    expect(document.activeElement).toBe(dialogFirst)
+    opener.focus()
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true })
+    expect(document.activeElement).toBe(last)
+
+    rerender(<Modal open={false} onClose={() => {}} title="Focusable dialog" closeLabel="Close" />)
+    expect(appRoot.inert).not.toBe(true)
+    expect(document.activeElement).toBe(opener)
+    appRoot.remove()
+  })
+
+  it('does not try to restore a removed opening control', () => {
+    const opener = document.createElement('button')
+    document.body.append(opener)
+    opener.focus()
+    const { rerender } = render(
+      <Modal open onClose={() => {}} title="Detached opener" closeLabel="Close">
+        <button type="button">Action</button>
+      </Modal>,
+    )
+    opener.remove()
+    expect(() => {
+      rerender(<Modal open={false} onClose={() => {}} title="Detached opener" closeLabel="Close" />)
+    }).not.toThrow()
+    expect(document.activeElement).not.toBe(opener)
+  })
+
+  it('keeps focus on the dialog when it has no tabbable descendants', () => {
+    render(
+      <Modal open onClose={() => {}} title="Empty dialog" headless>
+        <span>Nothing actionable</span>
+      </Modal>,
+    )
+    const dialog = screen.getByRole('dialog', { name: 'Empty dialog' })
+    expect(document.activeElement).toBe(dialog)
+
+    fireEvent.keyDown(document, { key: 'Tab' })
+    expect(document.activeElement).toBe(dialog)
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true })
+    expect(document.activeElement).toBe(dialog)
+  })
+
+  it('lets only the topmost nested dialog handle Escape and mask clicks', () => {
+    const closeOuter = vi.fn()
+    const closeInner = vi.fn()
+    render(
+      <>
+        <Modal open onClose={closeOuter} title="Outer" closeLabel="Close outer">
+          <button type="button">Outer action</button>
+        </Modal>
+        <Modal open onClose={closeInner} title="Inner" closeLabel="Close inner">
+          <button type="button">Inner action</button>
+        </Modal>
+      </>,
+    )
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(closeInner).toHaveBeenCalledTimes(1)
+    expect(closeOuter).not.toHaveBeenCalled()
+
+    const masks = document.querySelectorAll<HTMLElement>('[aria-hidden="true"]')
+    fireEvent.click(masks[0]!)
+    expect(closeOuter).not.toHaveBeenCalled()
+    fireEvent.click(masks[1]!)
+    expect(closeInner).toHaveBeenCalledTimes(2)
   })
 })
 

@@ -1,4 +1,5 @@
-- banner:
+- main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy":
     - button "Markdown image policy" [disabled]
   - button "Session log":
@@ -7,29 +8,30 @@
   - tablist:
     - tab "Chat" [selected]
     - tab "Trajectory"
-- text: Show the Markdown image policy. {{clock}}
-- button "Copy":
-  - img
-- heading "Markdown images" [level=2]
-- paragraph:
-  - img "Remote test image"
-- paragraph: Local test image
-- paragraph: REMOTE_IMAGE_DONE
-- button "Copy":
-  - img
-- button "Good response":
-  - img
-- button "Bad response":
-  - img
-- button "Branch into a new conversation":
-  - img
-- text: {{clock}} Ran for {{duration}}
-- textbox "Message or run a task... / commands, @ files or sessions"
-- button "Commands":
-  - img
-- 'button "Access mode, current: Workspace Write"': Workspace Write
-- button "Select model, current DeepSeek-V4-Flash":
-  - text: DeepSeek-V4-Flash
-  - img
-- button "Send message" [disabled]
-- text: 1 turns · 1 steps LLM {{duration}}
+  - text: Show the Markdown image policy. {{clock}}
+  - button "Copy":
+    - img
+  - heading "Markdown images" [level=2]
+  - paragraph:
+    - img "Remote test image"
+  - paragraph: Local test image
+  - paragraph: REMOTE_IMAGE_DONE
+  - button "Copy":
+    - img
+  - button "Good response":
+    - img
+  - button "Bad response":
+    - img
+  - button "Branch into a new conversation":
+    - img
+  - text: {{clock}} Ran for {{duration}}
+  - textbox "Message or run a task... / commands, @ files or sessions"
+  - button "Commands":
+    - img
+  - 'button "Access mode, current: Workspace Write"': Workspace Write
+  - button "Select model, current DeepSeek-V4-Flash":
+    - text: DeepSeek-V4-Flash
+    - img
+  - button "Send message" [disabled]
+  - text: 1 turns · 1 steps LLM {{duration}}
+  - separator "Resize session navigation"

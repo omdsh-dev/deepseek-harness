@@ -1,0 +1,45 @@
+# Agent Note: Web accessibility interaction ownership
+
+Status: implemented
+
+English | [中文](2026-08-29-web-accessibility-interaction-ownership.zh.md)
+
+## Problem
+
+Several shared Web controls exposed accessibility roles without implementing the keyboard and focus behavior those roles promise. Modal dialogs did not contain or restore focus, menus exposed menu items as ordinary independent controls, layout separators were pointer-only, the application lacked stable named landmarks, a closed mounted Details subtree remained keyboard-reachable, and the context meter described a non-modal disclosure as a dialog. A companion plugin can diagnose rendered markup, but it cannot safely reconstruct component state, focus ownership, or nested dismissal timing after rendering.
+
+## Decision
+
+The core component that owns an interaction also owns its accessibility behavior. Optional accessibility plugins provide diagnostics, guidance, preferences, and authoring assistance through declared slots; they do not rewrite core interaction semantics through DOM observation. This division follows the [slot composition decision](../architecture/2026-07-22-slot-type-chain-implementation.md): replacement behavior stays with the component that owns the slot, while additive behavior registers through declared child slots.
+
+The shared `Modal` primitive maintains a stack of open dialogs, makes `#root` inert while that stack is non-empty, chooses initial focus, contains forward and reverse Tab traversal, gives Escape and mask dismissal only to the topmost dialog, and restores focus to a connected opening control. A dialog with no tabbable descendant retains focus on its dialog container. A visible heading can name headless content through `aria-labelledby`; the ordinary variant retains its localized close control.
+
+The shared `Menu` primitive implements the menu-button relationship for an inline anchor and accepts an explicit name and return-focus reference for an externally rendered anchor. Arrow Up or Down opens at the corresponding edge; Arrow keys, Home, End, and typeahead move among enabled items in the current menu; Right and Left enter and leave submenus; Escape closes one level or the root menu; Tab exits in its requested direction instead of visiting every menu item. Selection and root dismissal return focus unless the selected action has deliberately moved it elsewhere.
+
+The application shell renders the conversation column as `main` with one localized level-one application heading. Session navigation and open Session details are named complementary landmarks. Closed Details content remains mounted for state continuity but is inert and absent from the accessibility tree. Both visible resize handles are named, focusable vertical separators with range and current-value metadata; Left and Right resize according to the panel's physical edge, Home selects the minimum width, End selects the maximum width, and Shift applies a larger step. Shell overlays and separators remain inside the main landmark.
+
+The context meter implements a disclosure relationship. Its trigger exposes expanded state and controls a stable panel id; the open panel is a named information region rather than a modal dialog. Escape, an outside pointer action, or activating the trigger again closes it without moving focus into the panel.
+
+## Alternatives considered
+
+**Repair the rendered application from a companion plugin.** Rejected because a MutationObserver would infer ownership from unstable markup, race React commits, duplicate private state, and remain unable to guarantee nested focus restoration or authoritative disclosure changes.
+
+**Give every menu item an ordinary Tab stop.** Rejected because a long menu would dominate sequential navigation and contradict the composite `menu` interaction pattern. Roving focus preserves one sequential entry while arrow keys operate the collection.
+
+**Unmount Details whenever it closes.** Rejected because the shell intentionally preserves the subtree and its state. Applying `inert` and `aria-hidden` removes closed controls from navigation without changing that lifecycle.
+
+**Keep the context meter as a dialog.** Rejected because it neither takes focus nor blocks the application. A disclosure controlling a named region matches its interaction and avoids announcing modal behavior that does not exist.
+
+## Verification
+
+Seventy focused jsdom tests exercise modal stacking, initial and contained focus, background inertness, disconnected openers, empty dialogs, menu-button ownership including a Tooltip-wrapped trigger, edge opening, roving keys, typeahead, submenus, Tab exit, named landmarks, closed-Details exclusion, separator metadata and resizing, and context disclosure ownership. The complete GUI lane passes 288 files and 3,830 tests, with one test skipped by its existing condition.
+
+A production build followed by the assembled Web replay passes 92 of 93 files, with one conditionally skipped file; 311 tests pass and 15 are skipped. Reviewed accessibility-tree goldens add the application `main`, its level-one heading, named Session-navigation complementary landmark, keyboard separator, and named menu while removing controls from the already-collapsed Details subtree. Contract type checking, contract lint, and the Node 22 documentation lane also pass. These checks verify DOM, focus, built-composition, and browser accessibility-tree contracts; they do not certify spoken output or real assistive-technology operation.
+
+## Deferred
+
+This decision does not claim complete Web accessibility. Session and workspace trees, search focus, tabs, model selection, question forms, conversation log and completion announcements, tool disclosures, contrast and forced-colors behavior, zoom and reflow, reduced-motion behavior, browser coverage, and task-level VoiceOver, NVDA, JAWS, Narrator, and Orca evidence remain separately verified work.
+
+## Consequences
+
+Shared primitives and the shell carry explicit keyboard, focus, naming, and hidden-content state, including nested ownership that is more complex than pointer-only behavior. In return, the accessibility contract follows the same lifecycle and state authority as the visible interaction, works without an optional package, and can be regression-tested without selectors tied to presentation. Automated component checks remain necessary evidence but are insufficient for a complete accessibility claim.

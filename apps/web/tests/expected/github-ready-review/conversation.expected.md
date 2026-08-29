@@ -9,7 +9,8 @@
 
 ---
 
-- banner:
+- main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy":
     - button "Review deepseek-harness/deepseek-harness#314" [disabled]
   - img
@@ -20,29 +21,30 @@
   - tablist:
     - tab "Chat" [selected]
     - tab "Trajectory"
-- button "System prompt":
-  - img
-  - img
-  - text: System prompt
-- button "Thought for a while":
-  - text: Thought for a while
-  - img
-- paragraph: "Review complete: no actionable findings."
-- button "Copy":
-  - img
-- button "Good response":
-  - img
-- button "Bad response":
-  - img
-- button "Branch into a new conversation":
-  - img
-- text: {{clock}} Ran for {{duration}}
-- textbox "Message or run a task... / commands, @ files or sessions"
-- button "Commands":
-  - img
-- 'button "Access mode, current: Read Only"': Read Only
-- button "Select model, current github-webhook-review-test/reply":
-  - text: github-webhook-review-test/reply
-  - img
-- button "Send message" [disabled]
-- text: 1 turns · 1 steps LLM {{duration}}
+  - button "System prompt":
+    - img
+    - img
+    - text: System prompt
+  - button "Thought for a while":
+    - text: Thought for a while
+    - img
+  - paragraph: "Review complete: no actionable findings."
+  - button "Copy":
+    - img
+  - button "Good response":
+    - img
+  - button "Bad response":
+    - img
+  - button "Branch into a new conversation":
+    - img
+  - text: {{clock}} Ran for {{duration}}
+  - textbox "Message or run a task... / commands, @ files or sessions"
+  - button "Commands":
+    - img
+  - 'button "Access mode, current: Read Only"': Read Only
+  - button "Select model, current github-webhook-review-test/reply":
+    - text: github-webhook-review-test/reply
+    - img
+  - button "Send message" [disabled]
+  - text: 1 turns · 1 steps LLM {{duration}}
+  - separator "Resize session navigation"

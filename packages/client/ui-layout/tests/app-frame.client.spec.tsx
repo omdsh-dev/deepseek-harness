@@ -11,11 +11,13 @@
  * resizes are driven through the ResizeObserver stub.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { act, cleanup, render } from '@testing-library/react'
+import { act, cleanup, fireEvent, render } from '@testing-library/react'
 import { useSyncExternalStore } from 'react'
 import { AppFrame } from '@deepseek-ai/dsh-client-ui-layout/src/client/AppFrame.tsx'
 import type { AppFrameProps } from '@deepseek-ai/dsh-client-ui-layout/src/client/AppFrame.tsx'
-import { SIDEBAR_COLLAPSED } from '@deepseek-ai/dsh-client-ui-layout/src/client/columns.ts'
+import {
+  DETAILS_MAX, SIDEBAR_COLLAPSED, SIDEBAR_MAX, SIDEBAR_MIN,
+} from '@deepseek-ai/dsh-client-ui-layout/src/client/columns.ts'
 import { createLayoutStore } from '@deepseek-ai/dsh-client-ui-layout/src/client/stores.ts'
 import type { SessionListState } from '@deepseek-ai/dsh-api-session-controller/client'
 import type { WorkspaceSnapshot } from '@deepseek-ai/dsh-api-workspace-controller/client'
@@ -29,6 +31,14 @@ const workspacesReady = { current: true }
 type AttentionSnapshot = Parameters<Parameters<AppFrameProps['useSessionPendingInteraction']>[0]>[0]
 const noAttention: AttentionSnapshot = new Map()
 const useSessionPendingInteraction: AppFrameProps['useSessionPendingInteraction'] = selector => selector(noAttention)
+const commonText: Readonly<Record<string, string>> = {
+  'brand.localBuild': 'DSH Local Build',
+  'shell.application': 'DSH application',
+  'shell.sidebar': 'Session navigation',
+  'shell.details': 'Session details',
+  'shell.resizeSidebar': 'Resize session navigation',
+  'shell.resizeDetails': 'Resize session details',
+}
 
 // Provider contract stub fed through the standard seat prop (the renderer
 // injects the real one in production): session mode renders children and
@@ -100,7 +110,7 @@ function mountFrame() {
       useSessionPendingInteraction={useSessionPendingInteraction}
       useWorkspaces={((sel: (s: WorkspaceSnapshot) => unknown) => sel(workspaceState)) as never}
       SessionProvider={SessionProviderStub}
-      t={key => key === 'brand.localBuild' ? 'DSH Local Build' : key}
+      t={key => commonText[key] ?? key}
     />
   )
   const utils = render(element())
@@ -176,6 +186,30 @@ describe('AppFrame', () => {
   it('renders three tracks from store state', () => {
     const { frame } = mountFrame()
     expect(tracks(frame)).toEqual([280, 0])
+  })
+
+  it('exposes named landmarks, one application heading, and keyboard-resizable separators', () => {
+    const { frame, getByRole, instance } = mountFrame()
+    expect(frame.hasAttribute('role')).toBe(false)
+    expect(getByRole('complementary', { name: 'Session navigation' })).toBeTruthy()
+    expect(getByRole('main')).toBeTruthy()
+    expect(getByRole('heading', { level: 1, name: 'DSH application' })).toBeTruthy()
+
+    const sidebar = getByRole('separator', { name: 'Resize session navigation' })
+    expect(sidebar.getAttribute('aria-valuenow')).toBe('280')
+    fireEvent.keyDown(sidebar, { key: 'ArrowRight' })
+    expect(instance.getSnapshot().sidebar).toBe(288)
+    fireEvent.keyDown(sidebar, { key: 'Home' })
+    expect(instance.getSnapshot().sidebar).toBe(SIDEBAR_MIN)
+    fireEvent.keyDown(sidebar, { key: 'End' })
+    expect(instance.getSnapshot().sidebar).toBe(SIDEBAR_MAX)
+
+    act(() => { instance.actions.openDetails() })
+    const details = getByRole('separator', { name: 'Resize session details' })
+    fireEvent.keyDown(details, { key: 'ArrowLeft' })
+    expect(instance.getSnapshot().details).toBe(368)
+    fireEvent.keyDown(details, { key: 'End' })
+    expect(instance.getSnapshot().details).toBe(DETAILS_MAX)
   })
 
   it('renders the session pair with empty owner shares (sessionId is framework-standard)', () => {
@@ -283,10 +317,14 @@ describe('AppFrame', () => {
   })
 
   it('details column stays mounted at zero width', () => {
-    const { frame, getByTestId } = mountFrame()
+    const { frame, getByTestId, queryByRole } = mountFrame()
     expect(tracks(frame)).toEqual([280, 0])
     expect(getByTestId('details-content')).toBeTruthy()
     expect(frame.hasAttribute('data-details-collapsed')).toBe(true)
+    expect(queryByRole('complementary', { name: 'Session details' })).toBeNull()
+    const details = getByTestId('details-content').parentElement!
+    expect(details.hasAttribute('inert')).toBe(true)
+    expect(details.getAttribute('aria-hidden')).toBe('true')
   })
 
   it('closed sidebar keeps its compact rail with mounted slot content and collapsed owner props', () => {

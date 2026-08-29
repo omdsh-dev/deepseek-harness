@@ -1,4 +1,5 @@
-- banner:
+- main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy":
     - button "workspace" [disabled]
   - img
@@ -9,41 +10,42 @@
   - tablist:
     - tab "Chat" [selected]
     - tab "Trajectory"
-- group "Command input": /goal Keep the composer context panels aligned
-- 'button "goal Goal created Status: active Objective: Keep the composer context panels aligned Rounds: 0/256 Activation: armed Commands: /goal edit <objective>, /goal pause, /goal clear"':
+  - group "Command input": /goal Keep the composer context panels aligned
+  - 'button "goal Goal created Status: active Objective: Keep the composer context panels aligned Rounds: 0/256 Activation: armed Commands: /goal edit <objective>, /goal pause, /goal clear"':
+    - img
+    - img
+    - text: "goal Goal created Status: active Objective: Keep the composer context panels aligned Rounds: 0/256 Activation: armed Commands: /goal edit <objective>, /goal pause, /goal clear"
+  - button "System prompt":
+    - img
+    - img
+    - text: System prompt
+  - button "Context injection goal":
+    - img
+    - img
+    - text: Context injection goal
+  - button "Context injection @deepseek-ai/dsh-system-prompt":
+    - img
+    - img
+    - text: Context injection @deepseek-ai/dsh-system-prompt
+  - paragraph: partial
+  - status: Deep diving...
+  - region "To-dos":
+    - button "To-dos 1 completed · 1 in progress"
   - img
-  - img
-  - text: "goal Goal created Status: active Objective: Keep the composer context panels aligned Rounds: 0/256 Activation: armed Commands: /goal edit <objective>, /goal pause, /goal clear"
-- button "System prompt":
-  - img
-  - img
-  - text: System prompt
-- button "Context injection goal":
-  - img
-  - img
-  - text: Context injection goal
-- button "Context injection @deepseek-ai/dsh-system-prompt":
-  - img
-  - img
-  - text: Context injection @deepseek-ai/dsh-system-prompt
-- paragraph: partial
-- status: Deep diving...
-- region "To-dos":
-  - button "To-dos 1 completed · 1 in progress"
-- img
-- text: Ongoing Goal Keep the composer context panels aligned
-- button "Pause goal":
-  - img
-- button "Edit goal":
-  - img
-- button "Clear goal":
-  - img
-- button "2 queued messages"
-- textbox "Cmd/Ctrl+Enter steers all queued messages"
-- button "Commands":
-  - img
-- 'button "Access mode, current: Workspace Write"': Workspace Write
-- button "Select model, current DeepSeek-V4-Flash":
-  - text: DeepSeek-V4-Flash
-  - img
-- button "Stop generating"
+  - text: Ongoing Goal Keep the composer context panels aligned
+  - button "Pause goal":
+    - img
+  - button "Edit goal":
+    - img
+  - button "Clear goal":
+    - img
+  - button "2 queued messages"
+  - textbox "Cmd/Ctrl+Enter steers all queued messages"
+  - button "Commands":
+    - img
+  - 'button "Access mode, current: Workspace Write"': Workspace Write
+  - button "Select model, current DeepSeek-V4-Flash":
+    - text: DeepSeek-V4-Flash
+    - img
+  - button "Stop generating"
+  - separator "Resize session navigation"
