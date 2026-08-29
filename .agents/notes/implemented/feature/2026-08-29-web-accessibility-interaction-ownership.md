@@ -30,6 +30,8 @@ The Trajectory record inspector owns the same automatic-activation tab contract 
 
 The Trajectory ledger owns one roving row entry across its loaded logical records. Up and Down move one record, Home and End move to the loaded edges, and an off-screen virtual destination is scrolled into the mounted window before receiving focus. Enter and Space activate a record or collapsed summary. Nested Request controls join sequential navigation only for the active row; request-only separators retain their explicit control.
 
+The Trajectory timeline owns a multiselect listbox over its record spans. DOM focus stays on the overview while `aria-activedescendant` exposes the browsed record. Arrow keys browse, Shift extends an inclusive record range, Home and End reach an edge, Enter or Space opens the active record, Control or Command plus A selects the loaded domain, and Escape clears the range. Keyboard-active records remain mounted and visually indicated across a zoomed viewport.
+
 ## Alternatives considered
 
 **Repair the rendered application from a companion plugin.** Rejected because a MutationObserver would infer ownership from unstable markup, race React commits, duplicate private state, and remain unable to guarantee nested focus restoration or authoritative disclosure changes.
@@ -52,13 +54,13 @@ Twenty-three focused model-seat and command-popup tests pass, including edge ope
 
 Twenty-two focused Conversation-shell tests pass, including the named roving View tab list, Arrow/Home/End activation and wrap, stable tab-to-panel relationships, and the active panel's sequential focus entry.
 
-Thirty-seven focused Trajectory-table tests pass, including the ledger's single-entry row stop, logical Arrow/Home/End movement across a virtual scroll boundary, active-row Request action ownership, and the detail inspector's single-entry tab stop, activation, focus movement, and active tab-to-panel relationship. Together with the assembled Trajectory view tests, 69 focused tests pass.
+Thirty-seven focused Trajectory-table tests pass, including the ledger's single-entry row stop, logical Arrow/Home/End movement across a virtual scroll boundary, active-row Request action ownership, and the detail inspector's single-entry tab stop, activation, focus movement, and active tab-to-panel relationship. Thirty-three assembled Trajectory view tests include multiselect listbox ownership, active-descendant browsing, Shift range extension, record opening, whole-domain selection, and the integrated ledger path; together, 70 focused tests pass.
 
 A production build followed by the assembled Web replay passes 92 of 93 files, with one conditionally skipped file; 311 tests pass and 15 are skipped. Reviewed accessibility-tree goldens add the application `main`, its level-one heading, named Session-navigation complementary landmark, keyboard separator, and named menu while removing controls from the already-collapsed Details subtree. Contract type checking, contract lint, and the Node 22 documentation lane also pass. These checks verify DOM, focus, built-composition, and browser accessibility-tree contracts; they do not certify spoken output or real assistive-technology operation.
 
 ## Deferred
 
-This decision does not claim complete Web accessibility. Trajectory range selection, model-selection and command-popup spoken output, question forms, conversation log and completion announcements, tool disclosures, contrast and forced-colors behavior, zoom and reflow, reduced-motion behavior, browser coverage, and task-level VoiceOver, NVDA, JAWS, Narrator, and Orca evidence remain separately verified work.
+This decision does not claim complete Web accessibility. Timeline listbox and range spoken output, model-selection and command-popup spoken output, question forms, conversation log and completion announcements, tool disclosures, contrast and forced-colors behavior, zoom and reflow, reduced-motion behavior, browser coverage, and task-level VoiceOver, NVDA, JAWS, Narrator, and Orca evidence remain separately verified work.
 
 ## Consequences
 

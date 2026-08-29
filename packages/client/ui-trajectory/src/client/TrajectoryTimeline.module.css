@@ -238,6 +238,18 @@
     );
 }
 
+.span[data-keyboard-active='true']:not([data-current='true']) {
+  z-index: 1;
+  opacity: 1;
+  box-shadow:
+    0 0 0 1px var(--dsw-alias-bg-layer-2),
+    0 0 0 2px color-mix(
+      in srgb,
+      var(--dsw-alias-state-business-primary) 80%,
+      transparent
+    );
+}
+
 .span[data-current='true'] {
   z-index: 1;
   opacity: 1;

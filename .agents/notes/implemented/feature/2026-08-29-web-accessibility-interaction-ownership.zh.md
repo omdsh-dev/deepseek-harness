@@ -30,6 +30,8 @@ Trajectory 记录检查器为所选记录的可用详情拥有同样的自动激
 
 Trajectory ledger 在已加载的逻辑记录中只拥有一个漫游行入口。上／下方向键逐条移动，Home／End 移到已加载边界；目标位于屏外时，先将其滚入虚拟挂载窗口再接收焦点。Enter 与空格激活记录或折叠摘要。内嵌 Request 控件只在活动行进入顺序导航；仅含 request 的分隔行继续保留自身显式控件。
 
+Trajectory timeline 在记录时间条上拥有多选 listbox。DOM 焦点留在概览上，由 `aria-activedescendant` 暴露正在浏览的记录。方向键浏览，Shift 扩展闭合记录范围，Home／End 到达边界，Enter 或空格打开活动记录，Control 或 Command 加 A 选择已加载时间域，Escape 清除范围。键盘活动记录会在缩放视口间保持挂载并获得可视提示。
+
 ## Alternatives considered
 
 **通过 companion 插件修复渲染后的应用。** 拒绝，因为 MutationObserver 需要从不稳定标记推断职责，与 React 提交竞争，重复私有状态，并且仍无法保证嵌套焦点恢复或权威的 disclosure 状态变更。
@@ -52,13 +54,13 @@ Trajectory ledger 在已加载的逻辑记录中只拥有一个漫游行入口�
 
 22 个聚焦 Conversation shell 测试通过，覆盖具名的漫游 View 标签列表、方向键／Home／End 激活与循环、稳定的标签到面板关系，以及活动面板的顺序焦点入口。
 
-37 个聚焦 Trajectory table 测试通过，覆盖 ledger 的单入口行停靠点、跨虚拟滚动边界的逻辑方向键／Home／End 移动、活动行 Request 操作归属，以及详情检查器的单入口标签停靠点、激活、焦点移动和活动标签到面板关系。连同组装 Trajectory view 测试，共有 69 个聚焦测试通过。
+37 个聚焦 Trajectory table 测试通过，覆盖 ledger 的单入口行停靠点、跨虚拟滚动边界的逻辑方向键／Home／End 移动、活动行 Request 操作归属，以及详情检查器的单入口标签停靠点、激活、焦点移动和活动标签到面板关系。33 个组装 Trajectory view 测试包含多选 listbox 归属、active-descendant 浏览、Shift 扩展范围、打开记录、选择整个时间域与集成 ledger 路径；合计 70 个聚焦测试通过。
 
 生产构建完成后，组装 Web replay 的 93 个文件中有 92 个通过、1 个按条件跳过；311 个测试通过、15 个跳过。经过审查的无障碍树 golden 新增应用 `main`、其中的一级标题、具名会话导航 complementary 地标、键盘分隔条与具名菜单，同时移除已经折叠的详情子树中的控件。契约类型检查、契约 lint 与 Node 22 文档测试通道也通过。这些检查验证 DOM、焦点、构建后组合与浏览器无障碍树契约；它们不能认证真实朗读或真实辅助技术操作。
 
 ## Deferred
 
-这项决策不宣称 Web 已完整适配无障碍。Trajectory 范围选择、模型选择与命令弹窗的真实朗读、问题表单、对话 log 与完成播报、工具 disclosure、对比度与强制颜色行为、缩放与回流、减少动态效果、浏览器覆盖，以及任务级 VoiceOver、NVDA、JAWS、Narrator 与 Orca 证据仍属于需要分别验证的工作。
+这项决策不宣称 Web 已完整适配无障碍。Timeline listbox 与范围的真实朗读、模型选择与命令弹窗的真实朗读、问题表单、对话 log 与完成播报、工具 disclosure、对比度与强制颜色行为、缩放与回流、减少动态效果、浏览器覆盖，以及任务级 VoiceOver、NVDA、JAWS、Narrator 与 Orca 证据仍属于需要分别验证的工作。
 
 ## Consequences
 

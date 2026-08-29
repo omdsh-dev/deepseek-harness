@@ -33,7 +33,7 @@ Selection, timeline navigation, folding, search, and Request totals cover the lo
 
 ### The timing overview
 
-A fixed Overview above the ledger projects real record start/duration timing from left to right; Assistant spans divide recorded TTFT from decoding, and a 500 ms hover reveals exact clock and duration details. Dragging an interval focuses the ledger on every record active at any point in that inclusive range; wheel gestures zoom the time domain; a right-button click clears the selected interval, and a right-button drag pans an already zoomed viewport. The initial view and streaming updates stay at the tail; scrolling upward suspends following so new records do not interrupt inspection of earlier rows.
+A fixed Overview above the ledger projects real record start/duration timing from left to right; Assistant spans divide recorded TTFT from decoding, and a 500 ms hover reveals exact clock and duration details. The overview is also a multiselect listbox: Arrow keys browse records, Shift plus an Arrow extends the inclusive focus range, Home and End move to an edge, Enter or Space opens the active record, Control or Command plus A focuses all records, and Escape clears the range. Pointer dragging focuses every record active at any point in the selected interval; wheel gestures zoom the time domain; a right-button click clears the selected interval, and a right-button drag pans an already zoomed viewport. The initial view and streaming updates stay at the tail; scrolling upward suspends following so new records do not interrupt inspection of earlier rows.
 
 -----
 
@@ -85,7 +85,7 @@ None; this package neither assembles nor sends a provider request.
 
 These limits define what the view can show while work is in flight; they are current package constraints.
 
-- **In-flight Time stays blank** — `partial` and `runningCalls` rows show their running state without a fabricated duration, so the Overview renders a start marker rather than inventing a live span. Record and timeline selection are local to Trajectory, with no anchor deep links. The timeline range still requires a keyboard-operable selection alternative beyond the completed ledger and inspector patterns.
+- **In-flight Time stays blank** — `partial` and `runningCalls` rows show their running state without a fabricated duration, so the Overview renders a start marker rather than inventing a live span. Record and timeline selection are local to Trajectory, with no anchor deep links.
 
 <a id="dev-note"></a>
 ### Dev Note
