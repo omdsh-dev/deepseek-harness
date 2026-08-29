@@ -150,6 +150,29 @@ afterEach(async () => {
 })
 
 describe('SessionProjectionCache write policy', () => {
+  it('commits overlapping checkpoints in call order so an older cut cannot win', async () => {
+    const { ctx, root } = await harness()
+    const creationFlush = Promise.withResolvers<boolean>()
+    const flush = vi.spyOn(ctx.sessions, 'flush').mockReturnValueOnce(creationFlush.promise)
+    const session = ctx.sessions.create(SessionId('ordered-writes'))
+    await vi.waitFor(() => {
+      expect(flush).toHaveBeenCalledTimes(1)
+    })
+
+    mark(session, ['newer'])
+    const end = endTurn(session)
+    await Promise.resolve()
+    // The turn-end checkpoint is queued behind the still-blocked creation
+    // checkpoint instead of racing it to the domain write chain.
+    expect(flush).toHaveBeenCalledTimes(1)
+
+    creationFlush.resolve(false)
+    await waitForStoredRows(root, session.id, (rows) => {
+      expect(rows?.['cache-test/marks']).toEqual({ ver: 1, seq: end.seq, val: { marks: ['newer'] } })
+    })
+    expect(flush).toHaveBeenCalledTimes(2)
+  })
+
   it('writes a durable checkpoint at turn/end (mandatory point)', async () => {
     const { ctx, root } = await harness()
     const session = ctx.sessions.create(SessionId('turn-end'))
