@@ -29,7 +29,7 @@ Open the Trajectory tab in the conversation's view ring to inspect agent activit
 
 ### Inspecting records
 
-Selection, timeline navigation, folding, search, and Request totals cover the loaded window. Selecting a record opens a local inspector for token usage, duration, Input, Output, Timing, and durable images. Its detail tabs keep one sequential Tab entry; Left and Right wrap through the available details, while Home and End move to an edge, activating and focusing the destination. Image URLs use the Conversation-owned per-session cache, so Chat and Trajectory share one authorized read per attachment. A record without text labels its row with the image count. A standalone compaction request appears chronologically in its own `Between turns` section, while a numbered compaction remains inside its owning turn.
+Selection, timeline navigation, folding, search, and Request totals cover the loaded window. The ledger keeps one sequential row entry; Up and Down move by one logical record, Home and End move to the loaded window's edges, and navigation scrolls virtualized destinations into view before focusing them. Enter and Space activate the focused record or collapsed summary. Only the active row's nested Request action joins sequential navigation. Selecting a record opens a local inspector for token usage, duration, Input, Output, Timing, and durable images. Its detail tabs keep one sequential Tab entry; Left and Right wrap through the available details, while Home and End move to an edge, activating and focusing the destination. Image URLs use the Conversation-owned per-session cache, so Chat and Trajectory share one authorized read per attachment. A record without text labels its row with the image count. A standalone compaction request appears chronologically in its own `Between turns` section, while a numbered compaction remains inside its owning turn.
 
 ### The timing overview
 
@@ -85,7 +85,7 @@ None; this package neither assembles nor sends a provider request.
 
 These limits define what the view can show while work is in flight; they are current package constraints.
 
-- **In-flight Time stays blank** — `partial` and `runningCalls` rows show their running state without a fabricated duration, so the Overview renders a start marker rather than inventing a live span. Record and timeline selection are local to Trajectory, with no anchor deep links. The virtual ledger and timeline range still require separate keyboard-navigation ownership beyond the inspector's completed tab pattern.
+- **In-flight Time stays blank** — `partial` and `runningCalls` rows show their running state without a fabricated duration, so the Overview renders a start marker rather than inventing a live span. Record and timeline selection are local to Trajectory, with no anchor deep links. The timeline range still requires a keyboard-operable selection alternative beyond the completed ledger and inspector patterns.
 
 <a id="dev-note"></a>
 ### Dev Note

@@ -1862,6 +1862,8 @@ export function TrajectoryTable({
   const tableScrollInitialized = useRef(false)
   const [tableScrollReady, setTableScrollReady] = useState(false)
   const pendingScrollRecordId = useRef<string | null>(null)
+  const rovingRowKey = useRef<string | null>(null)
+  const pendingRovingRowKey = useRef<string | null>(null)
   const loadingOlder = useRef(false)
   const [olderLoading, setOlderLoading] = useState(false)
   const olderLoadAnchor = useRef<OlderLoadAnchor | null>(null)
@@ -1945,6 +1947,17 @@ export function TrajectoryTable({
     }
     return indexes
   }, [projectedVirtualRows])
+  const virtualIndexByRowKey = useMemo(() => {
+    const indexes = new Map<string, number>()
+    for (const [virtualIndex, row] of projectedVirtualRows.entries()) {
+      for (const entry of row.entries) {
+        if (entry.record.cell.requestOnly !== true) {
+          indexes.set(trajectoryVirtualRecordKey(entry.record), virtualIndex)
+        }
+      }
+    }
+    return indexes
+  }, [projectedVirtualRows])
   const virtualItems = virtualizationEnabled ? rowVirtualizer.getVirtualItems() : []
   const virtualTop = Math.max(0, (virtualItems[0]?.start ?? 0) - virtualScrollMargin)
   const virtualBottom = virtualItems.length === 0
@@ -1974,6 +1987,86 @@ export function TrajectoryTable({
       terminalRequestBoundary:
         record.cell.requestOnly === true && position === records.length - 1,
     }))
+  const focusableRowKeys = records.flatMap(record => (
+    record.cell.requestOnly === true ? [] : [trajectoryVirtualRecordKey(record)]
+  ))
+  const pendingRenderedRow = renderedRecords.find(({ record }) => (
+    trajectoryVirtualRecordKey(record) === pendingRovingRowKey.current
+    && record.cell.requestOnly !== true
+  ))
+  const rememberedRenderedRow = renderedRecords.find(({ record }) => (
+    trajectoryVirtualRecordKey(record) === rovingRowKey.current
+    && record.cell.requestOnly !== true
+  ))
+  const selectedRenderedRow = renderedRecords.find(({ record }) => (
+    record.collapsedSummary === undefined
+    && record.cell.requestOnly !== true
+    && record.cell.index === selectedIndex
+  ))
+  const initialRovingRecord = pendingRenderedRow?.record
+    ?? rememberedRenderedRow?.record
+    ?? selectedRenderedRow?.record
+    ?? renderedRecords.find(({ record }) => record.cell.requestOnly !== true)?.record
+  const initialRovingRowKey = initialRovingRecord === undefined
+    ? null
+    : trajectoryVirtualRecordKey(initialRovingRecord)
+  rovingRowKey.current = initialRovingRowKey
+
+  const claimRovingRow = useCallback((row: HTMLTableRowElement): void => {
+    const body = row.closest('tbody')
+    if (body === null) return
+    rovingRowKey.current = row.dataset['trajectoryRowKey'] ?? null
+    for (const candidate of body.querySelectorAll<HTMLTableRowElement>(
+      'tr[data-trajectory-row-key]:not([data-request-only="true"])',
+    )) {
+      const active = candidate === row
+      candidate.tabIndex = active ? 0 : -1
+      const requestControl = candidate.querySelector<HTMLButtonElement>(
+        '[data-request-boundary-control]',
+      )
+      if (requestControl !== null) requestControl.tabIndex = active ? 0 : -1
+    }
+  }, [])
+
+  useLayoutEffect(() => {
+    const pending = pendingRovingRowKey.current
+    if (pending === null || pending !== initialRovingRowKey) return
+    const row = [...(rootRef.current?.querySelectorAll<HTMLTableRowElement>(
+      'tr[data-trajectory-row-key]',
+    ) ?? [])].find(candidate => candidate.dataset['trajectoryRowKey'] === pending)
+    if (row === undefined) return
+    pendingRovingRowKey.current = null
+    claimRovingRow(row)
+    row.focus()
+  }, [claimRovingRow, initialRovingRowKey, renderedRecords])
+
+  const moveRovingRow = (row: HTMLTableRowElement, key: string): boolean => {
+    const currentKey = row.dataset['trajectoryRowKey']
+    const current = currentKey === undefined ? -1 : focusableRowKeys.indexOf(currentKey)
+    if (current < 0 || focusableRowKeys.length === 0) return false
+    const targetKey = key === 'Home'
+      ? focusableRowKeys[0]
+      : key === 'End'
+        ? focusableRowKeys.at(-1)
+        : focusableRowKeys[current + (key === 'ArrowDown' ? 1 : -1)]
+    if (targetKey === undefined) return false
+    const target = [...(row.closest('tbody')?.querySelectorAll<HTMLTableRowElement>(
+      'tr[data-trajectory-row-key]:not([data-request-only="true"])',
+    ) ?? [])].find(candidate => candidate.dataset['trajectoryRowKey'] === targetKey)
+    if (target !== undefined) {
+      claimRovingRow(target)
+      target.focus()
+      return true
+    }
+    if (!virtualizationEnabled) return false
+    const virtualIndex = virtualIndexByRowKey.get(targetKey)
+    if (virtualIndex === undefined) return false
+    rovingRowKey.current = targetKey
+    pendingRovingRowKey.current = targetKey
+    followsTableTail.current = false
+    rowVirtualizer.scrollToIndex(virtualIndex, { behavior: 'auto', align: 'auto' })
+    return true
+  }
   const requestBoundaryRuns = useMemo(
     () => indexRequestBoundaryRuns(records, requestGroups),
     [records, requestGroups],
@@ -2435,9 +2528,10 @@ export function TrajectoryTable({
                   const sectionActive = record.turn === null
                     ? activeSection === record.section
                     : activeTurn === record.turn
+                  const rowKey = trajectoryVirtualRecordKey(record)
                   return (
                     <tr
-                      tabIndex={isRequestOnly ? -1 : 0}
+                      tabIndex={isRequestOnly ? -1 : rowKey === initialRovingRowKey ? 0 : -1}
                       aria-rowindex={position + 1 + historyRowOffset}
                       aria-label={isCollapsedSummary
                         ? t('request.collapsedSummary', {
@@ -2455,7 +2549,7 @@ export function TrajectoryTable({
                           })}
                       aria-selected={!isCollapsedSummary && !isRequestOnly && selectedIndex === record.cell.index}
                       data-kind={record.cell.kind}
-                      data-trajectory-row-key={trajectoryVirtualRecordKey(record)}
+                      data-trajectory-row-key={rowKey}
                       data-virtual-position={virtualizationEnabled ? position : undefined}
                       data-record-index={!isCollapsedSummary && !isRequestOnly
                         ? record.cell.index
@@ -2476,11 +2570,15 @@ export function TrajectoryTable({
                         ? undefined
                         : isCollapsedSummary
                           ? () => {
+                            rovingRowKey.current = rowKey
                             if (record.collapsedSummaryKind === 'turn' && record.turn !== null) {
                               onToggleTurn(record.turn)
                             } else onToggleAssistant(trajectoryRecordId(record.cell))
                           }
-                          : () => { selectRecord(record.cell.index) }}
+                          : () => {
+                            rovingRowKey.current = rowKey
+                            selectRecord(record.cell.index)
+                          }}
                       onDoubleClick={(event) => {
                         if (isCollapsedSummary || isRequestOnly) return
                         if (record.turn !== null && collapsedTurns.has(record.turn)) {
@@ -2505,8 +2603,21 @@ export function TrajectoryTable({
                         event.preventDefault()
                         onToggleTurn(record.turn)
                       }}
+                      onFocus={(event) => {
+                        if (event.target === event.currentTarget) claimRovingRow(event.currentTarget)
+                      }}
                       onKeyDown={(event) => {
-                        if (isRequestOnly) return
+                        if (isRequestOnly || event.target !== event.currentTarget) return
+                        if (
+                          event.key === 'ArrowDown'
+                          || event.key === 'ArrowUp'
+                          || event.key === 'Home'
+                          || event.key === 'End'
+                        ) {
+                          moveRovingRow(event.currentTarget, event.key)
+                          event.preventDefault()
+                          return
+                        }
                         if (event.key !== 'Enter' && event.key !== ' ') return
                         event.preventDefault()
                         if (isCollapsedSummary) {
@@ -2527,6 +2638,8 @@ export function TrajectoryTable({
                               : css.requestBoundaryControl}
                             aria-label={requestLabel}
                             aria-pressed={requestSelected}
+                            tabIndex={isRequestOnly || rowKey === initialRovingRowKey ? 0 : -1}
+                            data-request-boundary-control=""
                             data-label={requestLabel}
                             data-request-run-index={requestRunIndex}
                             data-request-status={requestStatus}
