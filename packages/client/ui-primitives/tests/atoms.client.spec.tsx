@@ -2,10 +2,34 @@
 import { useState } from 'react'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { Button, ConnectionBanner, Input, Menu, Modal, Pill, Tooltip } from '@deepseek-ai/dsh-client-ui-primitives'
+import {
+  Button, ConnectionBanner, Input, Menu, Modal, moveHorizontalTabFocus, Pill, Tooltip,
+} from '@deepseek-ai/dsh-client-ui-primitives'
 import { POINTER_GRACE_MS } from '../src/pointer-grace.ts'
 
 afterEach(cleanup)
+
+describe('horizontal tab focus', () => {
+  it('leaves unrelated keys to the caller', () => {
+    const activate = vi.fn()
+    render(
+      <div role="tablist">
+        <button
+          type="button"
+          role="tab"
+          onKeyDown={(event) => {
+            moveHorizontalTabFocus(event, ['only'], 0, activate)
+          }}
+        >
+          Only
+        </button>
+      </div>,
+    )
+
+    expect(fireEvent.keyDown(screen.getByRole('tab'), { key: 'PageDown' })).toBe(true)
+    expect(activate).not.toHaveBeenCalled()
+  })
+})
 
 describe('Button', () => {
   it('renders children, icon, and forwards clicks', () => {

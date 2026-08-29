@@ -1,7 +1,7 @@
 /** Turn-aware trajectory event ledger with a local record inspector. */
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import type { CSSProperties, KeyboardEvent, ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import {
   IconChevronRightOutline14,
@@ -10,6 +10,7 @@ import {
   IconUserOutline16,
   JsonTree,
   MarkdownText,
+  moveHorizontalTabFocus,
   Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { JsonTreeLabels, MarkdownLabels } from '@deepseek-ai/dsh-client-ui-primitives'
@@ -175,30 +176,6 @@ type RecordState = 'complete' | 'running' | 'error'
 interface DetailTabItem {
   id: DetailTab
   labelKey: TrajectoryKey
-}
-
-function moveDetailTab(
-  event: KeyboardEvent<HTMLButtonElement>,
-  tabs: readonly DetailTabItem[],
-  currentIndex: number,
-  activate: (tab: DetailTab) => void,
-): void {
-  let nextIndex: number
-  switch (event.key) {
-    case 'ArrowRight': nextIndex = (currentIndex + 1) % tabs.length; break
-    case 'ArrowLeft': nextIndex = (currentIndex - 1 + tabs.length) % tabs.length; break
-    case 'Home': nextIndex = 0; break
-    case 'End': nextIndex = tabs.length - 1; break
-    default: return
-  }
-  const next = tabs.at(nextIndex)
-  if (next === undefined) return
-  event.preventDefault()
-  activate(next.id)
-  event.currentTarget.parentElement
-    ?.querySelectorAll<HTMLButtonElement>('[role="tab"]')
-    .item(nextIndex)
-    .focus()
 }
 
 interface ParentRecords {
@@ -2935,7 +2912,9 @@ export function TrajectoryTable({
                 className={activeTab === tab.id ? `${css.detailTab} ${css.detailTabActive}` : css.detailTab}
                 onClick={() => { activateTab(tab.id) }}
                 onKeyDown={(event) => {
-                  moveDetailTab(event, selectedTabs, index, activateTab)
+                  moveHorizontalTabFocus(event, selectedTabs, index, (tab) => {
+                    activateTab(tab.id)
+                  })
                 }}
               >
                 {t(tab.labelKey)}

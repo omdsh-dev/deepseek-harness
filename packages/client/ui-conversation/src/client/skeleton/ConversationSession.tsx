@@ -1,9 +1,10 @@
 /** Strict per-session header/body content inserted into the resident conversation layout. */
 
-import { useEffect, type KeyboardEvent } from 'react'
+import { useEffect } from 'react'
 import clsx from 'clsx'
 import type { SessionListState, SessionSummary } from '@deepseek-ai/dsh-api-session-controller/client'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import { moveHorizontalTabFocus } from '@deepseek-ai/dsh-client-ui-primitives'
 import type {
   ConversationSessionHeaderSlotProps, ConversationSessionSlotProps,
 } from '../contract/slots.ts'
@@ -27,30 +28,6 @@ const DEFAULT_VIEW_ID = 'chat'
 
 function viewDomId(sessionId: SessionId, viewId: string, part: 'tab' | 'panel'): string {
   return `conversation-${encodeURIComponent(String(sessionId))}-view-${encodeURIComponent(viewId)}-${part}`
-}
-
-function moveViewTab(
-  event: KeyboardEvent<HTMLButtonElement>,
-  tabs: readonly ViewTab[],
-  currentIndex: number,
-  select: (viewId: string) => void,
-): void {
-  let nextIndex: number
-  switch (event.key) {
-    case 'ArrowRight': nextIndex = (currentIndex + 1) % tabs.length; break
-    case 'ArrowLeft': nextIndex = (currentIndex - 1 + tabs.length) % tabs.length; break
-    case 'Home': nextIndex = 0; break
-    case 'End': nextIndex = tabs.length - 1; break
-    default: return
-  }
-  const next = tabs.at(nextIndex)
-  if (next === undefined) return
-  event.preventDefault()
-  select(next.id)
-  event.currentTarget.parentElement
-    ?.querySelectorAll<HTMLButtonElement>('[role="tab"]')
-    .item(nextIndex)
-    .focus()
 }
 
 /** Resolve a persisted selection, then registered Chat, without choosing another View. */
@@ -186,7 +163,9 @@ export function ConversationSessionHeader({
                     className={clsx(css.tab, selected && css.tabActive)}
                     onClick={() => { actions.setView(viewTab.id) }}
                     onKeyDown={(event) => {
-                      moveViewTab(event, tabs, index, actions.setView)
+                      moveHorizontalTabFocus(event, tabs, index, (tab) => {
+                        actions.setView(tab.id)
+                      })
                     }}
                   >
                     {viewTab.label}
