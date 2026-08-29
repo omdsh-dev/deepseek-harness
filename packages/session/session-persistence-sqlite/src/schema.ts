@@ -74,12 +74,14 @@ export async function openDatabase(
   journalMode: JournalMode,
   busyTimeoutMs: number,
 ): Promise<DatabaseSync> {
-  const deadline = performance.now() + busyTimeoutMs
   const db = new Database(path, { timeout: busyTimeoutMs })
   try {
     configureConnectionSecurity(db, path)
     configureDatabase(Database, db, path)
-    await selectJournalMode(db, path, journalMode, deadline)
+    // The native connection timeout applies independently to earlier schema
+    // operations. Give the journal transition its own advertised retry budget
+    // instead of consuming it during unrelated initialization work.
+    await selectJournalMode(db, path, journalMode, performance.now() + busyTimeoutMs)
     configureDurability(db, path)
     return db
   } catch (error: unknown) {
