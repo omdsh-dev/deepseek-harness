@@ -12,6 +12,8 @@ Pull Request workflow 选择了只注册在上游组织中的 Linux 与 Windows 
 
 以仓库 owner 作为基础设施边界。`deepseek-harness` 下的 Pull Request 继续使用专用 larger runner 与组织集成；其他 owner 下的 Pull Request 使用 GitHub 标准托管的 Ubuntu 24.04 与 Windows 2025 runner。snapshot-consumer 通道显式使用项目参考时区 `Asia/Shanghai`，避免持久化浏览器 fixture 继承 runner 镜像的本地时区。Cloudflare 预览与会写入 Project 的 Issue lifecycle 任务依赖上游凭据和目标，因此在非上游 owner 中明确跳过。只读 Issue policy 从 `GITHUB_REPOSITORY` 获取当前仓库坐标，本地执行时则回退到仓库中记录的上游配置。
 
+runner 选择与工作负载规模共同构成可移植性契约。标准 4 核 fork runner 使用 2 个 coverage partition、串行 coverage gate、2 个浏览器 snapshot worker、2 个并发 snapshot 场景，并限制 lint、发布检查与 consumer gate 的并发；上游 16 核路径保留原有较大预算。基于真实进程的测试仍验证同一行为，覆盖率仍为 100%；减少的只是争抢 CPU 的无关工作。对时序敏感的断言只接受已有文档定义的等价就绪状态，或在异步投递本身属于受测行为时获得显式等待预算。
+
 ## Alternatives considered
 
 **在每个 fork 中复制全部上游 runner 与 secret。** 拒绝，因为这会让源码评审依赖私有基础设施，扩大不必要的凭据分发，而且新 fork 的首次变更仍无法自行验证。
@@ -20,8 +22,8 @@ Pull Request workflow 选择了只注册在上游组织中的 Linux 与 Windows 
 
 ## Verification
 
-四个变更的 workflow 均可解析为 YAML，Issue policy 模块通过语法校验，23 个 Issue-management 单元测试全部在 Node 22 下通过。双语 Agent Note 配对已经记录并验证。首次 fork 运行已经证明标准 runner 分发、上游专属检查中性跳过与当前仓库策略查询有效；同时，标准 UTC runner 重放持久化 fixture 时暴露了专用 runner 所隐含的时区依赖。显式参考时区使下一轮运行能够作为快照确定性与既有聚合结论的集成检查。
+变更后的 workflow 均可解析为 YAML，Issue policy 模块通过语法校验，23 个 Issue-management 单元测试全部在 Node 22 下通过。workflow 合约、PowerShell 持久会话、Inspector 事件投递与 Oxlint 重试套件合计 48 项测试通过，另有 3 项按平台跳过。双语 Agent Note 配对已经记录并验证。最初几轮 fork 运行已经证明标准 runner 分发、上游专属检查中性跳过与当前仓库策略查询有效；同时也暴露了专用 runner 隐含的时区和 16 核并发假设：UTC 会改变持久化 fixture，而 6 个浏览器 worker、32 个 snapshot 场景及相互重叠的 coverage 通道会让标准 runner 上的真实进程与浏览器时序缺少 CPU。显式时区和按 owner 限制的预算，使下一轮运行可以作为 snapshot 确定性、100% 覆盖率与既有聚合结论的集成检查。
 
 ## Consequences
 
-fork 验证在标准 runner 上可能耗时更长，也不会生成上游 Cloudflare 预览或写入上游 Project。这些缺失会表现为明确的跳过检查，而不是误报失败或永久排队。上游路径、runner 故障切换变量、部署行为与 Project 自动化均保持不变。
+fork 验证在标准 runner 上可能耗时更长，也不会生成上游 Cloudflare 预览或写入上游 Project。这些缺失会表现为明确的跳过检查，而不是误报失败或永久排队。降低 fork 并发以更长运行时间换取确定性证据，不会删除场景或放宽覆盖率。上游路径、runner 故障切换变量、部署行为与 Project 自动化均保持不变。
