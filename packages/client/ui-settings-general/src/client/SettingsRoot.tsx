@@ -47,7 +47,7 @@ function SettingsPanel({ rows, renderSlot, activeId, onSelect, onClose }: PanelP
   const titleId = useId()
 
   return (
-    <Modal open onClose={onClose} title="" labelledBy={titleId} headless className={css.panel ?? ''}>
+    <Modal open onClose={onClose} title="" labelledBy={titleId} headless className={css.panel as string}>
       <nav className={css.nav}>
         <div className={css.navTitle} id={titleId}>{renderSlot('settings.header', {})}</div>
         <div className={css.navList}>
