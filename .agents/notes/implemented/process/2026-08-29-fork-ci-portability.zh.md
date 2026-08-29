@@ -10,7 +10,7 @@ Pull Request workflow 选择了只注册在上游组织中的 Linux 与 Windows 
 
 ## Decision
 
-以仓库 owner 作为基础设施边界。`deepseek-harness` 下的 Pull Request 继续使用专用 larger runner 与组织集成；其他 owner 下的 Pull Request 使用 GitHub 标准托管的 Ubuntu 24.04 与 Windows 2025 runner。Cloudflare 预览与会写入 Project 的 Issue lifecycle 任务依赖上游凭据和目标，因此在非上游 owner 中明确跳过。只读 Issue policy 从 `GITHUB_REPOSITORY` 获取当前仓库坐标，本地执行时则回退到仓库中记录的上游配置。
+以仓库 owner 作为基础设施边界。`deepseek-harness` 下的 Pull Request 继续使用专用 larger runner 与组织集成；其他 owner 下的 Pull Request 使用 GitHub 标准托管的 Ubuntu 24.04 与 Windows 2025 runner。snapshot-consumer 通道显式使用项目参考时区 `Asia/Shanghai`，避免持久化浏览器 fixture 继承 runner 镜像的本地时区。Cloudflare 预览与会写入 Project 的 Issue lifecycle 任务依赖上游凭据和目标，因此在非上游 owner 中明确跳过。只读 Issue policy 从 `GITHUB_REPOSITORY` 获取当前仓库坐标，本地执行时则回退到仓库中记录的上游配置。
 
 ## Alternatives considered
 
@@ -20,7 +20,7 @@ Pull Request workflow 选择了只注册在上游组织中的 Linux 与 Windows 
 
 ## Verification
 
-四个变更的 workflow 均可解析为 YAML，Issue policy 模块通过语法校验，23 个 Issue-management 单元测试全部在 Node 22 下通过。双语 Agent Note 配对已经记录并验证。fork Pull Request 将作为标准 runner 分发、上游专属检查中性跳过、当前仓库策略查询与既有聚合结论的集成检查。
+四个变更的 workflow 均可解析为 YAML，Issue policy 模块通过语法校验，23 个 Issue-management 单元测试全部在 Node 22 下通过。双语 Agent Note 配对已经记录并验证。首次 fork 运行已经证明标准 runner 分发、上游专属检查中性跳过与当前仓库策略查询有效；同时，标准 UTC runner 重放持久化 fixture 时暴露了专用 runner 所隐含的时区依赖。显式参考时区使下一轮运行能够作为快照确定性与既有聚合结论的集成检查。
 
 ## Consequences
 
