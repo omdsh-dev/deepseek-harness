@@ -653,6 +653,7 @@
     },
     "apps/web": {
       "entry": [
+        "tests/**/*.accessibility.ts",
         "tests/**/*.e2e.ts",
         "tests/**/*.perf.ts",
         "tests/**/*.snapshot.ts",
