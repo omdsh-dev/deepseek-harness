@@ -318,15 +318,17 @@ describe('Tooltip', () => {
     expect(screen.queryByRole('tooltip')).toBeNull()
   })
 
-  it('forwards the anchor element to the child ref (object and callback)', () => {
+  it('forwards the anchor element to child and Tooltip refs', () => {
     const objectRef = { current: null as HTMLButtonElement | null }
+    const tooltipRef = { current: null as HTMLElement | null }
     const callbackRef = vi.fn()
     const { rerender } = render(
-      <Tooltip label="Add">
+      <Tooltip label="Add" ref={tooltipRef}>
         <button type="button" ref={objectRef}>anchor</button>
       </Tooltip>,
     )
     expect(objectRef.current).toBe(screen.getByText('anchor'))
+    expect(tooltipRef.current).toBe(screen.getByText('anchor'))
     // Tooltip's own positioning still works through the merged ref.
     fireEvent.mouseEnter(screen.getByText('anchor'))
     expect(screen.getByRole('tooltip')).toBeTruthy()
