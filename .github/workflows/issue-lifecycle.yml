@@ -36,6 +36,9 @@ concurrency:
 jobs:
   lifecycle:
     name: Issue lifecycle
+    # Project mutation belongs to the upstream organization and requires its
+    # GitHub App installation; forks validate PR policy in the read-only lane.
+    if: github.repository_owner == 'deepseek-harness'
     # Runs on every pull_request_review event so the check reports success rather
     # than a gray "skipped" segment. The token-creating and board-mutating steps
     # are gated at step level (a skipped step does not gray the job): only a
