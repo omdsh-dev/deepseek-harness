@@ -165,6 +165,9 @@ jobs:
           || 'dsh-ubuntu-24-04-16core' }}
     name: node 24 / snapshots and artifacts
     env:
+      # Persisted Web fixtures intentionally record the project reference zone.
+      # Standard hosted runners default to UTC, unlike the dedicated pool.
+      TZ: Asia/Shanghai
       DSH_GATE_CONCURRENCY: '10'
       DSH_NODE_COMPAT_SKIP_TYPECHECK: '1'
       DSH_OXLINT_THREADS: '8'

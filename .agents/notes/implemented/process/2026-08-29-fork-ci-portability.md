@@ -10,7 +10,7 @@ Pull-request workflows selected larger Linux and Windows runners registered only
 
 ## Decision
 
-Repository ownership is the infrastructure boundary. Pull requests in `deepseek-harness` retain the dedicated larger runners and organization integrations. Pull requests in other owners use standard GitHub-hosted Ubuntu 24.04 and Windows 2025 runners. The Cloudflare preview and Project-mutating Issue lifecycle job are explicitly skipped outside the upstream owner because their credentials and destinations are upstream state. Read-only Issue policy derives its repository coordinates from `GITHUB_REPOSITORY`, falling back to the checked-in upstream configuration for local execution.
+Repository ownership is the infrastructure boundary. Pull requests in `deepseek-harness` retain the dedicated larger runners and organization integrations. Pull requests in other owners use standard GitHub-hosted Ubuntu 24.04 and Windows 2025 runners. The snapshot-consumer lane explicitly uses the project reference zone, `Asia/Shanghai`, so persisted browser fixtures do not inherit a runner image's local zone. The Cloudflare preview and Project-mutating Issue lifecycle job are explicitly skipped outside the upstream owner because their credentials and destinations are upstream state. Read-only Issue policy derives its repository coordinates from `GITHUB_REPOSITORY`, falling back to the checked-in upstream configuration for local execution.
 
 ## Alternatives considered
 
@@ -20,7 +20,7 @@ Repository ownership is the infrastructure boundary. Pull requests in `deepseek-
 
 ## Verification
 
-The four changed workflows parse as YAML, the Issue policy module passes syntax validation, and all 23 Issue-management unit tests pass under Node 22. The bilingual Agent Note pairing is recorded and verified. A fork pull request is the integration check for standard-runner dispatch, neutral upstream-only checks, current-repository policy lookup, and the existing aggregate verdict.
+The four changed workflows parse as YAML, the Issue policy module passes syntax validation, and all 23 Issue-management unit tests pass under Node 22. The bilingual Agent Note pairing is recorded and verified. The first fork run proved standard-runner dispatch, neutral upstream-only checks, and current-repository policy lookup; it also exposed the dedicated pool's implicit time-zone dependency when a standard UTC runner replayed persisted fixtures. The explicit reference zone makes the rerun the integration check for snapshot determinism and the existing aggregate verdict.
 
 ## Consequences
 
