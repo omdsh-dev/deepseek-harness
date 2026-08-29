@@ -6,7 +6,17 @@
     - img
     - searchbox "Search trajectory"
   - region "Trajectory timeline":
-    - tooltip "ASSISTANT {{clock}} → {{clock}} Total {{duration}} · TTFT {{duration}} · Decoding {{duration}}"
+    - listbox "Timeline overview; drag horizontally to focus events":
+      - option "SYSTEM {{clock}} → {{clock}} Total {{duration}}; record 1"
+      - option "USER {{clock}} → {{clock}} Total {{duration}}; record 2"
+      - option "ASSISTANT {{clock}} → {{clock}} Total {{duration}} · TTFT {{duration}} · Decoding {{duration}}; record 3"
+      - tooltip "ASSISTANT {{clock}} → {{clock}} Total {{duration}} · TTFT {{duration}} · Decoding {{duration}}"
+      - option "TOOL {{clock}} → {{clock}} Total {{duration}}; record 4" [selected]
+      - option "TOOL {{clock}} → {{clock}} Total {{duration}}; record 5"
+      - option "TOOL {{clock}} → {{clock}} Total {{duration}}; record 6"
+      - option "ASSISTANT {{clock}} → {{clock}} Total {{duration}} · TTFT {{duration}} · Decoding {{duration}}; record 7"
+      - option "USER {{clock}} → {{clock}} Total {{duration}}; record 8"
+      - option "ASSISTANT {{clock}} → {{clock}} Total {{duration}} · TTFT {{duration}} · Decoding {{duration}}; record 9"
   - table:
     - rowgroup:
       - row "SYSTEM, Initial System Prompt":

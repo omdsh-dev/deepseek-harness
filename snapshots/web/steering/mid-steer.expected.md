@@ -38,7 +38,7 @@
       - img
     - button "Dismiss all questions":
       - img
-    - radiogroup:
+    - radiogroup "Ready to continue?":
       - radio "Yes": 1 Yes
       - radio "No": 2 No
       - textbox "Type your answer"
