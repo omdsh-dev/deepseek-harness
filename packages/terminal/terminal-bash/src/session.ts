@@ -252,7 +252,9 @@ export class LocalPtySession implements TerminalBackendSession {
   /**
    * Start one caller-owned terminal send.
    * @param request - Input, submission, and cancellation for the send.
-   * @param readiness - Optional stricter evidence policy for shell bootstrap.
+   * @param readiness - Optional prompt-evidence override for shell bootstrap tests.
+   * Submitted pwsh commands require the owned prompt by default so a loaded
+   * PSReadLine host cannot publish silence or stdin-wait before executing input.
    * @returns A cancellable operation that settles with bounded output and readiness evidence.
    */
   startSend(
@@ -274,7 +276,7 @@ export class LocalPtySession implements TerminalBackendSession {
     const operation = new LocalSendOperation(
       this.config.maxReadBytes,
       Date.now(),
-      readiness.requirePrompt ?? false,
+      readiness.requirePrompt ?? (this.config.shellDialect === 'pwsh' && request.submit),
       () => { this.interrupt(operation) },
     )
     this.active = operation

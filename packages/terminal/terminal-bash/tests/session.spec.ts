@@ -1148,6 +1148,39 @@ describe('LocalPtySession readiness and output', () => {
     expect((await operation.done).waitReason).toBe('stdin_read')
   })
 
+  it('requires the owned prompt for submitted pwsh commands by default', async () => {
+    vi.useFakeTimers()
+    const terminal = new FakeTerminal()
+    const inspector = new FakeInspector()
+    const session = makeSession(terminal, inspector, config({
+      shellDialect: 'pwsh',
+      shellPath: 'pwsh',
+      idleSilenceMs: 50,
+      timeoutMs: 200,
+    }))
+    await initialize(session, terminal)
+
+    inspector.waiting = false
+    const operation = session.startSend({ text: 'Write-Output ready', submit: true })
+    let settled = false
+    void operation.done.then(() => { settled = true })
+    await vi.advanceTimersByTimeAsync(0)
+
+    // A loaded PSReadLine host may accept bytes and report stdin wait before it
+    // executes the submitted line. Neither that probe nor silence may release a
+    // successor until the controlled prompt proves command completion.
+    inspector.waiting = true
+    await vi.advanceTimersByTimeAsync(80)
+    expect(settled).toBe(false)
+
+    terminal.emitData('ready\r\n\x1b]133;D;0\x07dsh> ')
+    await vi.advanceTimersByTimeAsync(10)
+    expect(await operation.done).toMatchObject({
+      waitReason: 'stdin_read',
+      viewport: 'ready\ndsh> ',
+    })
+  })
+
   it('does not attribute a delayed prior prompt to the current send', async () => {
     vi.useFakeTimers()
     const terminal = new FakeTerminal()
