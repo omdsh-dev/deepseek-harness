@@ -7,7 +7,7 @@
  * (HMR safety), and the service satisfies the frozen CommandUiContract.
  */
 import { Context } from '@deepseek-ai/cordis'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { createScope, scopeOf } from '@deepseek-ai/dsh-api-session-controller/client'
 import { SlotRegistry } from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
@@ -76,12 +76,18 @@ describe('apply', () => {
   it('the overlay inject resolves the per-session popup controller by sessionId and fails loud on an unknown id', async () => {
     const { ctx, slots, mint } = await bench()
     const command = ctx.get('commandUi') as CommandUiRuntime
+    const bindComposerFocus = vi.spyOn(command, 'bindComposerFocus')
     const scope = mint('s1')
     const entry = slots.entries('conversation.input.overlay')[0]!
     const injectEntry = entry.inject as unknown as (sessionId: SessionId) => PopupSelectInjected
     const injected = injectEntry(sid('s1'))
     expect(injected.popup).toBe(command.popupFor(scope.ctx))
-    expect(typeof injected.bindComposerFocus).toBe('function')
+    const focus = vi.fn()
+    const unbind = injected.bindComposerFocus(focus)
+    expect(bindComposerFocus).toHaveBeenCalledWith(sid('s1'), focus)
+    expect(typeof unbind).toBe('function')
+    unbind()
+    bindComposerFocus.mockRestore()
     expect(() => injectEntry(sid('ghost'))).toThrow(/resolved no scope/)
   })
 })
