@@ -1121,6 +1121,33 @@ describe('LocalPtySession readiness and output', () => {
     expect(session.motd).toBe('dsh> ')
   })
 
+  it('keeps a prompt-required bootstrap pending across stdin wait and silence evidence', async () => {
+    vi.useFakeTimers()
+    const terminal = new FakeTerminal()
+    const inspector = new FakeInspector()
+    const session = makeSession(terminal, inspector, config({ idleSilenceMs: 50, timeoutMs: 200 }))
+    await initialize(session, terminal)
+
+    inspector.waiting = false
+    const operation = session.startSend(
+      { text: 'install controlled prompt', submit: true },
+      { requirePrompt: true },
+    )
+    let settled = false
+    void operation.done.then(() => { settled = true })
+    await vi.advanceTimersByTimeAsync(0)
+
+    // A post-write stdin wait would satisfy the exact probe, and 80ms also
+    // exceeds the silence fallback. Neither is sufficient for bootstrap.
+    inspector.waiting = true
+    await vi.advanceTimersByTimeAsync(80)
+    expect(settled).toBe(false)
+
+    terminal.emitData('\x1b]133;D;0\x07dsh> ')
+    await vi.advanceTimersByTimeAsync(10)
+    expect((await operation.done).waitReason).toBe('stdin_read')
+  })
+
   it('does not attribute a delayed prior prompt to the current send', async () => {
     vi.useFakeTimers()
     const terminal = new FakeTerminal()

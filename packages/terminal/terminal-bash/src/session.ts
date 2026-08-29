@@ -90,6 +90,7 @@ class LocalSendOperation implements TerminalSendOperation {
   constructor(
     maxBytes: number,
     readonly startedAt: number,
+    readonly requirePrompt: boolean,
     private readonly onCancel: () => void,
   ) {
     this.output = new BoundedTextBuffer(maxBytes)
@@ -248,7 +249,10 @@ export class LocalPtySession implements TerminalBackendSession {
     }
   }
 
-  startSend(request: TerminalSendRequest): TerminalSendOperation {
+  startSend(
+    request: TerminalSendRequest,
+    readiness: { requirePrompt?: boolean } = {},
+  ): TerminalSendOperation {
     if (this.closing) throw new Error('PTY session is closing')
     if (this.statusValue.kind === 'exited') throw new Error('PTY session has exited')
     if (this.active !== undefined) {
@@ -264,6 +268,7 @@ export class LocalPtySession implements TerminalBackendSession {
     const operation = new LocalSendOperation(
       this.config.maxReadBytes,
       Date.now(),
+      readiness.requirePrompt ?? false,
       () => { this.interrupt(operation) },
     )
     this.active = operation
@@ -498,7 +503,7 @@ export class LocalPtySession implements TerminalBackendSession {
       const startupHasOutput = !this.initializing || this.scrollback.snapshot().text.length > 0
       const acceptsStdinWait = startupHasOutput && foreground !== undefined
         && operation.acceptsStdinWait(foreground.processGroupId, foreground.inputWaiting)
-      if (elapsed >= this.config.exactProbeAfterMs && acceptsStdinWait) {
+      if (!operation.requirePrompt && elapsed >= this.config.exactProbeAfterMs && acceptsStdinWait) {
         this.settleActive('stdin_read')
         return
       }
@@ -507,7 +512,7 @@ export class LocalPtySession implements TerminalBackendSession {
       // on waiting for shell ownership instead of letting a child marker suppress
       // readiness until the absolute timeout.
       const handoffGrace = this.promptSeen ? this.config.handoffGraceMs : 0
-      if (startupHasOutput && idleFor >= this.config.idleSilenceMs + handoffGrace) {
+      if (!operation.requirePrompt && startupHasOutput && idleFor >= this.config.idleSilenceMs + handoffGrace) {
         this.settleActive('inferred_idle')
       }
     } catch (error: unknown) {
