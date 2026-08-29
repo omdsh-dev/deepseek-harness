@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-08-29-web-accessibility-interaction-ownership.md
-2026-08-29-web-accessibility-interaction-ownership.md: 94c3437b91c50dd23c320da83df6aa7c7fe0ef9a
-2026-08-29-web-accessibility-interaction-ownership.zh.md: 0a4c087ddc73cb7d60ddeb91063ae1dfe813271d
+2026-08-29-web-accessibility-interaction-ownership.md: 8089cfac4e184bd6c092278b65b8ba8b0ed715d6
+2026-08-29-web-accessibility-interaction-ownership.zh.md: 526fccc8a6041e74bea7489cdf4f6cacbfd98d73

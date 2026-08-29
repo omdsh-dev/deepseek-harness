@@ -32,6 +32,8 @@ Trajectory ledger 在已加载的逻辑记录中只拥有一个漫游行入口�
 
 Trajectory timeline 在记录时间条上拥有多选 listbox。DOM 焦点留在概览上，由 `aria-activedescendant` 暴露正在浏览的记录。方向键浏览，Shift 扩展闭合记录范围，Home／End 到达边界，Enter 或空格打开活动记录，Control 或 Command 加 A 选择已加载时间域，Escape 清除范围。键盘活动记录会在缩放视口间保持挂载并获得可视提示。
 
+通用用户问题 composer 为每道单选题拥有具名的漫游 radio group。方向键循环，Home／End 到达边界，移动会选择目标但不改变当前题页；显式激活继续采用立即前进。因激活、翻页器导航、跳过或校验恢复而改变题号时，焦点会进入新题页已选中的 radio、首个 checkbox 或具名自定义字段。推荐信息和选项描述通过 `aria-describedby` 连接，不改变模型编写的选项名称。
+
 ## Alternatives considered
 
 **通过 companion 插件修复渲染后的应用。** 拒绝，因为 MutationObserver 需要从不稳定标记推断职责，与 React 提交竞争，重复私有状态，并且仍无法保证嵌套焦点恢复或权威的 disclosure 状态变更。
@@ -56,11 +58,13 @@ Trajectory timeline 在记录时间条上拥有多选 listbox。DOM 焦点留在
 
 37 个聚焦 Trajectory table 测试通过，覆盖 ledger 的单入口行停靠点、跨虚拟滚动边界的逻辑方向键／Home／End 移动、活动行 Request 操作归属，以及详情检查器的单入口标签停靠点、激活、焦点移动和活动标签到面板关系。33 个组装 Trajectory view 测试包含多选 listbox 归属、active-descendant 浏览、Shift 扩展范围、打开记录、选择整个时间域与集成 ledger 路径；合计 70 个聚焦测试通过。
 
+17 个聚焦用户问题 composer 测试通过，覆盖具名的单入口 radio group、不翻页的方向键／Home 循环选择、推荐和描述关系、进入下一题自定义字段的焦点连续性、IME 安全输入、校验恢复、取消、失败后重新启用，以及 Session 级草稿恢复。
+
 生产构建完成后，组装 Web replay 的 93 个文件中有 92 个通过、1 个按条件跳过；311 个测试通过、15 个跳过。经过审查的无障碍树 golden 新增应用 `main`、其中的一级标题、具名会话导航 complementary 地标、键盘分隔条与具名菜单，同时移除已经折叠的详情子树中的控件。契约类型检查、契约 lint 与 Node 22 文档测试通道也通过。这些检查验证 DOM、焦点、构建后组合与浏览器无障碍树契约；它们不能认证真实朗读或真实辅助技术操作。
 
 ## Deferred
 
-这项决策不宣称 Web 已完整适配无障碍。Timeline listbox 与范围的真实朗读、模型选择与命令弹窗的真实朗读、问题表单、对话 log 与完成播报、工具 disclosure、对比度与强制颜色行为、缩放与回流、减少动态效果、浏览器覆盖，以及任务级 VoiceOver、NVDA、JAWS、Narrator 与 Orca 证据仍属于需要分别验证的工作。
+这项决策不宣称 Web 已完整适配无障碍。Timeline listbox 与范围的真实朗读、模型选择与命令弹窗的真实朗读、问题表单播报与 plan-review 使用方证据、对话 log 与完成播报、工具 disclosure、对比度与强制颜色行为、缩放与回流、减少动态效果、浏览器覆盖，以及任务级 VoiceOver、NVDA、JAWS、Narrator 与 Orca 证据仍属于需要分别验证的工作。
 
 ## Consequences
 

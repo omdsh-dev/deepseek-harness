@@ -32,6 +32,8 @@ The Trajectory ledger owns one roving row entry across its loaded logical record
 
 The Trajectory timeline owns a multiselect listbox over its record spans. DOM focus stays on the overview while `aria-activedescendant` exposes the browsed record. Arrow keys browse, Shift extends an inclusive record range, Home and End reach an edge, Enter or Space opens the active record, Control or Command plus A selects the loaded domain, and Escape clears the range. Keyboard-active records remain mounted and visually indicated across a zoomed viewport.
 
+The generic user-question composer owns a named roving radio group for each single-choice question. Arrow keys wrap, Home and End reach an edge, and movement selects without changing the current page; explicit activation retains immediate advancement. A question-index change caused by activation, pager navigation, skipping, or validation recovery focuses the new page's selected radio, first checkbox, or named custom field. Recommendation and option-description copy is connected through `aria-describedby` without changing the model-authored option name.
+
 ## Alternatives considered
 
 **Repair the rendered application from a companion plugin.** Rejected because a MutationObserver would infer ownership from unstable markup, race React commits, duplicate private state, and remain unable to guarantee nested focus restoration or authoritative disclosure changes.
@@ -56,11 +58,13 @@ Twenty-two focused Conversation-shell tests pass, including the named roving Vie
 
 Thirty-seven focused Trajectory-table tests pass, including the ledger's single-entry row stop, logical Arrow/Home/End movement across a virtual scroll boundary, active-row Request action ownership, and the detail inspector's single-entry tab stop, activation, focus movement, and active tab-to-panel relationship. Thirty-three assembled Trajectory view tests include multiselect listbox ownership, active-descendant browsing, Shift range extension, record opening, whole-domain selection, and the integrated ledger path; together, 70 focused tests pass.
 
+Seventeen focused user-question composer tests pass, including the named single-entry radio group, wrapped Arrow/Home selection without page advance, recommendation and description relationships, focus continuity into the next custom field, IME-safe input, validation recovery, cancellation, failure re-arming, and Session-scoped draft restoration.
+
 A production build followed by the assembled Web replay passes 92 of 93 files, with one conditionally skipped file; 311 tests pass and 15 are skipped. Reviewed accessibility-tree goldens add the application `main`, its level-one heading, named Session-navigation complementary landmark, keyboard separator, and named menu while removing controls from the already-collapsed Details subtree. Contract type checking, contract lint, and the Node 22 documentation lane also pass. These checks verify DOM, focus, built-composition, and browser accessibility-tree contracts; they do not certify spoken output or real assistive-technology operation.
 
 ## Deferred
 
-This decision does not claim complete Web accessibility. Timeline listbox and range spoken output, model-selection and command-popup spoken output, question forms, conversation log and completion announcements, tool disclosures, contrast and forced-colors behavior, zoom and reflow, reduced-motion behavior, browser coverage, and task-level VoiceOver, NVDA, JAWS, Narrator, and Orca evidence remain separately verified work.
+This decision does not claim complete Web accessibility. Timeline listbox and range spoken output, model-selection and command-popup spoken output, question-form announcements and plan-review consumer evidence, conversation log and completion announcements, tool disclosures, contrast and forced-colors behavior, zoom and reflow, reduced-motion behavior, browser coverage, and task-level VoiceOver, NVDA, JAWS, Narrator, and Orca evidence remain separately verified work.
 
 ## Consequences
 

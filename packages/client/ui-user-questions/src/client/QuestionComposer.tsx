@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react'
 import clsx from 'clsx'
 import {
   Button, IconCheckOutline14, IconChevronDownOutline14, IconChevronLeftOutline14,
@@ -37,7 +37,6 @@ export function parseRecommendedLabel(label: string): { label: string; recommend
 /** Return whether a text-field key event belongs to an active IME composition. */
 function isComposing(event: KeyboardEvent<HTMLTextAreaElement>): boolean {
   // keyCode 229 is the legacy IME-composition signal engines emit without isComposing.
-  // oxlint-disable-next-line typescript/no-deprecated
   return event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229
 }
 
@@ -49,6 +48,8 @@ interface AnswerFieldProps {
   value: string
   /** Empty-field prompt. */
   placeholder: string
+  /** Accessible field name independent of placeholder visibility. */
+  ariaLabel: string
   /** Whether a submission in flight has frozen the field. */
   disabled: boolean
   /** Whether this field takes focus on mount. */
@@ -82,6 +83,7 @@ function AnswerField(props: AnswerFieldProps) {
     <div className={clsx(css.field, props.variant === 'inline' ? css.customInline : css.customBlock)}>
       <div aria-hidden className={css.fieldMirror}>{`${props.value}\n`}</div>
       <textarea
+        aria-label={props.ariaLabel}
         autoFocus={props.autoFocus}
         className={css.fieldInput}
         value={props.value}
@@ -150,6 +152,8 @@ function QuestionFlow({ pending, t, useStore, actions }: QuestionFlowProps) {
   // Collapsed to the header strip so the conversation above stays readable
   // while the user decides; answer drafts live in the Session store above.
   const [minimized, setMinimized] = useState(false)
+  const cardRef = useRef<HTMLElement>(null)
+  const previousIndex = useRef(index)
   // The free-form textarea autofocuses on first presentation; re-expanding a
   // collapsed question must not steal focus from the expand toggle back into
   // the input, so focus is granted once per question index.
@@ -160,6 +164,14 @@ function QuestionFlow({ pending, t, useStore, actions }: QuestionFlowProps) {
   // oxlint-disable-next-line typescript/no-non-null-assertion
   const draft = drafts[index]!
   const hasOptions = (question.options?.length ?? 0) > 0
+
+  useEffect(() => {
+    if (previousIndex.current === index) return
+    previousIndex.current = index
+    cardRef.current?.querySelector<HTMLElement>(
+      '[role="radio"][tabindex="0"], [role="checkbox"], textarea',
+    )?.focus()
+  }, [index])
 
   const replaceProgress = (nextIndex: number, nextDrafts: QuestionDraftAnswer[]): void => {
     actions.replace(pending.key, { index: nextIndex, drafts: nextDrafts })
@@ -185,7 +197,7 @@ function QuestionFlow({ pending, t, useStore, actions }: QuestionFlowProps) {
     setError(null)
   }
 
-  const choose = (label: string): void => {
+  const choose = (label: string, advance = true): void => {
     updateDraft((current) => {
       if (question.multiSelect === true) {
         const selected = current.selected.includes(label)
@@ -194,7 +206,34 @@ function QuestionFlow({ pending, t, useStore, actions }: QuestionFlowProps) {
         return { ...current, selected, skipped: false }
       }
       return { selected: [label], custom: '', skipped: false }
-    }, question.multiSelect !== true && index < questions.length - 1 ? index + 1 : index)
+    }, advance && question.multiSelect !== true && index < questions.length - 1 ? index + 1 : index)
+  }
+
+  const moveRadio = (
+    event: KeyboardEvent<HTMLButtonElement>,
+    optionIndex: number,
+  ): boolean => {
+    if (question.multiSelect === true) return false
+    const options = question.options ?? []
+    let nextIndex: number
+    switch (event.key) {
+      case 'ArrowRight':
+      case 'ArrowDown': nextIndex = (optionIndex + 1) % options.length; break
+      case 'ArrowLeft':
+      case 'ArrowUp': nextIndex = (optionIndex - 1 + options.length) % options.length; break
+      case 'Home': nextIndex = 0; break
+      case 'End': nextIndex = options.length - 1; break
+      default: return false
+    }
+    const next = options[nextIndex]
+    if (next === undefined) return false
+    event.preventDefault()
+    choose(next.label, false)
+    event.currentTarget.parentElement
+      ?.querySelectorAll<HTMLButtonElement>('[role="radio"]')
+      .item(nextIndex)
+      .focus()
+    return true
   }
 
   const answered = (item: QuestionDraftAnswer): boolean =>
@@ -278,6 +317,7 @@ function QuestionFlow({ pending, t, useStore, actions }: QuestionFlowProps) {
   return (
     <div className={css.frame} data-question-key={pending.key}>
       <section
+        ref={cardRef}
         className={clsx(css.card, minimized && css.cardMinimized)}
         aria-labelledby={`question-${pending.key}-${String(index)}`}
       >
@@ -315,10 +355,19 @@ function QuestionFlow({ pending, t, useStore, actions }: QuestionFlowProps) {
               {question.detail !== undefined && (
                 <div className={css.detail}><MarkdownText text={question.detail} labels={markdownLabels} /></div>
               )}
-              <div className={css.options} role={question.multiSelect === true ? 'group' : 'radiogroup'}>
+              <div
+                className={css.options}
+                role={question.multiSelect === true ? 'group' : 'radiogroup'}
+                aria-labelledby={`question-${pending.key}-${String(index)}`}
+              >
                 {(question.options ?? []).map((option, optionIndex) => {
                   const selected = draft.selected.includes(option.label)
                   const display = parseRecommendedLabel(option.label)
+                  const optionId = `question-${pending.key}-${String(index)}-option-${String(optionIndex)}`
+                  const describedBy = [
+                    display.recommended ? `${optionId}-recommended` : null,
+                    option.description === undefined ? null : `${optionId}-description`,
+                  ].filter(value => value !== null).join(' ')
                   return (
                     <button
                       type="button" key={`${option.label}-${String(optionIndex)}`}
@@ -326,9 +375,16 @@ function QuestionFlow({ pending, t, useStore, actions }: QuestionFlowProps) {
                       role={question.multiSelect === true ? 'checkbox' : 'radio'}
                       aria-checked={selected}
                       aria-label={display.label}
+                      aria-describedby={describedBy === '' ? undefined : describedBy}
+                      tabIndex={question.multiSelect === true
+                        || selected
+                        || (draft.selected.length === 0 && optionIndex === 0)
+                        ? 0
+                        : -1}
                       disabled={busy !== null}
                       onClick={() => { choose(option.label) }}
                       onKeyDown={(event) => {
+                        if (moveRadio(event, optionIndex)) return
                         if (event.key !== 'Enter' || !drafts.every(completed)) return
                         event.preventDefault()
                         submitDrafts(drafts)
@@ -345,10 +401,17 @@ function QuestionFlow({ pending, t, useStore, actions }: QuestionFlowProps) {
                         <span className={css.optionLine}>
                           <span className={css.optionLabel}>{display.label}</span>
                           {display.recommended && (
-                            <span className={css.badge}>{t('option.recommended')}</span>
+                            <span id={`${optionId}-recommended`} className={css.badge}>
+                              {t('option.recommended')}
+                            </span>
                           )}
                           {option.description !== undefined && (
-                            <span className={css.description}>{option.description}</span>
+                            <span
+                              id={`${optionId}-description`}
+                              className={css.description}
+                            >
+                              {option.description}
+                            </span>
                           )}
                         </span>
                       </span>
@@ -374,6 +437,7 @@ function QuestionFlow({ pending, t, useStore, actions }: QuestionFlowProps) {
                           </span>
                         )}
                       <AnswerField
+                        ariaLabel={t('custom.placeholder')}
                         variant="inline"
                         value={draft.custom}
                         disabled={busy !== null}
@@ -385,6 +449,7 @@ function QuestionFlow({ pending, t, useStore, actions }: QuestionFlowProps) {
                   )
                   : (
                     <AnswerField
+                      ariaLabel={t('custom.placeholder')}
                       autoFocus={!focusedQuestions.current.has(index)}
                       variant="block"
                       value={draft.custom}
