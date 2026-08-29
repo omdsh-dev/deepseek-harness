@@ -20,6 +20,8 @@ The application shell renders the conversation column as `main` with one localiz
 
 The Workspace browser owns one roving Tab entry for each non-empty grouped, flat, or search-result tree. Up and Down, Home and End move among rendered rows; Enter and Space activate the focused row. Authored `aria-level` metadata lets Right open or enter a Workspace and Left close it or return from a Session without inferring hierarchy from presentation wrappers. Buttons owned by only the active row join sequential navigation. Empty containers expose no tree role. A collapsed search input is absent from the accessibility tree; Escape and Clear restore focus to the persistent search button, while an outside pointer dismissal preserves the user's new focus target.
 
+The composer model seat implements its two-level selector as a single-entry menu button. Edge opening, roving Arrow/Home/End movement, Right entry, Left or Escape return, selected-value initial focus, and trigger restoration remain inside the component that owns the selection panes. The command `popupSelect` owns a search combobox that controls its named listbox; DOM focus remains in that search field while `aria-activedescendant` and `aria-selected` expose the controller's one current filtered option. Its overlay binds the controller's focus-return callback to the exact composer card that owns the open popup, rather than looking up an arbitrary resident input. Loading, applying, empty, and failure states remain discoverable without adding every result to sequential Tab navigation.
+
 The context meter implements a disclosure relationship. Its trigger exposes expanded state and controls a stable panel id; the open panel is a named information region rather than a modal dialog. Escape, an outside pointer action, or activating the trigger again closes it without moving focus into the panel.
 
 ## Alternatives considered
@@ -38,13 +40,15 @@ The context meter implements a disclosure relationship. Its trigger exposes expa
 
 Seventy focused jsdom tests exercise modal stacking, initial and contained focus, background inertness, disconnected openers, empty dialogs, menu-button ownership including a Tooltip-wrapped trigger, edge opening, roving keys, typeahead, submenus, Tab exit, named landmarks, closed-Details exclusion, separator metadata and resizing, and context disclosure ownership. The complete GUI lane passes 288 files and 3,830 tests, with one test skipped by its existing condition.
 
-Seventy-six focused Workspace-row and browser tests pass; the row source retains 100% statement, branch, function, and line coverage. The built application then passes the same seeded tree hierarchy, roving focus, disclosure keys, search focus return, narrow reflow, focus visibility, Settings containment, forced-colors, and reduced-motion checks in Chromium (five tests), Firefox (four tests with the Chromium-only forced-colors case skipped), and WebKit (four tests with that case skipped).
+Seventy-six focused Workspace-row and browser tests pass; the row source retains 100% statement, branch, function, and line coverage. The built application then passes the same seeded tree hierarchy, roving focus, disclosure keys, search focus return, model-menu keyboard path, command-combobox ownership and focus return, narrow reflow, focus visibility, Settings containment, forced-colors, and reduced-motion checks in Chromium (six tests), Firefox (five tests with the Chromium-only forced-colors case skipped), and WebKit (five tests with that case skipped).
+
+Twenty-three focused model-seat and command-popup tests pass, including edge opening, single-entry menu focus, pane entry and return, current-option focus, combobox ownership, active-descendant synchronization, exact-composer binding, selection, cancellation, error, and focus-restoration paths.
 
 A production build followed by the assembled Web replay passes 92 of 93 files, with one conditionally skipped file; 311 tests pass and 15 are skipped. Reviewed accessibility-tree goldens add the application `main`, its level-one heading, named Session-navigation complementary landmark, keyboard separator, and named menu while removing controls from the already-collapsed Details subtree. Contract type checking, contract lint, and the Node 22 documentation lane also pass. These checks verify DOM, focus, built-composition, and browser accessibility-tree contracts; they do not certify spoken output or real assistive-technology operation.
 
 ## Deferred
 
-This decision does not claim complete Web accessibility. Tabs, model selection, question forms, conversation log and completion announcements, tool disclosures, contrast and forced-colors behavior, zoom and reflow, reduced-motion behavior, browser coverage, and task-level VoiceOver, NVDA, JAWS, Narrator, and Orca evidence remain separately verified work.
+This decision does not claim complete Web accessibility. Tabs, model-selection and command-popup spoken output, question forms, conversation log and completion announcements, tool disclosures, contrast and forced-colors behavior, zoom and reflow, reduced-motion behavior, browser coverage, and task-level VoiceOver, NVDA, JAWS, Narrator, and Orca evidence remain separately verified work.
 
 ## Consequences
 

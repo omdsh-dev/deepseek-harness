@@ -64,12 +64,12 @@ async function mountOpen(overrides: Partial<PopupSpec<string>> = {}, consumeResu
   const consume = vi.fn((_segment: TokenSegment) => consumeResult)
   const focusComposer = vi.fn()
   const popup = new PopupSelectController<string>({ consume, focusComposer })
-  const view = render(<PopupSelectView popup={popup} t={t} />)
+  const view = render(<PopupSelectView popup={popup} bindComposerFocus={() => () => {}} t={t} />)
   await act(async () => {
     popup.open('theme', spec(overrides), 'ctx-A', SEGMENT)
     await Promise.resolve()
   })
-  return { popup, view, consume, focusComposer, search: screen.getByRole('textbox', { name: '筛选选项' }) }
+  return { popup, view, consume, focusComposer, search: screen.getByRole('combobox', { name: '筛选选项' }) }
 }
 
 function rowLabels(): string[] {
@@ -77,17 +77,46 @@ function rowLabels(): string[] {
 }
 
 describe('PopupSelectView', () => {
+  it('binds focus return to the exact composer that owns the open popup', async () => {
+    const popup = new PopupSelectController<string>({ consume: () => true, focusComposer: () => {} })
+    let restoreFocus: (() => void) | undefined
+    const bindComposerFocus = vi.fn((focus: () => void) => {
+      restoreFocus = focus
+      return () => { restoreFocus = undefined }
+    })
+    render(
+      <div data-composer-card>
+        <div data-composer-input tabIndex={-1} />
+        <PopupSelectView popup={popup} bindComposerFocus={bindComposerFocus} t={t} />
+      </div>,
+    )
+    await act(async () => {
+      popup.open('theme', spec(), 'ctx-A', SEGMENT)
+      await Promise.resolve()
+    })
+    const composer = document.querySelector<HTMLElement>('[data-composer-input]')!
+    expect(document.activeElement).toBe(screen.getByRole('combobox', { name: '筛选选项' }))
+    act(() => { restoreFocus?.() })
+    expect(document.activeElement).toBe(composer)
+  })
+
   it('renders null while closed, opens with focus in the search input', async () => {
     const popup = new PopupSelectController<string>({ consume: () => true, focusComposer: () => {} })
-    const view = render(<PopupSelectView popup={popup} t={t} />)
+    const view = render(<PopupSelectView popup={popup} bindComposerFocus={() => () => {}} t={t} />)
     expect(view.container.childElementCount).toBe(0)
     await act(async () => {
       popup.open('theme', spec(), 'ctx-A', SEGMENT)
       await Promise.resolve()
     })
-    const search = screen.getByRole('textbox', { name: '筛选选项' })
+    const search = screen.getByRole('combobox', { name: '筛选选项' })
     expect(document.activeElement).toBe(search)
     expect(rowLabels()).toEqual(['Dark', 'Light', 'Sepia'])
+    const listbox = screen.getByRole('listbox', { name: '/theme 匹配项' })
+    const options = screen.getAllByRole('option')
+    expect(search.getAttribute('aria-controls')).toBe(listbox.id)
+    expect(search.getAttribute('aria-expanded')).toBe('true')
+    expect(search.getAttribute('aria-activedescendant')).toBe(options[0]!.id)
+    expect(options[0]!.getAttribute('aria-selected')).toBe('true')
   })
 
   it('typing filters rows locally and rebases the highlight', async () => {
@@ -107,9 +136,11 @@ describe('PopupSelectView', () => {
     act(() => { fireEvent.keyDown(search, { key: 'ArrowDown' }) })
     let options = screen.getAllByRole('option')
     expect(options[1]!.getAttribute('aria-selected')).toBe('true')
+    expect(search.getAttribute('aria-activedescendant')).toBe(options[1]!.id)
     act(() => { fireEvent.keyDown(search, { key: 'ArrowUp' }) })
     options = screen.getAllByRole('option')
     expect(options[0]!.getAttribute('aria-selected')).toBe('true')
+    expect(search.getAttribute('aria-activedescendant')).toBe(options[0]!.id)
     // fireEvent returns false when preventDefault was called: arrow left/right must NOT be intercepted.
     expect(fireEvent.keyDown(search, { key: 'ArrowLeft' })).toBe(true)
     expect(fireEvent.keyDown(search, { key: 'ArrowRight' })).toBe(true)

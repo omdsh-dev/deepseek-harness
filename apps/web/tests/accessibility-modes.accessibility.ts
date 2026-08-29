@@ -4,7 +4,7 @@ import type { Browser, Locator, Page } from 'playwright'
 import { chromium, firefox, webkit } from 'playwright'
 import { afterAll, beforeAll, describe, expect, it, onTestFailed } from 'vitest'
 import { launchWebScaffold, seedSession, watchConsole, type WebScaffold } from './scaffold.ts'
-import { saveFailureShot } from './support.ts'
+import { saveFailureShot, writeComposerDraft } from './support.ts'
 
 const browserTypes = { chromium, firefox, webkit }
 type BrowserName = keyof typeof browserTypes
@@ -285,6 +285,59 @@ describe(`web accessibility modes: ${browserName}`, () => {
     await page.locator('button[aria-haspopup="dialog"][aria-expanded]').waitFor()
     await expect.poll(() => page.evaluate(() => document.getAnimations()
       .filter(animation => animation.playState === 'running').length), { timeout: 5_000 }).toBe(0)
+    expect(tripwire.pageErrors).toEqual([])
+  })
+
+  it('operates the assembled model menu and command combobox with one current item', async () => {
+    onTestFailed(() => saveFailureShot(page, `web-accessibility-${browserName}-model-command`))
+    await page.setViewportSize({ width: 1280, height: 900 })
+    await page.emulateMedia({ reducedMotion: 'no-preference' })
+    const tree = page.getByRole('tree', { name: 'Sessions' })
+    const workspaceRow = tree.locator('[role="treeitem"][aria-level="1"][aria-expanded]').first()
+    await workspaceRow.waitFor()
+    if (await workspaceRow.getAttribute('aria-expanded') === 'false') {
+      await workspaceRow.focus()
+      await page.keyboard.press('ArrowRight')
+      await expect.poll(() => workspaceRow.getAttribute('aria-expanded')).toBe('true')
+    }
+    const sessionRow = tree.locator('[role="treeitem"][aria-level="2"]').first()
+    await sessionRow.click()
+
+    const trigger = page.getByRole('button', { name: /^Select model/ })
+    await trigger.waitFor({ timeout: 15_000 })
+    await trigger.focus()
+    await page.keyboard.press('ArrowDown')
+    const rootItem = page.getByRole('menuitem', { name: /^Model/ })
+    await rootItem.waitFor()
+    expect(await rootItem.evaluate(element => document.activeElement === element)).toBe(true)
+    expect(await rootItem.getAttribute('tabindex')).toBe('-1')
+    await page.keyboard.press('ArrowRight')
+
+    const modelOption = page.getByRole('menuitemradio', { name: 'DeepSeek-V4-Flash' })
+    await modelOption.waitFor()
+    expect(await modelOption.getAttribute('aria-checked')).toBe('true')
+    expect(await modelOption.evaluate(element => document.activeElement === element)).toBe(true)
+    await page.keyboard.press('ArrowLeft')
+    expect(await rootItem.evaluate(element => document.activeElement === element)).toBe(true)
+    await page.keyboard.press('Escape')
+    await expect.poll(() => page.getByRole('menu').count()).toBe(0)
+    expect(await trigger.evaluate(element => document.activeElement === element)).toBe(true)
+
+    const input = page.locator('[data-composer-input][contenteditable="true"]').first()
+    await writeComposerDraft(page, input, '/model')
+    await input.press('Enter')
+    const combobox = page.getByRole('combobox', { name: 'Filter options' })
+    const listbox = page.getByRole('listbox', { name: '/model matches' })
+    await combobox.waitFor({ timeout: 10_000 })
+    await listbox.waitFor()
+    const option = listbox.getByRole('option', { name: 'DeepSeek-V4-Flash' })
+    expect(await combobox.getAttribute('aria-controls')).toBe(await listbox.getAttribute('id'))
+    expect(await combobox.getAttribute('aria-activedescendant')).toBe(await option.getAttribute('id'))
+    expect(await option.getAttribute('aria-selected')).toBe('true')
+    expect(await combobox.evaluate(element => document.activeElement === element)).toBe(true)
+    await page.keyboard.press('Escape')
+    await expect.poll(() => combobox.count()).toBe(0)
+    await expect.poll(() => input.evaluate(element => document.activeElement === element)).toBe(true)
     expect(tripwire.pageErrors).toEqual([])
   })
 })

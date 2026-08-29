@@ -1,8 +1,8 @@
 - tree "Sessions":
-  - treeitem "{{workspace}}" [expanded]:
+  - treeitem "{{workspace}}" [expanded] [level=1]:
     - img
     - text: {{workspace}}
-  - treeitem "Review deepseek-harness/deepseek-harness#314 Session actions for Review deepseek-harness/deepseek-harness#314" [selected]:
+  - treeitem "Review deepseek-harness/deepseek-harness#314 Session actions for Review deepseek-harness/deepseek-harness#314" [level=2] [selected]:
     - text: Review deepseek-harness/deepseek-harness#314
     - button "Session actions for Review deepseek-harness/deepseek-harness#314":
       - img
