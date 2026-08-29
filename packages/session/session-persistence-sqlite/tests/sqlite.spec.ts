@@ -481,10 +481,9 @@ describe('SessionPersistenceSqlite schema ownership', () => {
     // Simulate expensive connection/schema setup before journal selection.
     // That unrelated work must not consume the transition's retry budget.
     const BusyOnceDatabase = class extends BusyOnceDatabaseBase {
-      override prepare(source: string) {
-        const statement = super.prepare(source)
-        if (source === sql('select-user-version')) now = 150
-        return statement
+      constructor(...args: ConstructorParameters<typeof BusyOnceDatabaseBase>) {
+        super(...args)
+        now = 150
       }
     }
 
