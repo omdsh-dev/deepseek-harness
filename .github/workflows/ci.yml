@@ -461,10 +461,13 @@ jobs:
     name: windows node 24 / coverage
     timeout-minutes: 120
     env:
-      DSH_COVERAGE_MAX_WORKERS: '6'
-      DSH_COVERAGE_PARTITIONS: '4'
+      # Forks run this lane on a standard four-core Windows host. Keep the
+      # instrumented partitions within that CPU budget just like Linux; the
+      # upstream 16-core pool retains its established profile.
+      DSH_COVERAGE_MAX_WORKERS: ${{ github.repository_owner != 'deepseek-harness' && '2' || '6' }}
+      DSH_COVERAGE_PARTITIONS: ${{ github.repository_owner != 'deepseek-harness' && '2' || '4' }}
       DSH_COVERAGE_TEST_TIMEOUT_MS: '90000'
-      DSH_GATE_CONCURRENCY: '3'
+      DSH_GATE_CONCURRENCY: ${{ github.repository_owner != 'deepseek-harness' && '1' || '3' }}
     steps:
       - uses: actions/checkout@v6
         with:

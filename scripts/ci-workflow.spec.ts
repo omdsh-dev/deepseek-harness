@@ -117,9 +117,14 @@ describe('CI workflow', () => {
     ))
     expect(buildCommands.map(step => step.run)).toContain('pnpm run check:ci:windows-blocking')
 
-    // windows-coverage uses the lower 4-partition profile.
+    // windows-coverage preserves the upstream profile but bounds standard
+    // four-core fork runners to the same owner-scoped budget as Linux.
     expect(windowsCoverage.name).toBe('windows node 24 / coverage')
-    expect(windowsCoverage.env).toMatchObject({ DSH_COVERAGE_PARTITIONS: '4' })
+    expect(windowsCoverage.env).toMatchObject({
+      DSH_COVERAGE_MAX_WORKERS: "${{ github.repository_owner != 'deepseek-harness' && '2' || '6' }}",
+      DSH_COVERAGE_PARTITIONS: "${{ github.repository_owner != 'deepseek-harness' && '2' || '4' }}",
+      DSH_GATE_CONCURRENCY: "${{ github.repository_owner != 'deepseek-harness' && '1' || '3' }}",
+    })
     const coverageSteps = windowsCoverage.steps as unknown[]
     const coverageCommands = coverageSteps.filter((step): step is Record<string, unknown> & { run: string } => (
       isRecord(step) && typeof step.run === 'string'

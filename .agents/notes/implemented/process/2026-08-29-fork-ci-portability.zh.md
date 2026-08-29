@@ -12,7 +12,7 @@ Pull Request workflow 选择了只注册在上游组织中的 Linux 与 Windows 
 
 以仓库 owner 作为基础设施边界。`deepseek-harness` 下的 Pull Request 继续使用专用 larger runner 与组织集成；其他 owner 下的 Pull Request 使用 GitHub 标准托管的 Ubuntu 24.04 与 Windows 2025 runner。snapshot-consumer 通道显式使用项目参考时区 `Asia/Shanghai`，避免持久化浏览器 fixture 继承 runner 镜像的本地时区。Cloudflare 预览与会写入 Project 的 Issue lifecycle 任务依赖上游凭据和目标，因此在非上游 owner 中明确跳过。只读 Issue policy 从 `GITHUB_REPOSITORY` 获取当前仓库坐标，本地执行时则回退到仓库中记录的上游配置。
 
-runner 选择与工作负载规模共同构成可移植性契约。标准 4 核 fork runner 使用 2 个 coverage partition、串行 coverage gate、2 个浏览器 snapshot worker、2 个并发 snapshot 场景，并限制 lint、发布检查与 consumer gate 的并发；上游 16 核路径保留原有较大预算。基于真实进程的测试仍验证同一行为，覆盖率仍为 100%；减少的只是争抢 CPU 的无关工作。对时序敏感的断言只接受已有文档定义的等价就绪状态，或在异步投递本身属于受测行为时获得显式等待预算。
+runner 选择与工作负载规模共同构成可移植性契约。标准 4 核 Linux 和 Windows fork runner 均使用 2 个 coverage worker、2 个 coverage partition 与串行 coverage gate；Linux consumer 通道还使用 2 个浏览器 snapshot worker、2 个并发 snapshot 场景，并限制 lint、发布检查与 consumer gate 的并发。上游 16 核路径保留原有较大预算。基于真实进程的测试仍验证同一行为，覆盖率仍为 100%；减少的只是争抢 CPU 的无关工作。对时序敏感的断言只接受已有文档定义的等价就绪状态，或在异步投递本身属于受测行为时获得显式等待预算。
 
 ## Alternatives considered
 
@@ -22,7 +22,7 @@ runner 选择与工作负载规模共同构成可移植性契约。标准 4 核 
 
 ## Verification
 
-变更后的 workflow 均可解析为 YAML，Issue policy 模块通过语法校验，23 个 Issue-management 单元测试全部在 Node 22 下通过。workflow 合约、PowerShell 持久会话、Inspector 事件投递与 Oxlint 重试套件合计 48 项测试通过，另有 3 项按平台跳过。双语 Agent Note 配对已经记录并验证。最初几轮 fork 运行已经证明标准 runner 分发、上游专属检查中性跳过与当前仓库策略查询有效；同时也暴露了专用 runner 隐含的时区和 16 核并发假设：UTC 会改变持久化 fixture，而 6 个浏览器 worker、32 个 snapshot 场景及相互重叠的 coverage 通道会让标准 runner 上的真实进程与浏览器时序缺少 CPU。限制负载后，标准镜像中可用的 `pwsh` 还真正执行了两个在无 PowerShell 环境中会跳过的场景，并暴露出陈旧 fixture。两个 fixture 均通过真实 PowerShell 7.6.5 执行完成刷新，包含当前权限上下文与工具 schema，随后又通过独立 replay 复核。显式时区、按 owner 限制的预算与更新后的 fixture，使下一轮运行可以作为 snapshot 确定性、100% 覆盖率与既有聚合结论的集成检查。
+变更后的 workflow 均可解析为 YAML，Issue policy 模块通过语法校验，23 个 Issue-management 单元测试全部在 Node 22 下通过。workflow 合约、PowerShell 持久会话、Inspector 事件投递与 Oxlint 重试套件合计 48 项测试通过，另有 3 项按平台跳过。双语 Agent Note 配对已经记录并验证。最初几轮 fork 运行已经证明标准 runner 分发、上游专属检查中性跳过与当前仓库策略查询有效；同时也暴露了专用 runner 隐含的时区和 16 核并发假设：UTC 会改变持久化 fixture，而 6 个浏览器 worker、32 个 snapshot 场景及相互重叠的 coverage 通道会让标准 runner 上的真实进程与浏览器时序缺少 CPU。限制 Linux 负载后，其 100% 覆盖率通道已经通过，标准镜像中可用的 `pwsh` 还执行了两个在无 PowerShell 环境中会跳过的场景，并暴露出陈旧 fixture。两个 fixture 均通过真实 PowerShell 7.6.5 执行完成刷新，包含当前权限上下文与工具 schema，随后又通过独立 replay 复核。同一次完整运行还表明，Windows coverage 在标准 4 核主机上仍沿用上游的 6 worker、4 partition、3 gate 配置；其失败是进程 hook 超时与异步写入延迟，而非覆盖率缺口。将按 owner 限制的 coverage 预算同样应用于 Windows，使下一轮运行可以作为 snapshot 确定性、跨平台 coverage 执行与既有聚合结论的集成检查。
 
 ## Consequences
 
