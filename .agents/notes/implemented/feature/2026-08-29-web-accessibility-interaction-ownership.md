@@ -6,7 +6,7 @@ English | [中文](2026-08-29-web-accessibility-interaction-ownership.zh.md)
 
 ## Problem
 
-Several shared Web controls exposed accessibility roles without implementing the keyboard and focus behavior those roles promise. Modal dialogs did not contain or restore focus, menus exposed menu items as ordinary independent controls, layout separators were pointer-only, the application lacked stable named landmarks, a closed mounted Details subtree remained keyboard-reachable, and the context meter described a non-modal disclosure as a dialog. A companion plugin can diagnose rendered markup, but it cannot safely reconstruct component state, focus ownership, or nested dismissal timing after rendering.
+Several shared Web controls exposed accessibility roles without implementing the keyboard and focus behavior those roles promise. Modal dialogs did not contain or restore focus, menus exposed menu items as ordinary independent controls, Workspace and Session trees had no composite keyboard model, collapsed search retained an accessibility-tree input without an explicit focus-return contract, layout separators were pointer-only, the application lacked stable named landmarks, a closed mounted Details subtree remained keyboard-reachable, and the context meter described a non-modal disclosure as a dialog. A companion plugin can diagnose rendered markup, but it cannot safely reconstruct component state, focus ownership, or nested dismissal timing after rendering.
 
 ## Decision
 
@@ -18,6 +18,8 @@ The shared `Menu` primitive implements the menu-button relationship for an inlin
 
 The application shell renders the conversation column as `main` with one localized level-one application heading. Session navigation and open Session details are named complementary landmarks. Closed Details content remains mounted for state continuity but is inert and absent from the accessibility tree. Both visible resize handles are named, focusable vertical separators with range and current-value metadata; Left and Right resize according to the panel's physical edge, Home selects the minimum width, End selects the maximum width, and Shift applies a larger step. Shell overlays and separators remain inside the main landmark.
 
+The Workspace browser owns one roving Tab entry for each non-empty grouped, flat, or search-result tree. Up and Down, Home and End move among rendered rows; Enter and Space activate the focused row. Authored `aria-level` metadata lets Right open or enter a Workspace and Left close it or return from a Session without inferring hierarchy from presentation wrappers. Buttons owned by only the active row join sequential navigation. Empty containers expose no tree role. A collapsed search input is absent from the accessibility tree; Escape and Clear restore focus to the persistent search button, while an outside pointer dismissal preserves the user's new focus target.
+
 The context meter implements a disclosure relationship. Its trigger exposes expanded state and controls a stable panel id; the open panel is a named information region rather than a modal dialog. Escape, an outside pointer action, or activating the trigger again closes it without moving focus into the panel.
 
 ## Alternatives considered
@@ -25,6 +27,8 @@ The context meter implements a disclosure relationship. Its trigger exposes expa
 **Repair the rendered application from a companion plugin.** Rejected because a MutationObserver would infer ownership from unstable markup, race React commits, duplicate private state, and remain unable to guarantee nested focus restoration or authoritative disclosure changes.
 
 **Give every menu item an ordinary Tab stop.** Rejected because a long menu would dominate sequential navigation and contradict the composite `menu` interaction pattern. Roving focus preserves one sequential entry while arrow keys operate the collection.
+
+**Give every Workspace and Session row an ordinary Tab stop.** Rejected because long histories would dominate sequential navigation and split one tree into unrelated stops. A roving row keeps one entry while arrow keys expose the ordered hierarchy; actions remain reachable from the active row.
 
 **Unmount Details whenever it closes.** Rejected because the shell intentionally preserves the subtree and its state. Applying `inert` and `aria-hidden` removes closed controls from navigation without changing that lifecycle.
 
@@ -34,12 +38,14 @@ The context meter implements a disclosure relationship. Its trigger exposes expa
 
 Seventy focused jsdom tests exercise modal stacking, initial and contained focus, background inertness, disconnected openers, empty dialogs, menu-button ownership including a Tooltip-wrapped trigger, edge opening, roving keys, typeahead, submenus, Tab exit, named landmarks, closed-Details exclusion, separator metadata and resizing, and context disclosure ownership. The complete GUI lane passes 288 files and 3,830 tests, with one test skipped by its existing condition.
 
+Seventy-six focused Workspace-row and browser tests pass; the row source retains 100% statement, branch, function, and line coverage. The built application then passes the same seeded tree hierarchy, roving focus, disclosure keys, search focus return, narrow reflow, focus visibility, Settings containment, forced-colors, and reduced-motion checks in Chromium (five tests), Firefox (four tests with the Chromium-only forced-colors case skipped), and WebKit (four tests with that case skipped).
+
 A production build followed by the assembled Web replay passes 92 of 93 files, with one conditionally skipped file; 311 tests pass and 15 are skipped. Reviewed accessibility-tree goldens add the application `main`, its level-one heading, named Session-navigation complementary landmark, keyboard separator, and named menu while removing controls from the already-collapsed Details subtree. Contract type checking, contract lint, and the Node 22 documentation lane also pass. These checks verify DOM, focus, built-composition, and browser accessibility-tree contracts; they do not certify spoken output or real assistive-technology operation.
 
 ## Deferred
 
-This decision does not claim complete Web accessibility. Session and workspace trees, search focus, tabs, model selection, question forms, conversation log and completion announcements, tool disclosures, contrast and forced-colors behavior, zoom and reflow, reduced-motion behavior, browser coverage, and task-level VoiceOver, NVDA, JAWS, Narrator, and Orca evidence remain separately verified work.
+This decision does not claim complete Web accessibility. Tabs, model selection, question forms, conversation log and completion announcements, tool disclosures, contrast and forced-colors behavior, zoom and reflow, reduced-motion behavior, browser coverage, and task-level VoiceOver, NVDA, JAWS, Narrator, and Orca evidence remain separately verified work.
 
 ## Consequences
 
-Shared primitives and the shell carry explicit keyboard, focus, naming, and hidden-content state, including nested ownership that is more complex than pointer-only behavior. In return, the accessibility contract follows the same lifecycle and state authority as the visible interaction, works without an optional package, and can be regression-tested without selectors tied to presentation. Automated component checks remain necessary evidence but are insufficient for a complete accessibility claim.
+Shared primitives, the Workspace browser, and the shell carry explicit keyboard, focus, naming, hierarchy, and hidden-content state, including nested ownership that is more complex than pointer-only behavior. In return, the accessibility contract follows the same lifecycle and state authority as the visible interaction, works without an optional package, and can be regression-tested without selectors tied to presentation. Automated component checks remain necessary evidence but are insufficient for a complete accessibility claim.

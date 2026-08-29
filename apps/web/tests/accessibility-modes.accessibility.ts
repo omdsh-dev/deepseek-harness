@@ -3,7 +3,7 @@
 import type { Browser, Locator, Page } from 'playwright'
 import { chromium, firefox, webkit } from 'playwright'
 import { afterAll, beforeAll, describe, expect, it, onTestFailed } from 'vitest'
-import { launchWebScaffold, watchConsole, type WebScaffold } from './scaffold.ts'
+import { launchWebScaffold, seedSession, watchConsole, type WebScaffold } from './scaffold.ts'
 import { saveFailureShot } from './support.ts'
 
 const browserTypes = { chromium, firefox, webkit }
@@ -16,6 +16,26 @@ function selectedBrowser(): BrowserName {
 }
 
 const browserName = selectedBrowser()
+const SEED_ID = 'accessibility-modes-seed'
+
+/** One closed Session keeps the tree semantics and keyboard contract present in every engine. */
+function seedLog(): string {
+  const time = 1788048000000
+  const at = (index: number, event: Record<string, unknown>): string => (
+    JSON.stringify({ ...event, seq: index, time: time + index })
+  )
+  return [
+    JSON.stringify({ type: 'session', version: 0, id: '{{sessionId}}', createdAt: time, cwd: '{{cwd}}' }),
+    at(0, { type: 'turn/start', data: { turn: 1, trigger: { kind: 'message', source: { kind: 'user', rpcId: 'seed' } } } }),
+    at(1, {
+      type: 'user/message',
+      data: { content: [{ type: 'text', text: 'Accessibility seed.' }], source: { kind: 'user', rpcId: 'seed' } },
+      surfaceOp: 'append',
+    }),
+    at(2, { type: 'session/title', data: { title: 'Accessibility seed', messageSeqs: [1], source: { kind: 'fallback' } } }),
+    at(3, { type: 'turn/end', data: { turn: 1, reason: { kind: 'completed' } } }),
+  ].join('\n')
+}
 
 interface FocusGeometry {
   tag: string
@@ -107,6 +127,7 @@ describe(`web accessibility modes: ${browserName}`, () => {
 
   beforeAll(async () => {
     scaffold = await launchWebScaffold({})
+    await seedSession(scaffold, seedLog(), SEED_ID)
     browser = await browserTypes[browserName].launch()
     page = await browser.newPage({ viewport: { width: 1280, height: 900 }, locale: 'en-US' })
     tripwire = watchConsole(page)
@@ -117,6 +138,42 @@ describe(`web accessibility modes: ${browserName}`, () => {
   afterAll(async () => {
     await browser?.close()
     await scaffold?.close()
+  })
+
+  it('operates the seeded Session tree and search with hierarchy and focus-return keys', async () => {
+    onTestFailed(() => saveFailureShot(page, `web-accessibility-${browserName}-tree-keys`))
+    await page.setViewportSize({ width: 1280, height: 900 })
+    const tree = page.getByRole('tree', { name: 'Sessions' })
+    const workspaceRow = tree.locator('[role="treeitem"][aria-level="1"][aria-expanded]').first()
+    const sessionRow = tree.locator('[role="treeitem"][aria-level="2"]').first()
+    await workspaceRow.waitFor()
+
+    await workspaceRow.focus()
+    expect(await workspaceRow.getAttribute('tabindex')).toBe('0')
+    if (await workspaceRow.getAttribute('aria-expanded') === 'false') {
+      await page.keyboard.press('ArrowRight')
+      await expect.poll(() => workspaceRow.getAttribute('aria-expanded')).toBe('true')
+    }
+    await sessionRow.waitFor()
+    await page.keyboard.press('ArrowRight')
+    expect(await sessionRow.evaluate(element => document.activeElement === element)).toBe(true)
+    expect(await workspaceRow.getAttribute('tabindex')).toBe('-1')
+    expect(await sessionRow.getAttribute('tabindex')).toBe('0')
+
+    await page.keyboard.press('ArrowLeft')
+    expect(await workspaceRow.evaluate(element => document.activeElement === element)).toBe(true)
+    await page.keyboard.press('ArrowLeft')
+    await expect.poll(() => workspaceRow.getAttribute('aria-expanded')).toBe('false')
+
+    const searchButton = page.getByRole('button', { name: 'Search sessions' })
+    const searchInput = page.locator('input[aria-label="Search sessions..."]')
+    expect(await searchInput.getAttribute('aria-hidden')).toBe('true')
+    await searchButton.click()
+    expect(await searchInput.evaluate(element => document.activeElement === element)).toBe(true)
+    await page.keyboard.press('Escape')
+    expect(await searchButton.evaluate(element => document.activeElement === element)).toBe(true)
+    expect(await searchInput.getAttribute('aria-hidden')).toBe('true')
+    expect(tripwire.pageErrors).toEqual([])
   })
 
   it('keeps the assembled core surface named and reflowed at 200% and 400% equivalents', async () => {
