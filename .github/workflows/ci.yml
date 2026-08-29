@@ -39,7 +39,9 @@ jobs:
   node-24:
     if: github.event_name == 'pull_request'
     runs-on: >-
-      ${{ vars.DSH_CI_FAILOVER_LINUX == 'selfhosted'
+      ${{ github.repository_owner != 'deepseek-harness'
+          && 'ubuntu-24.04'
+          || vars.DSH_CI_FAILOVER_LINUX == 'selfhosted'
           && github.event.pull_request.user.login != 'dependabot[bot]'
           && fromJSON('["self-hosted", "linux", "x64", "vm-backup"]')
           || 'dsh-ubuntu-24-04-16core' }}
@@ -91,7 +93,9 @@ jobs:
   node-24-coverage:
     if: github.event_name == 'pull_request'
     runs-on: >-
-      ${{ vars.DSH_CI_FAILOVER_LINUX == 'selfhosted'
+      ${{ github.repository_owner != 'deepseek-harness'
+          && 'ubuntu-24.04'
+          || vars.DSH_CI_FAILOVER_LINUX == 'selfhosted'
           && github.event.pull_request.user.login != 'dependabot[bot]'
           && fromJSON('["self-hosted", "linux", "x64", "vm-backup"]')
           || 'dsh-ubuntu-24-04-16core' }}
@@ -153,7 +157,9 @@ jobs:
   node-24-consumers:
     if: github.event_name == 'pull_request'
     runs-on: >-
-      ${{ vars.DSH_CI_FAILOVER_LINUX == 'selfhosted'
+      ${{ github.repository_owner != 'deepseek-harness'
+          && 'ubuntu-24.04'
+          || vars.DSH_CI_FAILOVER_LINUX == 'selfhosted'
           && github.event.pull_request.user.login != 'dependabot[bot]'
           && fromJSON('["self-hosted", "linux", "x64", "vm-backup"]')
           || 'dsh-ubuntu-24-04-16core' }}
@@ -406,7 +412,9 @@ jobs:
   windows-build:
     if: github.event_name == 'pull_request'
     runs-on: >-
-      ${{ vars.DSH_CI_FAILOVER_WINDOWS == 'selfhosted'
+      ${{ github.repository_owner != 'deepseek-harness'
+          && 'windows-2025'
+          || vars.DSH_CI_FAILOVER_WINDOWS == 'selfhosted'
           && github.event.pull_request.user.login != 'dependabot[bot]'
           && fromJSON('["self-hosted", "dsh-win-ci", "windows"]')
           || 'dsh-windows-2025-16core' }}
@@ -437,7 +445,9 @@ jobs:
   windows-coverage:
     if: github.event_name == 'pull_request'
     runs-on: >-
-      ${{ vars.DSH_CI_FAILOVER_WINDOWS == 'selfhosted'
+      ${{ github.repository_owner != 'deepseek-harness'
+          && 'windows-2025'
+          || vars.DSH_CI_FAILOVER_WINDOWS == 'selfhosted'
           && github.event.pull_request.user.login != 'dependabot[bot]'
           && fromJSON('["self-hosted", "dsh-win-ci", "windows"]')
           || 'dsh-windows-2025-16core' }}
@@ -476,7 +486,9 @@ jobs:
   windows-native-tests:
     if: github.event_name == 'pull_request'
     runs-on: >-
-      ${{ vars.DSH_CI_FAILOVER_WINDOWS == 'selfhosted'
+      ${{ github.repository_owner != 'deepseek-harness'
+          && 'windows-2025'
+          || vars.DSH_CI_FAILOVER_WINDOWS == 'selfhosted'
           && github.event.pull_request.user.login != 'dependabot[bot]'
           && fromJSON('["self-hosted", "dsh-win-ci", "windows"]')
           || 'dsh-windows-2025-16core' }}
@@ -516,7 +528,9 @@ jobs:
     if: github.event_name == 'pull_request'
     continue-on-error: true
     runs-on: >-
-      ${{ vars.DSH_CI_FAILOVER_WINDOWS == 'selfhosted'
+      ${{ github.repository_owner != 'deepseek-harness'
+          && 'windows-2025'
+          || vars.DSH_CI_FAILOVER_WINDOWS == 'selfhosted'
           && github.event.pull_request.user.login != 'dependabot[bot]'
           && fromJSON('["self-hosted", "dsh-win-ci", "windows"]')
           || 'dsh-windows-2025-16core' }}
