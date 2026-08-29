@@ -26,6 +26,8 @@ The context meter implements a disclosure relationship. Its trigger exposes expa
 
 The Conversation shell owns the Session View tab pattern across its separate header and body slots. Only the active Chat or Trajectory tab is sequentially tabbable; Left and Right wrap, Home and End move to an edge, and movement activates the focused View. Stable per-Session ids connect every tab to the active `tabpanel`, whose label points back to the selected tab.
 
+The Trajectory record inspector owns the same automatic-activation tab contract for the details available to the selected record. One active tab remains in sequential navigation; Left and Right wrap, Home and End move to an edge, and every destination becomes both selected and focused. The stable panel is controlled by every tab and labelled by the current tab.
+
 ## Alternatives considered
 
 **Repair the rendered application from a companion plugin.** Rejected because a MutationObserver would infer ownership from unstable markup, race React commits, duplicate private state, and remain unable to guarantee nested focus restoration or authoritative disclosure changes.
@@ -48,11 +50,13 @@ Twenty-three focused model-seat and command-popup tests pass, including edge ope
 
 Twenty-two focused Conversation-shell tests pass, including the named roving View tab list, Arrow/Home/End activation and wrap, stable tab-to-panel relationships, and the active panel's sequential focus entry.
 
+Thirty-six focused Trajectory-table tests pass, including the detail inspector's single-entry tab stop, Arrow/Home/End activation and wrap, focus movement, and active tab-to-panel relationship.
+
 A production build followed by the assembled Web replay passes 92 of 93 files, with one conditionally skipped file; 311 tests pass and 15 are skipped. Reviewed accessibility-tree goldens add the application `main`, its level-one heading, named Session-navigation complementary landmark, keyboard separator, and named menu while removing controls from the already-collapsed Details subtree. Contract type checking, contract lint, and the Node 22 documentation lane also pass. These checks verify DOM, focus, built-composition, and browser accessibility-tree contracts; they do not certify spoken output or real assistive-technology operation.
 
 ## Deferred
 
-This decision does not claim complete Web accessibility. Trajectory detail tabs and ledger/range navigation, model-selection and command-popup spoken output, question forms, conversation log and completion announcements, tool disclosures, contrast and forced-colors behavior, zoom and reflow, reduced-motion behavior, browser coverage, and task-level VoiceOver, NVDA, JAWS, Narrator, and Orca evidence remain separately verified work.
+This decision does not claim complete Web accessibility. Trajectory ledger/range navigation, model-selection and command-popup spoken output, question forms, conversation log and completion announcements, tool disclosures, contrast and forced-colors behavior, zoom and reflow, reduced-motion behavior, browser coverage, and task-level VoiceOver, NVDA, JAWS, Narrator, and Orca evidence remain separately verified work.
 
 ## Consequences
 

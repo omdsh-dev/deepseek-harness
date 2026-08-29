@@ -217,6 +217,38 @@ describe('TrajectoryTable', () => {
     expect(panel.querySelector('[data-summary-scroll-region]')).toBeNull()
   })
 
+  it('owns roving keyboard focus and panel relationships for detail tabs', () => {
+    render(<TrajectoryTable turns={TURNS} {...FOLD_PROPS} />)
+    fireEvent.click(screen.getByRole('row', { name: /ASSISTANT/ }))
+
+    const tabs = screen.getAllByRole('tab')
+    const summary = screen.getByRole('tab', { name: 'Summary' })
+    const preview = screen.getByRole('tab', { name: 'Preview' })
+    const panel = screen.getByRole('tabpanel')
+    expect(summary.getAttribute('aria-selected')).toBe('true')
+    expect(summary.tabIndex).toBe(0)
+    expect(tabs.filter(tab => tab.tabIndex === 0)).toEqual([summary])
+    expect(summary.getAttribute('aria-controls')).toBe(panel.id)
+    expect(panel.getAttribute('aria-labelledby')).toBe(summary.id)
+
+    summary.focus()
+    fireEvent.keyDown(summary, { key: 'ArrowRight' })
+    expect(document.activeElement).toBe(preview)
+    expect(preview.getAttribute('aria-selected')).toBe('true')
+    expect(preview.tabIndex).toBe(0)
+    expect(summary.tabIndex).toBe(-1)
+    expect(panel.getAttribute('aria-labelledby')).toBe(preview.id)
+
+    fireEvent.keyDown(preview, { key: 'Home' })
+    expect(document.activeElement).toBe(summary)
+    fireEvent.keyDown(summary, { key: 'ArrowLeft' })
+    expect(document.activeElement).toBe(tabs.at(-1))
+    fireEvent.keyDown(tabs.at(-1)!, { key: 'ArrowRight' })
+    expect(document.activeElement).toBe(summary)
+    fireEvent.keyDown(summary, { key: 'End' })
+    expect(document.activeElement).toBe(tabs.at(-1))
+  })
+
   it('keeps long thinking collapsed until the user asks to render it', () => {
     const thinking = 'private chain '.repeat(1_000)
     const turns: readonly TrajectoryTurnModel[] = [{

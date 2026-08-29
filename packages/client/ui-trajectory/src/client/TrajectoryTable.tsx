@@ -1,7 +1,7 @@
 /** Turn-aware trajectory event ledger with a local record inspector. */
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import type { CSSProperties, ReactNode } from 'react'
+import type { CSSProperties, KeyboardEvent, ReactNode } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import {
   IconChevronRightOutline14,
@@ -175,6 +175,30 @@ type RecordState = 'complete' | 'running' | 'error'
 interface DetailTabItem {
   id: DetailTab
   labelKey: TrajectoryKey
+}
+
+function moveDetailTab(
+  event: KeyboardEvent<HTMLButtonElement>,
+  tabs: readonly DetailTabItem[],
+  currentIndex: number,
+  activate: (tab: DetailTab) => void,
+): void {
+  let nextIndex: number
+  switch (event.key) {
+    case 'ArrowRight': nextIndex = (currentIndex + 1) % tabs.length; break
+    case 'ArrowLeft': nextIndex = (currentIndex - 1 + tabs.length) % tabs.length; break
+    case 'Home': nextIndex = 0; break
+    case 'End': nextIndex = tabs.length - 1; break
+    default: return
+  }
+  const next = tabs.at(nextIndex)
+  if (next === undefined) return
+  event.preventDefault()
+  activate(next.id)
+  event.currentTarget.parentElement
+    ?.querySelectorAll<HTMLButtonElement>('[role="tab"]')
+    .item(nextIndex)
+    .focus()
 }
 
 interface ParentRecords {
@@ -2786,7 +2810,7 @@ export function TrajectoryTable({
             </button>
           </div>
           <div className={css.detailTabs} role="tablist" aria-label={t('details.event')}>
-            {selectedTabs.map(tab => (
+            {selectedTabs.map((tab, index) => (
               <button
                 key={tab.id}
                 id={`trajectory-detail-${tab.id}`}
@@ -2794,8 +2818,12 @@ export function TrajectoryTable({
                 role="tab"
                 aria-controls="trajectory-detail-panel"
                 aria-selected={activeTab === tab.id}
+                tabIndex={activeTab === tab.id ? 0 : -1}
                 className={activeTab === tab.id ? `${css.detailTab} ${css.detailTabActive}` : css.detailTab}
                 onClick={() => { activateTab(tab.id) }}
+                onKeyDown={(event) => {
+                  moveDetailTab(event, selectedTabs, index, activateTab)
+                }}
               >
                 {t(tab.labelKey)}
               </button>
