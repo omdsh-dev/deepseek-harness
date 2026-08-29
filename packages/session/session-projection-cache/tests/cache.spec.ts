@@ -155,22 +155,22 @@ describe('SessionProjectionCache write policy', () => {
     const creationFlush = Promise.withResolvers<boolean>()
     const flush = vi.spyOn(ctx.sessions, 'flush').mockReturnValueOnce(creationFlush.promise)
     const session = ctx.sessions.create(SessionId('ordered-writes'))
-    await vi.waitFor(() => {
-      expect(flush).toHaveBeenCalledTimes(1)
-    })
+    expect(flush).toHaveBeenCalledTimes(1)
 
-    mark(session, ['newer'])
-    const end = endTurn(session)
+    const newer = mark(session, ['newer'])
+    const newerWrite = ctx.sessionProjectionCache.write(session)
     await Promise.resolve()
-    // The turn-end checkpoint is queued behind the still-blocked creation
-    // checkpoint instead of racing it to the domain write chain.
+    // The newer checkpoint is queued behind the still-blocked creation
+    // checkpoint instead of racing it to the domain write chain. Awaiting its
+    // own write promise below is a deterministic queue barrier even on a slow
+    // coverage runner; no filesystem polling window is involved.
     expect(flush).toHaveBeenCalledTimes(1)
 
     creationFlush.resolve(false)
-    await waitForStoredRows(root, session.id, (rows) => {
-      expect(rows?.['cache-test/marks']).toEqual({ ver: 1, seq: end.seq, val: { marks: ['newer'] } })
-    })
+    await newerWrite
     expect(flush).toHaveBeenCalledTimes(2)
+    expect((await storedRows(root, session.id))?.['cache-test/marks'])
+      .toEqual({ ver: 1, seq: newer.seq, val: { marks: ['newer'] } })
   })
 
   it('writes a durable checkpoint at turn/end (mandatory point)', async () => {
