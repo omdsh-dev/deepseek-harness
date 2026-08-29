@@ -249,6 +249,12 @@ export class LocalPtySession implements TerminalBackendSession {
     }
   }
 
+  /**
+   * Start one caller-owned terminal send.
+   * @param request - Input, submission, and cancellation for the send.
+   * @param readiness - Optional stricter evidence policy for shell bootstrap.
+   * @returns A cancellable operation that settles with bounded output and readiness evidence.
+   */
   startSend(
     request: TerminalSendRequest,
     readiness: { requirePrompt?: boolean } = {},
