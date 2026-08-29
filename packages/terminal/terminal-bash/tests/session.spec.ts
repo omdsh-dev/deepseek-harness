@@ -1143,6 +1143,12 @@ describe('LocalPtySession readiness and output', () => {
     await vi.advanceTimersByTimeAsync(80)
     expect(settled).toBe(false)
 
+    // Bootstrap owns the initial visible prompt too: a marker followed by a
+    // different prompt cannot prove that the controlled setup was installed.
+    terminal.emitData('\x1b]133;D;0\x07other> ')
+    await vi.advanceTimersByTimeAsync(10)
+    expect(settled).toBe(false)
+
     terminal.emitData('\x1b]133;D;0\x07dsh> ')
     await vi.advanceTimersByTimeAsync(10)
     expect((await operation.done).waitReason).toBe('stdin_read')
@@ -1173,11 +1179,11 @@ describe('LocalPtySession readiness and output', () => {
     await vi.advanceTimersByTimeAsync(80)
     expect(settled).toBe(false)
 
-    terminal.emitData('ready\r\n\x1b]133;D;0\x07dsh> ')
+    terminal.emitData('ready\r\n\x1b]133;D;0\x07__DSH_PERSISTENT_PWSH_PROMPT__ ')
     await vi.advanceTimersByTimeAsync(10)
     expect(await operation.done).toMatchObject({
       waitReason: 'stdin_read',
-      viewport: 'ready\ndsh> ',
+      viewport: 'ready\n__DSH_PERSISTENT_PWSH_PROMPT__ ',
     })
   })
 

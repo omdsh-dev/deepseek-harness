@@ -91,6 +91,7 @@ class LocalSendOperation implements TerminalSendOperation {
     maxBytes: number,
     readonly startedAt: number,
     readonly requirePrompt: boolean,
+    readonly promptTextOptional: boolean,
     private readonly onCancel: () => void,
   ) {
     this.output = new BoundedTextBuffer(maxBytes)
@@ -253,8 +254,9 @@ export class LocalPtySession implements TerminalBackendSession {
    * Start one caller-owned terminal send.
    * @param request - Input, submission, and cancellation for the send.
    * @param readiness - Optional prompt-evidence override for shell bootstrap tests.
-   * Submitted pwsh commands require the owned prompt by default so a loaded
-   * PSReadLine host cannot publish silence or stdin-wait before executing input.
+   * Submitted pwsh commands require a newly emitted owned prompt marker by
+   * default so a loaded PSReadLine host cannot publish silence or stdin-wait
+   * before executing input. Bootstrap additionally requires exact prompt text.
    * @returns A cancellable operation that settles with bounded output and readiness evidence.
    */
   startSend(
@@ -273,10 +275,12 @@ export class LocalPtySession implements TerminalBackendSession {
     }
     if (request.signal?.aborted === true) throw new Error('PTY send aborted before write')
 
+    const submittedPwsh = this.config.shellDialect === 'pwsh' && request.submit
     const operation = new LocalSendOperation(
       this.config.maxReadBytes,
       Date.now(),
-      readiness.requirePrompt ?? (this.config.shellDialect === 'pwsh' && request.submit),
+      readiness.requirePrompt ?? submittedPwsh,
+      readiness.requirePrompt === undefined && submittedPwsh,
       () => { this.interrupt(operation) },
     )
     this.active = operation
@@ -502,7 +506,8 @@ export class LocalPtySession implements TerminalBackendSession {
       if (this.promptSeen && foreground !== undefined && this.shellPgid === undefined) {
         this.shellPgid = foreground.processGroupId
       }
-      if (this.promptSeen && this.promptTextSeen && idleFor >= this.config.pollIntervalMs
+      if (this.promptSeen && (this.promptTextSeen || operation.promptTextOptional)
+        && idleFor >= this.config.pollIntervalMs
         && foreground?.processGroupId === this.shellPgid) {
         this.settleActive('stdin_read')
         return
