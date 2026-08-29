@@ -101,11 +101,12 @@ jobs:
           || 'dsh-ubuntu-24-04-16core' }}
     name: node 24 / coverage
     env:
-      # Partitioning replaces the instrumented share; this budget gives the
-      # exempt-heavy gate two workers on both hosted and failover runners.
-      DSH_COVERAGE_MAX_WORKERS: '6'
-      DSH_COVERAGE_PARTITIONS: '4'
-      DSH_GATE_CONCURRENCY: '3'
+      # The upstream 16-core pool can overlap the partitioned and exempt-heavy
+      # lanes. A standard 4-core fork runner uses a bounded two-worker profile
+      # so real process tests retain enough scheduling headroom to be reliable.
+      DSH_COVERAGE_MAX_WORKERS: ${{ github.repository_owner != 'deepseek-harness' && '2' || '6' }}
+      DSH_COVERAGE_PARTITIONS: ${{ github.repository_owner != 'deepseek-harness' && '2' || '4' }}
+      DSH_GATE_CONCURRENCY: ${{ github.repository_owner != 'deepseek-harness' && '1' || '3' }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -168,13 +169,16 @@ jobs:
       # Persisted Web fixtures intentionally record the project reference zone.
       # Standard hosted runners default to UTC, unlike the dedicated pool.
       TZ: Asia/Shanghai
-      DSH_GATE_CONCURRENCY: '10'
+      # Forks use standard 4-core runners rather than the upstream 16-core pool.
+      # Keep browser/process consumers bounded so timing assertions observe the
+      # product instead of CPU starvation from the aggregate itself.
+      DSH_GATE_CONCURRENCY: ${{ github.repository_owner != 'deepseek-harness' && '2' || '10' }}
       DSH_NODE_COMPAT_SKIP_TYPECHECK: '1'
-      DSH_OXLINT_THREADS: '8'
-      DSH_PUBLINT_CONCURRENCY: '8'
-      DSH_WEB_SNAPSHOT_WORKERS: '6'
+      DSH_OXLINT_THREADS: ${{ github.repository_owner != 'deepseek-harness' && '2' || '8' }}
+      DSH_PUBLINT_CONCURRENCY: ${{ github.repository_owner != 'deepseek-harness' && '2' || '8' }}
+      DSH_WEB_SNAPSHOT_WORKERS: ${{ github.repository_owner != 'deepseek-harness' && '2' || '6' }}
       # Failover halves snapshot concurrency for the shared 64-core VM.
-      DSH_SNAPSHOT_MAX_CONCURRENCY: ${{ vars.DSH_CI_FAILOVER_LINUX == 'selfhosted' && github.event.pull_request.user.login != 'dependabot[bot]' && '12' || '32' }}
+      DSH_SNAPSHOT_MAX_CONCURRENCY: ${{ github.repository_owner != 'deepseek-harness' && '2' || vars.DSH_CI_FAILOVER_LINUX == 'selfhosted' && github.event.pull_request.user.login != 'dependabot[bot]' && '12' || '32' }}
     steps:
       - uses: actions/checkout@v6
         with:

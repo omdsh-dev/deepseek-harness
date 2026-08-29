@@ -170,6 +170,23 @@ describe('CI workflow', () => {
       expect(job['runs-on'], `${jobName} runs-on must not use the Windows failover switch`).not.toContain('DSH_CI_FAILOVER_WINDOWS')
       expect(job['runs-on']).toContain('vm-backup')
     }
+    if (!isRecord(node24Coverage.env) || !isRecord(node24Consumers.env)) {
+      throw new TypeError('Linux coverage and consumer jobs must define environment budgets')
+    }
+    expect(node24Coverage.env).toMatchObject({
+      DSH_COVERAGE_MAX_WORKERS: "${{ github.repository_owner != 'deepseek-harness' && '2' || '6' }}",
+      DSH_COVERAGE_PARTITIONS: "${{ github.repository_owner != 'deepseek-harness' && '2' || '4' }}",
+      DSH_GATE_CONCURRENCY: "${{ github.repository_owner != 'deepseek-harness' && '1' || '3' }}",
+    })
+    expect(node24Consumers.env).toMatchObject({
+      DSH_GATE_CONCURRENCY: "${{ github.repository_owner != 'deepseek-harness' && '2' || '10' }}",
+      DSH_OXLINT_THREADS: "${{ github.repository_owner != 'deepseek-harness' && '2' || '8' }}",
+      DSH_PUBLINT_CONCURRENCY: "${{ github.repository_owner != 'deepseek-harness' && '2' || '8' }}",
+      DSH_WEB_SNAPSHOT_WORKERS: "${{ github.repository_owner != 'deepseek-harness' && '2' || '6' }}",
+    })
+    expect(node24Consumers.env.DSH_SNAPSHOT_MAX_CONCURRENCY).toContain(
+      "github.repository_owner != 'deepseek-harness' && '2'",
+    )
     expect(aggregate['runs-on']).toContain('DSH_CI_FAILOVER_LINUX')
     expect(aggregate['runs-on']).not.toContain('DSH_CI_FAILOVER_WINDOWS')
     expect(aggregate['runs-on']).toContain('vm-backup')
@@ -563,19 +580,18 @@ describe('Python release workflows', () => {
 })
 
 describe('Issue lifecycle workflow', () => {
-  it('runs the lifecycle job on every PR/review event but gates token and board steps', () => {
+  it('runs lifecycle mutations only upstream and still gates review-triggered steps', () => {
     const lifecycle = loadWorkflow('.github/workflows/issue-lifecycle.yml')
     const policy = loadWorkflow('.github/workflows/issue-policy.yml')
     const lifecycleJob = workflowJob(lifecycle, 'lifecycle')
     if (!Array.isArray(lifecycleJob.steps)) throw new TypeError('Issue lifecycle job must define steps')
 
-    // The job has no job-level `if`, so it is listed on every pull_request /
-    // pull_request_review event and reports success instead of a gray skip. The
-    // write-capable steps are gated at step level so approved/commented reviews
-    // never mint a Project/Issue App token nor touch the board.
+    // Forks do not have the upstream GitHub App installation, so the entire
+    // mutation job is upstream-only. Within that job, write-capable steps stay
+    // gated so approved/commented reviews never mint a token or touch the board.
     expect(lifecycle.on).toHaveProperty('pull_request')
     expect(lifecycle.on).toHaveProperty('pull_request_review')
-    expect(lifecycleJob.if).toBeUndefined()
+    expect(lifecycleJob.if).toBe("github.repository_owner == 'deepseek-harness'")
     // Keep the subscription-type gates: issue-lifecycle does not re-subscribe
     // ready_for_review (issue-policy owns that) and only reacts to submitted
     // review events.
