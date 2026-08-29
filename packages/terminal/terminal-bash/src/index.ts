@@ -115,26 +115,22 @@ async function startupSession(
       await session.initialize(signal)
       return
     }
-    // pwsh cannot install its prompt from the environment. Write the prompt
-    // function through the session, pin UTF-8 output before user input, and
-    // accept only backend stdin_read evidence; echoed setup source containing
-    // the printable prompt is not readiness. Follow-up sends bridge silence
-    // settlements during startup, while one absolute deadline bounds them.
-    let viewport = ''
-    for (;;) {
-      const first = viewport.length === 0
-      startupOperation = session.startSend({
-        text: first ? ENCODING_PREAMBLE + PWSH_PROMPT_SETUP : '',
-        submit: first,
-        ...signal !== undefined ? { signal } : {},
-      })
-      const result = await startupOperation.done
-      if (result.waitReason === 'session_exit') throw new Error('PTY shell exited during startup')
-      if (result.waitReason === 'timeout') throw new Error('PTY shell did not reach readiness before startup timeout')
-      viewport = result.viewport
-      if (result.waitReason === 'stdin_read') break
-    }
-    session.motd = viewport
+    // pwsh cannot install its prompt from the environment. First let the host
+    // and PSReadLine finish their initial terminal-protocol handshake. Writing
+    // during that handshake can leave the setup source only redrawn at the
+    // default prompt instead of executed. Once the native prompt is ready,
+    // install the controlled prompt and accept only its private OSC marker as
+    // evidence; the printable prompt text may merely be echoed setup source.
+    await session.initialize(signal)
+    startupOperation = session.startSend({
+      text: ENCODING_PREAMBLE + PWSH_PROMPT_SETUP,
+      submit: true,
+      ...signal !== undefined ? { signal } : {},
+    }, { requirePrompt: true })
+    const result = await startupOperation.done
+    if (result.waitReason === 'session_exit') throw new Error('PTY shell exited during startup')
+    if (result.waitReason !== 'stdin_read') throw new Error('PTY shell did not reach readiness before startup timeout')
+    session.motd = result.viewport
   }
   const races: Promise<void>[] = []
   let onAbort: (() => void) | undefined
