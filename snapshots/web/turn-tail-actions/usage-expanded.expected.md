@@ -7,42 +7,43 @@
   - button "Session log":
     - text: Session log
     - img
-  - tablist:
+  - tablist "Session views":
     - tab "Chat" [selected]
     - tab "Trajectory"
-  - button "System prompt":
-    - img
-    - img
-    - text: System prompt
-  - text: Begin your reply with the plain sentence "Reading the workspace now." as text, and in that same message call the bash tool with the command "echo alpha". After the tool result, reply with the single word DONE and stop. {{clock}}
-  - button "Copy":
-    - img
-  - button "1 tool call · 1 message":
-    - text: 1 tool call · 1 message
-    - img
-  - paragraph: DONE
-  - button "Turn usage 15.8K tok · Cache hit 49.7%" [expanded]:
-    - img
-    - text: Turn usage 15.8K tok · Cache hit 49.7%
-  - term: Provider / model
-  - definition: deepseek-official/deepseek-v4-flash
-  - term: Uncached input
-  - definition: 7,891 tok
-  - term: Cached input
-  - definition: 7,808 tok
-  - term: Output
-  - definition: 112 tok (42 tok reasoning)
-  - term: Total
-  - definition: 15,811 tok
-  - button "Copy":
-    - img
-  - button "Good response":
-    - img
-  - button "Bad response":
-    - img
-  - button "Branch into a new conversation":
-    - img
-  - text: {{clock}} Ran for {{duration}} TTFT {{duration}} {{throughput}} tok/s
+  - tabpanel "Chat":
+    - button "System prompt":
+      - img
+      - img
+      - text: System prompt
+    - text: Begin your reply with the plain sentence "Reading the workspace now." as text, and in that same message call the bash tool with the command "echo alpha". After the tool result, reply with the single word DONE and stop. {{clock}}
+    - button "Copy":
+      - img
+    - button "1 tool call · 1 message":
+      - text: 1 tool call · 1 message
+      - img
+    - paragraph: DONE
+    - button "Turn usage 15.8K tok · Cache hit 49.7%" [expanded]:
+      - img
+      - text: Turn usage 15.8K tok · Cache hit 49.7%
+    - term: Provider / model
+    - definition: deepseek-official/deepseek-v4-flash
+    - term: Uncached input
+    - definition: 7,891 tok
+    - term: Cached input
+    - definition: 7,808 tok
+    - term: Output
+    - definition: 112 tok (42 tok reasoning)
+    - term: Total
+    - definition: 15,811 tok
+    - button "Copy":
+      - img
+    - button "Good response":
+      - img
+    - button "Bad response":
+      - img
+    - button "Branch into a new conversation":
+      - img
+    - text: {{clock}} Ran for {{duration}} TTFT {{duration}} {{throughput}} tok/s
   - textbox "Message or run a task... / commands, @ files or sessions"
   - button "Commands":
     - img

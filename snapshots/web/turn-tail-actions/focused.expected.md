@@ -7,46 +7,47 @@
   - button "Session log":
     - text: Session log
     - img
-  - tablist:
+  - tablist "Session views":
     - tab "Chat" [selected]
     - tab "Trajectory"
-  - button "System prompt":
-    - img
-    - img
-    - text: System prompt
-  - text: Begin your reply with the plain sentence "Reading the workspace now." as text, and in that same message call the bash tool with the command "echo alpha". After the tool result, reply with the single word DONE and stop. {{clock}}
-  - button "Copy":
-    - img
-  - button "1 tool call · 1 message" [expanded]:
-    - text: 1 tool call · 1 message
-    - img
-  - button "Context injection @deepseek-ai/dsh-system-prompt":
-    - img
-    - img
-    - text: Context injection @deepseek-ai/dsh-system-prompt
-  - button "Think The user wants me to begin with \"Reading the workspace now.\" and call bash with \"echo alpha\" in the same message. Then after the tool result, reply with the single word DONE and stop.":
-    - img
-    - img
-    - text: Think The user wants me to begin with "Reading the workspace now." and call bash with "echo alpha" in the same message. Then after the tool result, reply with the single word DONE and stop.
-  - paragraph: Reading the workspace now.
-  - button "Bash Print alpha to stdout":
-    - img
-    - img
-    - text: Bash Print alpha to stdout
-  - paragraph: DONE
-  - button "Turn usage 15.8K tok · Cache hit 49.7%":
-    - img
-    - img
-    - text: Turn usage 15.8K tok · Cache hit 49.7%
-  - button "Copy":
-    - img
-  - button "Good response":
-    - img
-  - button "Bad response":
-    - img
-  - button "Branch into a new conversation":
-    - img
-  - text: {{clock}} Ran for {{duration}} TTFT {{duration}} {{throughput}} tok/s
+  - tabpanel "Chat":
+    - button "System prompt":
+      - img
+      - img
+      - text: System prompt
+    - text: Begin your reply with the plain sentence "Reading the workspace now." as text, and in that same message call the bash tool with the command "echo alpha". After the tool result, reply with the single word DONE and stop. {{clock}}
+    - button "Copy":
+      - img
+    - button "1 tool call · 1 message" [expanded]:
+      - text: 1 tool call · 1 message
+      - img
+    - button "Context injection @deepseek-ai/dsh-system-prompt":
+      - img
+      - img
+      - text: Context injection @deepseek-ai/dsh-system-prompt
+    - button "Think The user wants me to begin with \"Reading the workspace now.\" and call bash with \"echo alpha\" in the same message. Then after the tool result, reply with the single word DONE and stop.":
+      - img
+      - img
+      - text: Think The user wants me to begin with "Reading the workspace now." and call bash with "echo alpha" in the same message. Then after the tool result, reply with the single word DONE and stop.
+    - paragraph: Reading the workspace now.
+    - button "Bash Print alpha to stdout":
+      - img
+      - img
+      - text: Bash Print alpha to stdout
+    - paragraph: DONE
+    - button "Turn usage 15.8K tok · Cache hit 49.7%":
+      - img
+      - img
+      - text: Turn usage 15.8K tok · Cache hit 49.7%
+    - button "Copy":
+      - img
+    - button "Good response":
+      - img
+    - button "Bad response":
+      - img
+    - button "Branch into a new conversation":
+      - img
+    - text: {{clock}} Ran for {{duration}} TTFT {{duration}} {{throughput}} tok/s
   - textbox "Message or run a task... / commands, @ files or sessions"
   - button "Commands":
     - img

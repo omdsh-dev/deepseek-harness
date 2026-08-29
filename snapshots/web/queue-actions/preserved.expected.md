@@ -7,30 +7,31 @@
   - button "Session log":
     - text: Session log
     - img
-  - tablist:
+  - tablist "Session views":
     - tab "Chat" [selected]
     - tab "Trajectory"
-  - button "System prompt":
-    - img
-    - img
-    - text: System prompt
-  - text: Reply with a one-sentence description of event sourcing, then stop. {{clock}}
-  - button "Copy":
-    - img
-  - button "Thought for a while":
-    - text: Thought for a while
-    - img
-  - paragraph: partial
-  - text: Stopped
-  - button "Copy":
-    - img
-  - button "Good response":
-    - img
-  - button "Bad response":
-    - img
-  - button "Branch into a new conversation":
-    - img
-  - text: {{clock}} Ran for {{duration}} TTFT {{duration}}
+  - tabpanel "Chat":
+    - button "System prompt":
+      - img
+      - img
+      - text: System prompt
+    - text: Reply with a one-sentence description of event sourcing, then stop. {{clock}}
+    - button "Copy":
+      - img
+    - button "Thought for a while":
+      - text: Thought for a while
+      - img
+    - paragraph: partial
+    - text: Stopped
+    - button "Copy":
+      - img
+    - button "Good response":
+      - img
+    - button "Bad response":
+      - img
+    - button "Branch into a new conversation":
+      - img
+    - text: {{clock}} Ran for {{duration}} TTFT {{duration}}
   - button "2 queued messages" [expanded]
   - list:
     - listitem:

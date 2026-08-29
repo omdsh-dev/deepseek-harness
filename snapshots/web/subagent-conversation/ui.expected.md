@@ -12,52 +12,53 @@
   - button "Session log":
     - text: Session log
     - img
-  - tablist:
+  - tablist "Session views":
     - tab "Chat" [selected]
     - tab "Trajectory"
-  - navigation "Turn navigation":
-    - button "Jump to turn 1"
-    - button "Jump to turn 2"
-  - button "System prompt":
-    - img
-    - img
-    - text: System prompt
-  - text: Explain event sourcing in one sentence. {{clock}}
-  - button "Copy":
-    - img
-  - button "Thought for a while":
-    - text: Thought for a while
-    - img
-  - paragraph: Event sourcing is a pattern where all changes to an application's state are stored as an immutable, append-only sequence of events, rather than persisting only the current state, enabling full auditability, temporal queries, and event-driven architectures.
-  - button "Copy":
-    - img
-  - button "Good response":
-    - img
-  - button "Bad response":
-    - img
-  - button "Branch into a new conversation":
-    - img
-  - text: {{clock}} Ran for {{duration}} TTFT {{duration}} {{throughput}} tok/s
-  - button "System prompt":
-    - img
-    - img
-    - text: System prompt
-  - text: Now give the same explanation to a human reader. {{clock}}
-  - button "Copy":
-    - img
-  - button "Thought for a while":
-    - text: Thought for a while
-    - img
-  - paragraph: Event sourcing is a pattern where all changes to an application's state are stored as an immutable, append-only sequence of events, rather than persisting only the current state, enabling full auditability, temporal queries, and event-driven architectures.
-  - button "Copy":
-    - img
-  - button "Good response":
-    - img
-  - button "Bad response":
-    - img
-  - button "Branch into a new conversation":
-    - img
-  - text: {{clock}} Ran for {{duration}} TTFT {{duration}} {{throughput}} tok/s
+  - tabpanel "Chat":
+    - navigation "Turn navigation":
+      - button "Jump to turn 1"
+      - button "Jump to turn 2"
+    - button "System prompt":
+      - img
+      - img
+      - text: System prompt
+    - text: Explain event sourcing in one sentence. {{clock}}
+    - button "Copy":
+      - img
+    - button "Thought for a while":
+      - text: Thought for a while
+      - img
+    - paragraph: Event sourcing is a pattern where all changes to an application's state are stored as an immutable, append-only sequence of events, rather than persisting only the current state, enabling full auditability, temporal queries, and event-driven architectures.
+    - button "Copy":
+      - img
+    - button "Good response":
+      - img
+    - button "Bad response":
+      - img
+    - button "Branch into a new conversation":
+      - img
+    - text: {{clock}} Ran for {{duration}} TTFT {{duration}} {{throughput}} tok/s
+    - button "System prompt":
+      - img
+      - img
+      - text: System prompt
+    - text: Now give the same explanation to a human reader. {{clock}}
+    - button "Copy":
+      - img
+    - button "Thought for a while":
+      - text: Thought for a while
+      - img
+    - paragraph: Event sourcing is a pattern where all changes to an application's state are stored as an immutable, append-only sequence of events, rather than persisting only the current state, enabling full auditability, temporal queries, and event-driven architectures.
+    - button "Copy":
+      - img
+    - button "Good response":
+      - img
+    - button "Bad response":
+      - img
+    - button "Branch into a new conversation":
+      - img
+    - text: {{clock}} Ran for {{duration}} TTFT {{duration}} {{throughput}} tok/s
   - textbox "Message or run a task... / commands, @ files or sessions"
   - button "Commands":
     - img

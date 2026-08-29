@@ -7,25 +7,26 @@
   - button "Session log":
     - text: Session log
     - img
-  - tablist:
+  - tablist "Session views":
     - tab "Chat" [selected]
     - tab "Trajectory"
-  - button "System prompt":
-    - img
-    - img
-    - text: System prompt
-  - text: Reply with a one-sentence description of event sourcing, then stop. {{clock}}
-  - button "Copy":
-    - img
-  - button "Context injection @deepseek-ai/dsh-system-prompt":
-    - img
-    - img
-    - text: Context injection @deepseek-ai/dsh-system-prompt
-  - group:
-    - status: Retried model request (2/2) · {{duration}}
-  - status:
-    - text: This turn failedupstream 503
-    - code: SERVER
+  - tabpanel "Chat":
+    - button "System prompt":
+      - img
+      - img
+      - text: System prompt
+    - text: Reply with a one-sentence description of event sourcing, then stop. {{clock}}
+    - button "Copy":
+      - img
+    - button "Context injection @deepseek-ai/dsh-system-prompt":
+      - img
+      - img
+      - text: Context injection @deepseek-ai/dsh-system-prompt
+    - group:
+      - status: Retried model request (2/2) · {{duration}}
+    - status:
+      - text: This turn failedupstream 503
+      - code: SERVER
   - textbox "Message or run a task... / commands, @ files or sessions"
   - button "Commands":
     - img

@@ -7,24 +7,25 @@
   - button "Session log":
     - text: Session log
     - img
-  - tablist:
+  - tablist "Session views":
     - tab "Chat" [selected]
     - tab "Trajectory"
-  - button "System prompt":
-    - img
-    - img
-    - text: System prompt
-  - text: Stream one TypeScript fence for the highlighting snapshot. {{clock}}
-  - button "Copy":
-    - img
-  - button "Context injection @deepseek-ai/dsh-system-prompt":
-    - img
-    - img
-    - text: Context injection @deepseek-ai/dsh-system-prompt
-  - text: ts
-  - button "Copy"
-  - code: "const first: number = 1 const second = \"two\" let tail"
-  - status: Deep diving...
+  - tabpanel "Chat":
+    - button "System prompt":
+      - img
+      - img
+      - text: System prompt
+    - text: Stream one TypeScript fence for the highlighting snapshot. {{clock}}
+    - button "Copy":
+      - img
+    - button "Context injection @deepseek-ai/dsh-system-prompt":
+      - img
+      - img
+      - text: Context injection @deepseek-ai/dsh-system-prompt
+    - text: ts
+    - button "Copy"
+    - code: "const first: number = 1 const second = \"two\" let tail"
+    - status: Deep diving...
   - textbox "Message or run a task... / commands, @ files or sessions"
   - button "Commands":
     - img

@@ -5,37 +5,38 @@
   - button "Session log":
     - text: Session log
     - img
-  - tablist:
+  - tablist "Session views":
     - tab "Chat" [selected]
     - tab "Trajectory"
-  - navigation "Turn navigation":
-    - button "Jump to turn 1"
-    - button "Jump to turn 2"
-  - button "System prompt":
-    - img
-    - img
-    - text: System prompt
-  - text: "Use the read tool twice in one assistant message: read a.txt and b.txt. Then reply with the single word DONE and stop. 7/25 {{clock}}"
-  - button "Copy":
-    - img
-  - button "2 tool calls":
-    - text: 2 tool calls
-    - img
-  - paragraph: DONE
-  - button "Copy":
-    - img
-  - button "Good response":
-    - img
-  - button "Bad response":
-    - img
-  - button "Branch into a new conversation":
-    - img
-  - text: 7/25 {{clock}} Ran for {{duration}} TTFT {{duration}} {{throughput}} tok/s
-  - button "compact Compacted 5 history items (~{{tokens}} tokens)"
-  - button "Context injection AGENTS.md":
-    - img
-    - img
-    - text: Context injection AGENTS.md
+  - tabpanel "Chat":
+    - navigation "Turn navigation":
+      - button "Jump to turn 1"
+      - button "Jump to turn 2"
+    - button "System prompt":
+      - img
+      - img
+      - text: System prompt
+    - text: "Use the read tool twice in one assistant message: read a.txt and b.txt. Then reply with the single word DONE and stop. 7/25 {{clock}}"
+    - button "Copy":
+      - img
+    - button "2 tool calls":
+      - text: 2 tool calls
+      - img
+    - paragraph: DONE
+    - button "Copy":
+      - img
+    - button "Good response":
+      - img
+    - button "Bad response":
+      - img
+    - button "Branch into a new conversation":
+      - img
+    - text: 7/25 {{clock}} Ran for {{duration}} TTFT {{duration}} {{throughput}} tok/s
+    - button "compact Compacted 5 history items (~{{tokens}} tokens)"
+    - button "Context injection AGENTS.md":
+      - img
+      - img
+      - text: Context injection AGENTS.md
   - textbox "Message or run a task... / commands, @ files or sessions"
   - button "Commands":
     - img

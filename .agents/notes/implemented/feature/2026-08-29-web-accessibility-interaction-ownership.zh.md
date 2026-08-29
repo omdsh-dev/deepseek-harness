@@ -24,6 +24,8 @@ composer 模型位把两层选择器实现为只有一个顺序入口的菜单�
 
 上下文占用率实现 disclosure 关系。触发控件暴露展开状态并控制稳定的面板 id；打开的面板是具名信息 region，而不是模态 dialog。Escape、外部指针操作或再次激活触发控件会将其关闭，并且不会把焦点移入面板。
 
+Conversation shell 跨独立的 header 与 body slot 拥有 Session View 标签页模式。顺序 Tab 导航中只有活动的 Chat 或 Trajectory 标签；左／右方向键循环，Home／End 移到边缘，移动时同时激活聚焦的 View。逐 Session 稳定 id 把每个标签连接到活动 `tabpanel`，面板名称再指回已选标签。
+
 ## Alternatives considered
 
 **通过 companion 插件修复渲染后的应用。** 拒绝，因为 MutationObserver 需要从不稳定标记推断职责，与 React 提交竞争，重复私有状态，并且仍无法保证嵌套焦点恢复或权威的 disclosure 状态变更。
@@ -44,11 +46,13 @@ composer 模型位把两层选择器实现为只有一个顺序入口的菜单�
 
 23 个聚焦模型位与命令弹窗测试通过，覆盖从边缘打开、单入口菜单焦点、进入与返回子层、当前项焦点、combobox 归属、active-descendant 同步、精确 composer 绑定、选择、取消、错误与焦点恢复路径。
 
+22 个聚焦 Conversation shell 测试通过，覆盖具名的漫游 View 标签列表、方向键／Home／End 激活与循环、稳定的标签到面板关系，以及活动面板的顺序焦点入口。
+
 生产构建完成后，组装 Web replay 的 93 个文件中有 92 个通过、1 个按条件跳过；311 个测试通过、15 个跳过。经过审查的无障碍树 golden 新增应用 `main`、其中的一级标题、具名会话导航 complementary 地标、键盘分隔条与具名菜单，同时移除已经折叠的详情子树中的控件。契约类型检查、契约 lint 与 Node 22 文档测试通道也通过。这些检查验证 DOM、焦点、构建后组合与浏览器无障碍树契约；它们不能认证真实朗读或真实辅助技术操作。
 
 ## Deferred
 
-这项决策不宣称 Web 已完整适配无障碍。标签页、模型选择与命令弹窗的真实朗读、问题表单、对话 log 与完成播报、工具 disclosure、对比度与强制颜色行为、缩放与回流、减少动态效果、浏览器覆盖，以及任务级 VoiceOver、NVDA、JAWS、Narrator 与 Orca 证据仍属于需要分别验证的工作。
+这项决策不宣称 Web 已完整适配无障碍。Trajectory 详情标签与 ledger／范围键盘导航、模型选择与命令弹窗的真实朗读、问题表单、对话 log 与完成播报、工具 disclosure、对比度与强制颜色行为、缩放与回流、减少动态效果、浏览器覆盖，以及任务级 VoiceOver、NVDA、JAWS、Narrator 与 Orca 证据仍属于需要分别验证的工作。
 
 ## Consequences
 

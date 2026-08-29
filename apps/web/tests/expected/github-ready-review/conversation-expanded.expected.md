@@ -18,34 +18,35 @@
   - button "Session log":
     - text: Session log
     - img
-  - tablist:
+  - tablist "Session views":
     - tab "Chat" [selected]
     - tab "Trajectory"
-  - button "System prompt":
-    - img
-    - img
-    - text: System prompt
-  - button "Thought for a while" [expanded]:
-    - text: Thought for a while
-    - img
-  - button "Context injection webhook github webhook handled by review-pr-when-ready":
-    - img
-    - img
-    - text: Context injection webhook github webhook handled by review-pr-when-ready
-  - button "Context injection @deepseek-ai/dsh-system-prompt":
-    - img
-    - img
-    - text: Context injection @deepseek-ai/dsh-system-prompt
-  - paragraph: "Review complete: no actionable findings."
-  - button "Copy":
-    - img
-  - button "Good response":
-    - img
-  - button "Bad response":
-    - img
-  - button "Branch into a new conversation":
-    - img
-  - text: {{clock}} Ran for {{duration}}
+  - tabpanel "Chat":
+    - button "System prompt":
+      - img
+      - img
+      - text: System prompt
+    - button "Thought for a while" [expanded]:
+      - text: Thought for a while
+      - img
+    - button "Context injection webhook github webhook handled by review-pr-when-ready":
+      - img
+      - img
+      - text: Context injection webhook github webhook handled by review-pr-when-ready
+    - button "Context injection @deepseek-ai/dsh-system-prompt":
+      - img
+      - img
+      - text: Context injection @deepseek-ai/dsh-system-prompt
+    - paragraph: "Review complete: no actionable findings."
+    - button "Copy":
+      - img
+    - button "Good response":
+      - img
+    - button "Bad response":
+      - img
+    - button "Branch into a new conversation":
+      - img
+    - text: {{clock}} Ran for {{duration}}
   - textbox "Message or run a task... / commands, @ files or sessions"
   - button "Commands":
     - img

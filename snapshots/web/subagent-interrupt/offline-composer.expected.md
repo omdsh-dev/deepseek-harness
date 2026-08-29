@@ -9,22 +9,23 @@
   - button "Session log":
     - text: Session log
     - img
-  - tablist:
+  - tablist "Session views":
     - tab "Chat" [selected]
     - tab "Trajectory"
-  - button "System prompt":
-    - img
-    - img
-    - text: System prompt
-  - text: Explain event sourcing in one sentence. {{clock}}
-  - button "Copy":
-    - img
-  - button "Context injection @deepseek-ai/dsh-system-prompt":
-    - img
-    - img
-    - text: Context injection @deepseek-ai/dsh-system-prompt
-  - paragraph: partial
-  - status: Deep diving...
+  - tabpanel "Chat":
+    - button "System prompt":
+      - img
+      - img
+      - text: System prompt
+    - text: Explain event sourcing in one sentence. {{clock}}
+    - button "Copy":
+      - img
+    - button "Context injection @deepseek-ai/dsh-system-prompt":
+      - img
+      - img
+      - text: Context injection @deepseek-ai/dsh-system-prompt
+    - paragraph: partial
+    - status: Deep diving...
   - textbox "Parent session offline; sending is unavailable but you can still stop the run" [disabled]
   - button "Commands" [disabled]:
     - img

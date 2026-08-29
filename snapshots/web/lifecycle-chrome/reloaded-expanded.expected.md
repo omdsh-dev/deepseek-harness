@@ -7,37 +7,38 @@
   - button "Session log":
     - text: Session log
     - img
-  - tablist:
+  - tablist "Session views":
     - tab "Chat" [selected]
     - tab "Trajectory"
-  - button "System prompt":
-    - img
-    - img
-    - text: System prompt
-  - text: Reply with the single word LIGHTHOUSE and stop. {{clock}}
-  - button "Copy":
-    - img
-  - button "Thought for a while" [expanded]:
-    - text: Thought for a while
-    - img
-  - button "Context injection @deepseek-ai/dsh-system-prompt":
-    - img
-    - img
-    - text: Context injection @deepseek-ai/dsh-system-prompt
-  - button "Think The user wants me to reply with a single word. Let me comply.":
-    - img
-    - img
-    - text: Think The user wants me to reply with a single word. Let me comply.
-  - paragraph: LIGHTHOUSE
-  - button "Copy":
-    - img
-  - button "Good response":
-    - img
-  - button "Bad response":
-    - img
-  - button "Branch into a new conversation":
-    - img
-  - text: {{clock}} Ran for {{duration}} TTFT {{duration}} {{throughput}} tok/s
+  - tabpanel "Chat":
+    - button "System prompt":
+      - img
+      - img
+      - text: System prompt
+    - text: Reply with the single word LIGHTHOUSE and stop. {{clock}}
+    - button "Copy":
+      - img
+    - button "Thought for a while" [expanded]:
+      - text: Thought for a while
+      - img
+    - button "Context injection @deepseek-ai/dsh-system-prompt":
+      - img
+      - img
+      - text: Context injection @deepseek-ai/dsh-system-prompt
+    - button "Think The user wants me to reply with a single word. Let me comply.":
+      - img
+      - img
+      - text: Think The user wants me to reply with a single word. Let me comply.
+    - paragraph: LIGHTHOUSE
+    - button "Copy":
+      - img
+    - button "Good response":
+      - img
+    - button "Bad response":
+      - img
+    - button "Branch into a new conversation":
+      - img
+    - text: {{clock}} Ran for {{duration}} TTFT {{duration}} {{throughput}} tok/s
   - textbox "Message or run a task... / commands, @ files or sessions"
   - button "Commands":
     - img

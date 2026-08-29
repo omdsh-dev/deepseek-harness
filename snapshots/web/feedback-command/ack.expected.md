@@ -7,33 +7,34 @@
   - button "Session log":
     - text: Session log
     - img
-  - tablist:
+  - tablist "Session views":
     - tab "Chat" [selected]
     - tab "Trajectory"
-  - button "System prompt":
-    - img
-    - img
-    - text: System prompt
-  - text: Reply with the single word LIGHTHOUSE and stop. {{clock}}
-  - button "Copy":
-    - img
-  - button "Thought for a while":
-    - text: Thought for a while
-    - img
-  - paragraph: LIGHTHOUSE
-  - button "Copy":
-    - img
-  - button "Good response":
-    - img
-  - button "Bad response":
-    - img
-  - button "Branch into a new conversation":
-    - img
-  - text: {{clock}} Ran for {{duration}} TTFT {{duration}} {{throughput}} tok/s
-  - 'button "feedback Feedback recorded for session session-{{uuid}} Anonymous user: {{uuid}}. Session sharing is enabled."':
-    - img
-    - img
-    - text: "feedback Feedback recorded for session session-{{uuid}} Anonymous user: {{uuid}}. Session sharing is enabled."
+  - tabpanel "Chat":
+    - button "System prompt":
+      - img
+      - img
+      - text: System prompt
+    - text: Reply with the single word LIGHTHOUSE and stop. {{clock}}
+    - button "Copy":
+      - img
+    - button "Thought for a while":
+      - text: Thought for a while
+      - img
+    - paragraph: LIGHTHOUSE
+    - button "Copy":
+      - img
+    - button "Good response":
+      - img
+    - button "Bad response":
+      - img
+    - button "Branch into a new conversation":
+      - img
+    - text: {{clock}} Ran for {{duration}} TTFT {{duration}} {{throughput}} tok/s
+    - 'button "feedback Feedback recorded for session session-{{uuid}} Anonymous user: {{uuid}}. Session sharing is enabled."':
+      - img
+      - img
+      - text: "feedback Feedback recorded for session session-{{uuid}} Anonymous user: {{uuid}}. Session sharing is enabled."
   - textbox "Message or run a task... / commands, @ files or sessions"
   - button "Commands":
     - img

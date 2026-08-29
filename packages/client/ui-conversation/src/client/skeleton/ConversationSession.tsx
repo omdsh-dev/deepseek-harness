@@ -1,6 +1,6 @@
 /** Strict per-session header/body content inserted into the resident conversation layout. */
 
-import { useEffect } from 'react'
+import { useEffect, type KeyboardEvent } from 'react'
 import clsx from 'clsx'
 import type { SessionListState, SessionSummary } from '@deepseek-ai/dsh-api-session-controller/client'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
@@ -24,6 +24,34 @@ interface Breadcrumb {
 }
 
 const DEFAULT_VIEW_ID = 'chat'
+
+function viewDomId(sessionId: SessionId, viewId: string, part: 'tab' | 'panel'): string {
+  return `conversation-${encodeURIComponent(String(sessionId))}-view-${encodeURIComponent(viewId)}-${part}`
+}
+
+function moveViewTab(
+  event: KeyboardEvent<HTMLButtonElement>,
+  tabs: readonly ViewTab[],
+  currentIndex: number,
+  select: (viewId: string) => void,
+): void {
+  let nextIndex: number
+  switch (event.key) {
+    case 'ArrowRight': nextIndex = (currentIndex + 1) % tabs.length; break
+    case 'ArrowLeft': nextIndex = (currentIndex - 1 + tabs.length) % tabs.length; break
+    case 'Home': nextIndex = 0; break
+    case 'End': nextIndex = tabs.length - 1; break
+    default: return
+  }
+  const next = tabs.at(nextIndex)
+  if (next === undefined) return
+  event.preventDefault()
+  select(next.id)
+  event.currentTarget.parentElement
+    ?.querySelectorAll<HTMLButtonElement>('[role="tab"]')
+    .item(nextIndex)
+    .focus()
+}
 
 /** Resolve a persisted selection, then registered Chat, without choosing another View. */
 function resolveActiveView(tabs: readonly ViewTab[], selectedId: string | null): ViewTab | undefined {
@@ -143,19 +171,28 @@ export function ConversationSessionHeader({
             </div>
           </div>
           {tabs.length > 1 && (
-            <div className={css.tabs} role="tablist">
-              {tabs.map(viewTab => (
-                <button
-                  key={viewTab.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={viewTab.id === active?.id}
-                  className={clsx(css.tab, viewTab.id === active?.id && css.tabActive)}
-                  onClick={() => { actions.setView(viewTab.id) }}
-                >
-                  {viewTab.label}
-                </button>
-              ))}
+            <div className={css.tabs} role="tablist" aria-label={t('session.views')}>
+              {tabs.map((viewTab, index) => {
+                const selected = viewTab.id === active?.id
+                return (
+                  <button
+                    key={viewTab.id}
+                    id={viewDomId(sessionId, viewTab.id, 'tab')}
+                    type="button"
+                    role="tab"
+                    aria-controls={viewDomId(sessionId, viewTab.id, 'panel')}
+                    aria-selected={selected}
+                    tabIndex={selected ? 0 : -1}
+                    className={clsx(css.tab, selected && css.tabActive)}
+                    onClick={() => { actions.setView(viewTab.id) }}
+                    onKeyDown={(event) => {
+                      moveViewTab(event, tabs, index, actions.setView)
+                    }}
+                  >
+                    {viewTab.label}
+                  </button>
+                )
+              })}
             </div>
           )}
         </>
@@ -171,8 +208,8 @@ export function ConversationSessionHeader({
  * @returns the active view area, or null while the Session remains blank.
  */
 export function ConversationSession({
-  useSession, useConversation, useConversationViews, useInput, inputActions, useStore, actions,
-  renderSlot, bindDraftMirror,
+  sessionId, useSession, useConversation, useConversationViews, useInput, inputActions,
+  useStore, actions, renderSlot, bindDraftMirror,
 }: ConversationSessionProps) {
   const tabs = useConversationViews(value => value)
   const selectedId = useStore(s => s.view)
@@ -192,8 +229,15 @@ export function ConversationSession({
   }, [inputActions])
 
   if (session.blank && conversationPhase(session, conversation) === 'blank') return null
+  const ownsTabPanel = tabs.length > 1 && active !== undefined
   return (
-    <div className={css.viewArea}>
+    <div
+      className={css.viewArea}
+      id={ownsTabPanel ? viewDomId(sessionId, active.id, 'panel') : undefined}
+      role={ownsTabPanel ? 'tabpanel' : undefined}
+      aria-labelledby={ownsTabPanel ? viewDomId(sessionId, active.id, 'tab') : undefined}
+      tabIndex={ownsTabPanel ? 0 : undefined}
+    >
       {active !== undefined && renderSlot('conversation.view', {
         viewRequest,
         openView: actions.openView,

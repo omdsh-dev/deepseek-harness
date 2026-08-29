@@ -7,34 +7,35 @@
   - button "Session log":
     - text: Session log
     - img
-  - tablist:
+  - tablist "Session views":
     - tab "Chat" [selected]
     - tab "Trajectory"
-  - button "System prompt":
-    - img
-    - img
-    - text: System prompt
-  - text: Reply with a one-sentence description of event sourcing, then stop. {{clock}}
-  - button "Copy":
-    - img
-  - button "Thought for a while" [expanded]:
-    - text: Thought for a while
-    - img
-  - button "Context injection @deepseek-ai/dsh-system-prompt":
-    - img
-    - img
-    - text: Context injection @deepseek-ai/dsh-system-prompt
-  - paragraph: partial
-  - text: Stopped
-  - button "Copy":
-    - img
-  - button "Good response":
-    - img
-  - button "Bad response":
-    - img
-  - button "Branch into a new conversation":
-    - img
-  - text: {{clock}} Ran for {{duration}} TTFT {{duration}}
+  - tabpanel "Chat":
+    - button "System prompt":
+      - img
+      - img
+      - text: System prompt
+    - text: Reply with a one-sentence description of event sourcing, then stop. {{clock}}
+    - button "Copy":
+      - img
+    - button "Thought for a while" [expanded]:
+      - text: Thought for a while
+      - img
+    - button "Context injection @deepseek-ai/dsh-system-prompt":
+      - img
+      - img
+      - text: Context injection @deepseek-ai/dsh-system-prompt
+    - paragraph: partial
+    - text: Stopped
+    - button "Copy":
+      - img
+    - button "Good response":
+      - img
+    - button "Bad response":
+      - img
+    - button "Branch into a new conversation":
+      - img
+    - text: {{clock}} Ran for {{duration}} TTFT {{duration}}
   - textbox "Message or run a task... / commands, @ files or sessions"
   - button "Commands":
     - img

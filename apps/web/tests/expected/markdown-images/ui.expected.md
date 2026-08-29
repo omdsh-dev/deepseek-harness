@@ -5,26 +5,27 @@
   - button "Session log":
     - text: Session log
     - img
-  - tablist:
+  - tablist "Session views":
     - tab "Chat" [selected]
     - tab "Trajectory"
-  - text: Show the Markdown image policy. {{clock}}
-  - button "Copy":
-    - img
-  - heading "Markdown images" [level=2]
-  - paragraph:
-    - img "Remote test image"
-  - paragraph: Local test image
-  - paragraph: REMOTE_IMAGE_DONE
-  - button "Copy":
-    - img
-  - button "Good response":
-    - img
-  - button "Bad response":
-    - img
-  - button "Branch into a new conversation":
-    - img
-  - text: {{clock}} Ran for {{duration}}
+  - tabpanel "Chat":
+    - text: Show the Markdown image policy. {{clock}}
+    - button "Copy":
+      - img
+    - heading "Markdown images" [level=2]
+    - paragraph:
+      - img "Remote test image"
+    - paragraph: Local test image
+    - paragraph: REMOTE_IMAGE_DONE
+    - button "Copy":
+      - img
+    - button "Good response":
+      - img
+    - button "Bad response":
+      - img
+    - button "Branch into a new conversation":
+      - img
+    - text: {{clock}} Ran for {{duration}}
   - textbox "Message or run a task... / commands, @ files or sessions"
   - button "Commands":
     - img

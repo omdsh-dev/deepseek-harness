@@ -288,7 +288,7 @@ describe(`web accessibility modes: ${browserName}`, () => {
     expect(tripwire.pageErrors).toEqual([])
   })
 
-  it('operates the assembled model menu and command combobox with one current item', async () => {
+  it('operates assembled Session tabs, model menu, and command combobox', async () => {
     onTestFailed(() => saveFailureShot(page, `web-accessibility-${browserName}-model-command`))
     await page.setViewportSize({ width: 1280, height: 900 })
     await page.emulateMedia({ reducedMotion: 'no-preference' })
@@ -302,6 +302,23 @@ describe(`web accessibility modes: ${browserName}`, () => {
     }
     const sessionRow = tree.locator('[role="treeitem"][aria-level="2"]').first()
     await sessionRow.click()
+
+    const tablist = page.getByRole('tablist', { name: 'Session views' })
+    const chatTab = tablist.getByRole('tab', { name: 'Chat' })
+    const trajectoryTab = tablist.getByRole('tab', { name: 'Trajectory' })
+    await chatTab.waitFor()
+    expect(await chatTab.getAttribute('tabindex')).toBe('0')
+    expect(await trajectoryTab.getAttribute('tabindex')).toBe('-1')
+    await chatTab.focus()
+    await page.keyboard.press('ArrowRight')
+    expect(await trajectoryTab.evaluate(element => document.activeElement === element)).toBe(true)
+    expect(await trajectoryTab.getAttribute('aria-selected')).toBe('true')
+    const trajectoryPanel = page.getByRole('tabpanel')
+    expect(await trajectoryTab.getAttribute('aria-controls')).toBe(await trajectoryPanel.getAttribute('id'))
+    expect(await trajectoryPanel.getAttribute('aria-labelledby')).toBe(await trajectoryTab.getAttribute('id'))
+    await page.keyboard.press('Home')
+    expect(await chatTab.evaluate(element => document.activeElement === element)).toBe(true)
+    expect(await chatTab.getAttribute('aria-selected')).toBe('true')
 
     const trigger = page.getByRole('button', { name: /^Select model/ })
     await trigger.waitFor({ timeout: 15_000 })
