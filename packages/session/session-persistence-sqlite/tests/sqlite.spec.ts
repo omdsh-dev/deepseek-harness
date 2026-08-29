@@ -466,7 +466,9 @@ describe('SessionPersistenceSqlite schema ownership', () => {
   it('retries a busy journal-mode transition within its retry budget', async () => {
     const path = await freshDbPath('dsh-sqlite-journal-busy-')
     let attempts = 0
-    const BusyOnceDatabase = databaseWithJournalFailure(() => {
+    let now = 0
+    const clock = vi.spyOn(performance, 'now').mockImplementation(() => now)
+    const BusyOnceDatabaseBase = databaseWithJournalFailure(() => {
       attempts += 1
       return attempts === 1
         ? Object.assign(new Error('database is locked'), {
@@ -476,14 +478,27 @@ describe('SessionPersistenceSqlite schema ownership', () => {
         })
         : undefined
     })
+    // Simulate expensive connection/schema setup before journal selection.
+    // That unrelated work must not consume the transition's retry budget.
+    const BusyOnceDatabase = class extends BusyOnceDatabaseBase {
+      override prepare(source: string) {
+        const statement = super.prepare(source)
+        if (source === sql('select-user-version')) now = 150
+        return statement
+      }
+    }
 
-    const db = await openDatabase(BusyOnceDatabase, path, 'wal', 100)
-    expect(attempts).toBe(2)
-    expect(db.prepare(sql('journal-mode-wal')).get()).toEqual({ journal_mode: 'wal' })
-    expect(db.prepare(sql('select-trusted-schema')).get()).toEqual({ trusted_schema: 0 })
-    expect(db.prepare(sql('select-mmap-size')).get()).toEqual({ mmap_size: 0 })
-    expect(db.prepare(sql('select-synchronous')).get()).toEqual({ synchronous: 2 })
-    db.close()
+    try {
+      const db = await openDatabase(BusyOnceDatabase, path, 'wal', 100)
+      expect(attempts).toBe(2)
+      expect(db.prepare(sql('journal-mode-wal')).get()).toEqual({ journal_mode: 'wal' })
+      expect(db.prepare(sql('select-trusted-schema')).get()).toEqual({ trusted_schema: 0 })
+      expect(db.prepare(sql('select-mmap-size')).get()).toEqual({ mmap_size: 0 })
+      expect(db.prepare(sql('select-synchronous')).get()).toEqual({ synchronous: 2 })
+      db.close()
+    } finally {
+      clock.mockRestore()
+    }
   })
 
   it('does not retry journal failures outside the available busy budget', async () => {
