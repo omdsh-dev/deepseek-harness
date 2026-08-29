@@ -36,8 +36,10 @@ export function parseRecommendedLabel(label: string): { label: string; recommend
 
 /** Return whether a text-field key event belongs to an active IME composition. */
 function isComposing(event: KeyboardEvent<HTMLTextAreaElement>): boolean {
-  // keyCode 229 is the legacy IME-composition signal engines emit without isComposing.
-  return event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229
+  // Some legacy engines expose only the historical 229 composition signal.
+  // Keep that compatibility read isolated from the deprecated DOM declaration.
+  const legacyEvent = event.nativeEvent as unknown as { readonly keyCode?: number }
+  return event.nativeEvent.isComposing || legacyEvent.keyCode === 229
 }
 
 /** The free-text answer field shared by both question variants. */
