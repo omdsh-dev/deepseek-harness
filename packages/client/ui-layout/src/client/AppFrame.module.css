@@ -35,9 +35,22 @@
   }
 }
 
+/* At high zoom and narrow reflow widths, settling the control rail before a
+   keyboard user can enter it is more important than animating the track. */
+@media (max-width: 600px) {
+  .frame {
+    transition: none;
+  }
+}
+
 .sidebarCol {
   min-width: 0;
+  /* `hidden` is the compatibility fallback; `clip` preserves track clipping
+     without creating a programmatically scrollable box. Chromium otherwise
+     pans this column while tabbing through the rail and can leave the focused
+     Settings control outside the viewport. */
   overflow: hidden;
+  overflow: clip;
   background: var(--dsw-specific-sidebar-fill);
   border-right: 1px solid var(--dsw-alias-border-l1);
 }
@@ -83,6 +96,12 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .handle {
+    transition: none;
+  }
+}
+
+@media (max-width: 600px) {
   .handle {
     transition: none;
   }

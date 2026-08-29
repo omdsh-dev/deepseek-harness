@@ -18,6 +18,7 @@ const t: SidebarRootComponentProps['t'] = key =>
 afterEach(() => {
   cleanup()
   vi.unstubAllEnvs()
+  vi.unstubAllGlobals()
   vi.useRealTimers()
 })
 
@@ -174,5 +175,14 @@ describe('SidebarRoot shell', () => {
     const b = mountShell({ collapsed: true })
     expect(b.regionOwner().wide).toBe(false)
     expect(screen.getByRole('button', { name: 'Open sidebar' })).toBeTruthy()
+  })
+
+  it('settles collapse immediately when reflow or reduced-motion removes the track transition', () => {
+    vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: true }) as MediaQueryList))
+    const b = mountShell()
+    b.rerender({ collapsed: true })
+    expect(b.regionOwner().wide).toBe(false)
+    expect(b.settingsOwner().wide).toBe(false)
+    expect(b.footerActionOwner().wide).toBe(false)
   })
 })

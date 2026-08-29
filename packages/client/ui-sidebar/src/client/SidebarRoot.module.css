@@ -342,6 +342,16 @@
 .collapsed .footerActions {
   display: flex;
   justify-content: center;
+}
+
+/* Keep the bottom Settings control on the rail's explicit 36px content
+   track. Firefox otherwise shrink-wraps this seat around the trigger during
+   keyboard focus and can place half of its outline outside the viewport. */
+.collapsed .settingsArea {
+  width: 100%;
+}
+
+.collapsed .footerActions {
   width: auto;
 }
 

@@ -93,7 +93,7 @@ describe('SettingsRoot trigger', () => {
     expect(trigger.getAttribute('aria-expanded')).toBe('false')
     fireEvent.click(trigger)
     expect(screen.getByRole('dialog')).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Settings', expanded: true })).toBeTruthy()
+    expect(trigger.getAttribute('aria-expanded')).toBe('true')
   })
 
   it('hands the rail state to the trigger seat', () => {
@@ -163,6 +163,23 @@ describe('SettingsPanel close paths', () => {
     mount()
     openPanel()
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Close' }))
+  })
+
+  it('traps keyboard focus and restores it to the opening trigger', () => {
+    mount()
+    const trigger = screen.getByRole('button', { name: 'Settings' })
+    trigger.focus()
+    openPanel()
+    const close = screen.getByRole('button', { name: 'Close' })
+    expect(document.activeElement).toBe(close)
+
+    fireEvent.keyDown(document, { key: 'Tab' })
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'General' }))
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true })
+    expect(document.activeElement).toBe(close)
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(document.activeElement).toBe(trigger)
   })
 })
 
