@@ -192,6 +192,34 @@ describe('automation-only ACP bridge', () => {
       .resolves.toHaveProperty('configOptions')
   })
 
+  it('folds activation-time topology changes into the new-session response without an early notification', async () => {
+    harness = await makeBridgeHarness()
+    await harness.client.initialize({ protocolVersion: PROTOCOL_VERSION, clientCapabilities: {} })
+    const listModels = harness.ctx.llm.listModels.bind(harness.ctx.llm)
+    let discoveryChanged = false
+    vi.spyOn(harness.ctx.llm, 'listModels').mockImplementation(async (provider) => {
+      if (!discoveryChanged) {
+        discoveryChanged = true
+        harness!.registerCatalogProvider('discovery-topology')
+      }
+      return await listModels(provider)
+    })
+    const ensureMaterialized = harness.ctx.sessionPersistence.ensureMaterialized
+      .bind(harness.ctx.sessionPersistence)
+    vi.spyOn(harness.ctx.sessionPersistence, 'ensureMaterialized').mockImplementationOnce(async (session) => {
+      harness!.registerCatalogProvider('activation-topology')
+      await ensureMaterialized(session)
+    })
+
+    const created = await harness.client.newSession({ cwd: process.cwd(), mcpServers: [] })
+
+    const model = created.configOptions?.find(option => option.id === 'model')
+    if (model?.type !== 'select') throw new Error('expected a model select option')
+    expect(model.options.some(option => 'group' in option && option.group === 'discovery-topology')).toBe(true)
+    expect(model.options.some(option => 'group' in option && option.group === 'activation-topology')).toBe(true)
+    expect(harness.updates).toEqual([])
+  })
+
   it('rejects active or wrong-workspace resume before composing another Agent', async () => {
     harness = await makeBridgeHarness({ script: [textResponse('persisted')] })
     await harness.client.initialize({ protocolVersion: PROTOCOL_VERSION, clientCapabilities: {} })
