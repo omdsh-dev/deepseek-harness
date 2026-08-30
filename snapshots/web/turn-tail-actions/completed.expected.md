@@ -11,30 +11,35 @@
     - tab "Chat" [selected]
     - tab "Trajectory"
   - tabpanel "Chat":
-    - button "System prompt":
-      - img
-      - img
-      - text: System prompt
-    - text: Begin your reply with the plain sentence "Reading the workspace now." as text, and in that same message call the bash tool with the command "echo alpha". After the tool result, reply with the single word DONE and stop. {{clock}}
-    - button "Copy":
-      - img
-    - button "1 tool call · 1 message":
-      - text: 1 tool call · 1 message
-      - img
-    - paragraph: DONE
-    - button "Turn usage 15.8K tok · Cache hit 49.7%":
-      - img
-      - img
-      - text: Turn usage 15.8K tok · Cache hit 49.7%
-    - button "Copy":
-      - img
-    - button "Good response":
-      - img
-    - button "Bad response":
-      - img
-    - button "Branch into a new conversation":
-      - img
-    - text: {{clock}} Ran for {{duration}} TTFT {{duration}} {{throughput}} tok/s
+    - log "Conversation transcript":
+      - button "System prompt":
+        - img
+        - img
+        - text: System prompt
+      - article "User message":
+        - text: Begin your reply with the plain sentence "Reading the workspace now." as text, and in that same message call the bash tool with the command "echo alpha". After the tool result, reply with the single word DONE and stop. {{clock}}
+        - button "Copy":
+          - img
+      - button "1 tool call · 1 message":
+        - text: 1 tool call · 1 message
+        - img
+      - article "Assistant response"
+      - article "Assistant response":
+        - paragraph: DONE
+      - button "Turn usage 15.8K tok · Cache hit 49.7%":
+        - img
+        - img
+        - text: Turn usage 15.8K tok · Cache hit 49.7%
+      - button "Copy":
+        - img
+      - button "Good response":
+        - img
+      - button "Bad response":
+        - img
+      - button "Branch into a new conversation":
+        - img
+      - text: {{clock}} Ran for {{duration}} TTFT {{duration}} {{throughput}} tok/s
+    - status: Assistant response finished
   - textbox "Message or run a task... / commands, @ files or sessions"
   - button "Commands":
     - img

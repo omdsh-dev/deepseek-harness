@@ -11,20 +11,23 @@
     - tab "Chat" [selected]
     - tab "Trajectory"
   - tabpanel "Chat":
-    - button "System prompt":
-      - img
-      - img
-      - text: System prompt
-    - text: Reply with a one-sentence description of event sourcing, then stop. {{clock}}
-    - button "Copy":
-      - img
-    - button "Context injection @deepseek-ai/dsh-system-prompt":
-      - img
-      - img
-      - text: Context injection @deepseek-ai/dsh-system-prompt
-    - status:
-      - text: This turn failedAPI key is invalid
-      - code: AUTH
+    - log "Conversation transcript":
+      - button "System prompt":
+        - img
+        - img
+        - text: System prompt
+      - article "User message":
+        - text: Reply with a one-sentence description of event sourcing, then stop. {{clock}}
+        - button "Copy":
+          - img
+      - button "Context injection @deepseek-ai/dsh-system-prompt":
+        - img
+        - img
+        - text: Context injection @deepseek-ai/dsh-system-prompt
+      - status:
+        - text: This turn failedAPI key is invalid
+        - code: AUTH
+    - status: Assistant response finished
   - textbox "Message or run a task... / commands, @ files or sessions"
   - button "Commands":
     - img

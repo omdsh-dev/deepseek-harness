@@ -9,12 +9,14 @@
     - tab "Chat" [selected]
     - tab "Trajectory"
   - tabpanel "Chat":
-    - text: Research notes what changed? Referenced session · Research notes {{clock}}
-    - button "Copy":
-      - img
-    - button "Session recall Research notes":
-      - img
-      - text: Session recall Research notes
+    - log "Conversation transcript":
+      - article "User message":
+        - text: Research notes what changed? Referenced session · Research notes {{clock}}
+        - button "Copy":
+          - img
+      - button "Session recall Research notes":
+        - img
+        - text: Session recall Research notes
   - textbox "Message or run a task... / commands, @ files or sessions"
   - button "Commands":
     - img

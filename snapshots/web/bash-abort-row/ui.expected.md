@@ -9,25 +9,27 @@
     - tab "Chat" [selected]
     - tab "Trajectory"
   - tabpanel "Chat":
-    - button "System prompt":
-      - img
-      - img
-      - text: System prompt
-    - text: "Run two shell commands: wait for cancellation, then write skipped.txt. {{clock}}"
-    - button "Copy":
-      - img
-    - button "Context injection @deepseek-ai/dsh-system-prompt":
-      - img
-      - img
-      - text: Context injection @deepseek-ai/dsh-system-prompt
-    - 'button "Failed Bash Error: tool call aborted" [expanded]':
-      - img
-      - text: "Failed Bash Error: tool call aborted"
-    - text: "IN { \"command\": \"node -e \\\"const fs=require('node:fs'); fs.writeFileSync('started.tmp', 'started'); fs.renameSync('started.tmp', 'started.txt'); setInterval(() => {}, 1000)\\\"\", \"description\": \"Wait until cancellation\" } OUT Error: tool call aborted"
-    - button "Inspect"
-    - 'button "Failed Bash Error: tool call aborted before dispatch"':
-      - img
-      - text: "Failed Bash Error: tool call aborted before dispatch"
+    - log "Conversation transcript":
+      - button "System prompt":
+        - img
+        - img
+        - text: System prompt
+      - article "User message":
+        - text: "Run two shell commands: wait for cancellation, then write skipped.txt. {{clock}}"
+        - button "Copy":
+          - img
+      - button "Context injection @deepseek-ai/dsh-system-prompt":
+        - img
+        - img
+        - text: Context injection @deepseek-ai/dsh-system-prompt
+      - 'button "Failed Bash Error: tool call aborted" [expanded]':
+        - img
+        - text: "Failed Bash Error: tool call aborted"
+      - text: "IN { \"command\": \"node -e \\\"const fs=require('node:fs'); fs.writeFileSync('started.tmp', 'started'); fs.renameSync('started.tmp', 'started.txt'); setInterval(() => {}, 1000)\\\"\", \"description\": \"Wait until cancellation\" } OUT Error: tool call aborted"
+      - button "Inspect"
+      - 'button "Failed Bash Error: tool call aborted before dispatch"':
+        - img
+        - text: "Failed Bash Error: tool call aborted before dispatch"
   - textbox "Message or run a task... / commands, @ files or sessions"
   - button "Commands":
     - img

@@ -11,19 +11,22 @@
     - tab "Chat" [selected]
     - tab "Trajectory"
   - tabpanel "Chat":
-    - button "System prompt":
-      - img
-      - img
-      - text: System prompt
-    - text: Reply with a one-sentence description of event sourcing, then stop. {{clock}}
-    - button "Copy":
-      - img
-    - button "Context injection @deepseek-ai/dsh-system-prompt":
-      - img
-      - img
-      - text: Context injection @deepseek-ai/dsh-system-prompt
-    - paragraph: partial
-    - status: Deep diving...
+    - log "Conversation transcript":
+      - button "System prompt":
+        - img
+        - img
+        - text: System prompt
+      - article "User message":
+        - text: Reply with a one-sentence description of event sourcing, then stop. {{clock}}
+        - button "Copy":
+          - img
+      - button "Context injection @deepseek-ai/dsh-system-prompt":
+        - img
+        - img
+        - text: Context injection @deepseek-ai/dsh-system-prompt
+      - article "Assistant response":
+        - paragraph: partial
+      - status: Deep diving...
   - button "2 queued messages" [disabled] [expanded]
   - list:
     - listitem:

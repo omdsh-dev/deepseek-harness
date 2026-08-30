@@ -11,26 +11,31 @@
     - tab "Chat" [selected]
     - tab "Trajectory"
   - tabpanel "Chat":
-    - button "System prompt":
-      - img
-      - img
-      - text: System prompt
-    - text: "Use the bash tool to run exactly: echo WEB_E2E_OK. Then reply with the single word DONE and stop. {{clock}}"
-    - button "Copy":
-      - img
-    - button "1 tool call":
-      - text: 1 tool call
-      - img
-    - paragraph: DONE
-    - button "Copy":
-      - img
-    - button "Good response":
-      - img
-    - button "Bad response":
-      - img
-    - button "Branch into a new conversation":
-      - img
-    - text: {{clock}} Ran for {{duration}} TTFT {{duration}} {{throughput}} tok/s
+    - log "Conversation transcript":
+      - button "System prompt":
+        - img
+        - img
+        - text: System prompt
+      - article "User message":
+        - text: "Use the bash tool to run exactly: echo WEB_E2E_OK. Then reply with the single word DONE and stop. {{clock}}"
+        - button "Copy":
+          - img
+      - button "1 tool call":
+        - text: 1 tool call
+        - img
+      - article "Assistant response"
+      - article "Assistant response":
+        - paragraph: DONE
+      - button "Copy":
+        - img
+      - button "Good response":
+        - img
+      - button "Bad response":
+        - img
+      - button "Branch into a new conversation":
+        - img
+      - text: {{clock}} Ran for {{duration}} TTFT {{duration}} {{throughput}} tok/s
+    - status: Assistant response finished
   - textbox "Message or run a task... / commands, @ files or sessions"
   - button "Commands":
     - img

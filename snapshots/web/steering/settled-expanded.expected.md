@@ -11,37 +11,42 @@
     - tab "Chat" [selected]
     - tab "Trajectory"
   - tabpanel "Chat":
-    - button "System prompt":
-      - img
-      - img
-      - text: System prompt
-    - text: Use the ask_user_question tool to ask me exactly one question with id "checkpoint", question "Ready to continue?", header "Checkpoint", and options labeled "Yes" and "No". After I answer, reply with one short sentence acknowledging my answer and stop. {{clock}}
-    - button "Copy":
-      - img
-    - button "1 tool call" [expanded]:
-      - text: 1 tool call
-      - img
-    - button "Context injection @deepseek-ai/dsh-system-prompt":
-      - img
-      - img
-      - text: Context injection @deepseek-ai/dsh-system-prompt
-    - button "Ask question 1/1 answered":
-      - img
-      - img
-      - text: Ask question 1/1 answered
-    - text: "Interjection: include the word BANANA in your final reply. {{clock}}"
-    - button "Copy":
-      - img
-    - paragraph: Great, let's move forward. BANANA!
-    - button "Copy":
-      - img
-    - button "Good response":
-      - img
-    - button "Bad response":
-      - img
-    - button "Branch into a new conversation":
-      - img
-    - text: {{clock}} Ran for {{duration}} TTFT {{duration}} {{throughput}} tok/s
+    - log "Conversation transcript":
+      - button "System prompt":
+        - img
+        - img
+        - text: System prompt
+      - article "User message":
+        - text: Use the ask_user_question tool to ask me exactly one question with id "checkpoint", question "Ready to continue?", header "Checkpoint", and options labeled "Yes" and "No". After I answer, reply with one short sentence acknowledging my answer and stop. {{clock}}
+        - button "Copy":
+          - img
+      - button "1 tool call" [expanded]:
+        - text: 1 tool call
+        - img
+      - button "Context injection @deepseek-ai/dsh-system-prompt":
+        - img
+        - img
+        - text: Context injection @deepseek-ai/dsh-system-prompt
+      - button "Ask question 1/1 answered":
+        - img
+        - img
+        - text: Ask question 1/1 answered
+      - article "User message":
+        - text: "Interjection: include the word BANANA in your final reply. {{clock}}"
+        - button "Copy":
+          - img
+      - article "Assistant response":
+        - paragraph: Great, let's move forward. BANANA!
+      - button "Copy":
+        - img
+      - button "Good response":
+        - img
+      - button "Bad response":
+        - img
+      - button "Branch into a new conversation":
+        - img
+      - text: {{clock}} Ran for {{duration}} TTFT {{duration}} {{throughput}} tok/s
+    - status: Assistant response finished
   - textbox "Message or run a task... / commands, @ files or sessions"
   - button "Commands":
     - img

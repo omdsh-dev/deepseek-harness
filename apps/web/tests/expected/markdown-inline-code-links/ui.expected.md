@@ -9,35 +9,38 @@
     - tab "Chat" [selected]
     - tab "Trajectory"
   - tabpanel "Chat":
-    - text: Show the local preview URL. {{clock}}
-    - button "Copy":
-      - img
-    - heading "Inline code links" [level=2]
-    - paragraph:
-      - text: "Preview:"
-      - code:
-        - link "{{linkUrl}}":
-          - /url: {{linkUrl}}
-    - paragraph:
-      - text: "Standard:"
-      - link "Open preview":
-        - /url: {{linkUrl}}
-    - paragraph:
-      - text: "Command:"
-      - code: curl {{linkUrl}}
-    - paragraph:
-      - text: "Unsafe:"
-      - code: javascript:alert(1)
-    - paragraph: INLINE_CODE_LINK_DONE
-    - button "Copy":
-      - img
-    - button "Good response":
-      - img
-    - button "Bad response":
-      - img
-    - button "Branch into a new conversation":
-      - img
-    - text: {{clock}} Ran for {{duration}}
+    - log "Conversation transcript":
+      - article "User message":
+        - text: Show the local preview URL. {{clock}}
+        - button "Copy":
+          - img
+      - article "Assistant response":
+        - heading "Inline code links" [level=2]
+        - paragraph:
+          - text: "Preview:"
+          - code:
+            - link "{{linkUrl}}":
+              - /url: {{linkUrl}}
+        - paragraph:
+          - text: "Standard:"
+          - link "Open preview":
+            - /url: {{linkUrl}}
+        - paragraph:
+          - text: "Command:"
+          - code: curl {{linkUrl}}
+        - paragraph:
+          - text: "Unsafe:"
+          - code: javascript:alert(1)
+        - paragraph: INLINE_CODE_LINK_DONE
+      - button "Copy":
+        - img
+      - button "Good response":
+        - img
+      - button "Bad response":
+        - img
+      - button "Branch into a new conversation":
+        - img
+      - text: {{clock}} Ran for {{duration}}
   - textbox "Message or run a task... / commands, @ files or sessions"
   - button "Commands":
     - img

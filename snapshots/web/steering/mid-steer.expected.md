@@ -11,26 +11,29 @@
     - tab "Chat" [selected]
     - tab "Trajectory"
   - tabpanel "Chat":
-    - button "System prompt":
-      - img
-      - img
-      - text: System prompt
-    - text: Use the ask_user_question tool to ask me exactly one question with id "checkpoint", question "Ready to continue?", header "Checkpoint", and options labeled "Yes" and "No". After I answer, reply with one short sentence acknowledging my answer and stop. {{clock}}
-    - button "Copy":
-      - img
-    - button "Context injection @deepseek-ai/dsh-system-prompt":
-      - img
-      - img
-      - text: Context injection @deepseek-ai/dsh-system-prompt
-    - text: Running
-    - button "Ask question waiting":
-      - img
-      - img
-      - text: Ask question waiting
-    - status: Deep diving...
-    - text: "Interjection: include the word BANANA in your final reply."
-    - button "Copy":
-      - img
+    - log "Conversation transcript":
+      - button "System prompt":
+        - img
+        - img
+        - text: System prompt
+      - article "User message":
+        - text: Use the ask_user_question tool to ask me exactly one question with id "checkpoint", question "Ready to continue?", header "Checkpoint", and options labeled "Yes" and "No". After I answer, reply with one short sentence acknowledging my answer and stop. {{clock}}
+        - button "Copy":
+          - img
+      - button "Context injection @deepseek-ai/dsh-system-prompt":
+        - img
+        - img
+        - text: Context injection @deepseek-ai/dsh-system-prompt
+      - text: Running
+      - button "Ask question waiting":
+        - img
+        - img
+        - text: Ask question waiting
+      - status: Deep diving...
+      - article "User message":
+        - text: "Interjection: include the word BANANA in your final reply."
+        - button "Copy":
+          - img
   - region "Ready to continue?":
     - text: Checkpoint
     - heading "Ready to continue?" [level=2]

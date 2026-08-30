@@ -22,23 +22,25 @@
     - tab "Chat" [selected]
     - tab "Trajectory"
   - tabpanel "Chat":
-    - button "System prompt":
-      - img
-      - img
-      - text: System prompt
-    - button "Thought for a while":
-      - text: Thought for a while
-      - img
-    - paragraph: "Review complete: no actionable findings."
-    - button "Copy":
-      - img
-    - button "Good response":
-      - img
-    - button "Bad response":
-      - img
-    - button "Branch into a new conversation":
-      - img
-    - text: {{clock}} Ran for {{duration}}
+    - log "Conversation transcript":
+      - button "System prompt":
+        - img
+        - img
+        - text: System prompt
+      - button "Thought for a while":
+        - text: Thought for a while
+        - img
+      - article "Assistant response":
+        - paragraph: "Review complete: no actionable findings."
+      - button "Copy":
+        - img
+      - button "Good response":
+        - img
+      - button "Bad response":
+        - img
+      - button "Branch into a new conversation":
+        - img
+      - text: {{clock}} Ran for {{duration}}
   - textbox "Message or run a task... / commands, @ files or sessions"
   - button "Commands":
     - img

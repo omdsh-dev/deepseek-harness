@@ -11,21 +11,24 @@
     - tab "Chat" [selected]
     - tab "Trajectory"
   - tabpanel "Chat":
-    - button "System prompt":
-      - img
-      - img
-      - text: System prompt
-    - text: Stream one TypeScript fence for the highlighting snapshot. {{clock}}
-    - button "Copy":
-      - img
-    - button "Context injection @deepseek-ai/dsh-system-prompt":
-      - img
-      - img
-      - text: Context injection @deepseek-ai/dsh-system-prompt
-    - text: ts
-    - button "Copy"
-    - code: "const first: number = 1 const second = \"two\" let tail"
-    - status: Deep diving...
+    - log "Conversation transcript":
+      - button "System prompt":
+        - img
+        - img
+        - text: System prompt
+      - article "User message":
+        - text: Stream one TypeScript fence for the highlighting snapshot. {{clock}}
+        - button "Copy":
+          - img
+      - button "Context injection @deepseek-ai/dsh-system-prompt":
+        - img
+        - img
+        - text: Context injection @deepseek-ai/dsh-system-prompt
+      - article "Assistant response":
+        - text: ts
+        - button "Copy"
+        - code: "const first: number = 1 const second = \"two\" let tail"
+      - status: Deep diving...
   - textbox "Message or run a task... / commands, @ files or sessions"
   - button "Commands":
     - img
