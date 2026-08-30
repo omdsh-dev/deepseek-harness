@@ -92,17 +92,28 @@ describe('PluginInventorySettingsTab', () => {
 
   it('does not repeat a module name when its visual title is already exact', async () => {
     render(<PluginInventorySettingsTab {...props(async () => ({
-      entries: [{
-        entryId: 'plain-entry', moduleName: 'plain-plugin', enabled: true, fiberPhase: 'active',
-      }],
+      entries: [
+        { entryId: 'plain-entry', moduleName: 'plain-plugin', enabled: true, fiberPhase: 'active' },
+        { entryId: 'other-entry', moduleName: 'plain-entry-helper', enabled: true, fiberPhase: 'active' },
+      ],
     }) as unknown as Snapshot)} />)
 
-    expect(await screen.findByRole('button', {
+    const exact = await screen.findByRole('button', {
       name: 'plain-plugin, plain-entry, Mounted, Enabled',
-    })).toBeTruthy()
+    })
+    expect(exact).toBeTruthy()
     expect(screen.queryByRole('button', {
       name: 'plain-plugin, plain-plugin, plain-entry, Mounted, Enabled',
     })).toBeNull()
+
+    fireEvent.change(screen.getByRole('searchbox', { name: en.search }), {
+      target: { value: ' PLAIN-ENTRY ' },
+    })
+    expect(screen.getAllByRole('listitem')).toHaveLength(1)
+    expect(screen.getByRole('button', {
+      name: 'plain-plugin, plain-entry, Mounted, Enabled',
+    })).toBe(exact)
+    expect(screen.queryByText('plain-entry-helper')).toBeNull()
   })
 
   it('shows a generic failure and retries into the empty state', async () => {

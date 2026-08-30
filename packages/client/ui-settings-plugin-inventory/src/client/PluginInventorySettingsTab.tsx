@@ -55,9 +55,22 @@ function moduleShortName(moduleName: string): string {
 
 /** Whether an inventory row matches the local catalog query. */
 function matches(entry: PluginInventoryEntry, normalizedQuery: string): boolean {
-  if (normalizedQuery.length === 0) return true
   return [entry.moduleName, entry.entryId]
     .some(value => value.toLocaleLowerCase().includes(normalizedQuery))
+}
+
+/** Prefer an exact Loader id before falling back to the fuzzy catalog search. */
+function filterEntries(
+  entries: PluginInventorySnapshot['entries'],
+  normalizedQuery: string,
+): PluginInventorySnapshot['entries'] {
+  if (normalizedQuery.length === 0) return entries
+  const exactEntryMatches = entries.filter(
+    entry => entry.entryId.toLocaleLowerCase() === normalizedQuery,
+  )
+  return exactEntryMatches.length > 0
+    ? exactEntryMatches
+    : entries.filter(entry => matches(entry, normalizedQuery))
 }
 
 /** Render the read-only current Loader inventory. */
@@ -80,7 +93,7 @@ export function PluginInventorySettingsTab({ list, t }: PluginInventorySettingsT
   const normalizedQuery = query.trim().toLocaleLowerCase()
   const filteredEntries = useMemo(
     () => state.status === 'ready'
-      ? state.snapshot.entries.filter(entry => matches(entry, normalizedQuery))
+      ? filterEntries(state.snapshot.entries, normalizedQuery)
       : [],
     [normalizedQuery, state],
   )
