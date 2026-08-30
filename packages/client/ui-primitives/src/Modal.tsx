@@ -142,6 +142,9 @@ export function Modal({
     initial.focus()
     const onKeyDown = (e: KeyboardEvent) => {
       if (topDialog() !== dialog) return
+      // Nested composites (for example a portaled Menu) own their consumed
+      // Escape/Tab before the dialog's outer dismissal and focus boundary.
+      if (e.defaultPrevented) return
       if (e.key === 'Escape') {
         e.preventDefault()
         onCloseRef.current()
