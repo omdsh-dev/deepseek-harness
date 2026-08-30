@@ -181,6 +181,84 @@ describe('WorkspaceBrowser', () => {
     expect(b.store.getSnapshot().groupBy).toBe('workspace')
   })
 
+  it('supports roving focus, disclosure, activation, and type-ahead in the grouped tree', () => {
+    mount({
+      useSessions: hook(sessionState([summary('alpha-s', 2), summary('beta-s', 1)])),
+      useWorkspaces: hook(workspaceState([
+        workspace('alpha', ['alpha-s']),
+        workspace('beta', ['beta-s']),
+      ])),
+    })
+    const alpha = screen.getByText('alpha').closest<HTMLElement>('[role="treeitem"]')!
+    const beta = screen.getByText('beta').closest<HTMLElement>('[role="treeitem"]')!
+    const alphaAction = screen.getByRole('button', { name: '在“alpha”中新建会话' })
+    const betaAction = screen.getByRole('button', { name: '在“beta”中新建会话' })
+    expect(alpha.tabIndex).toBe(0)
+    expect(alpha.getAttribute('aria-level')).toBe('1')
+    expect(alphaAction.tabIndex).toBe(0)
+    expect(beta.tabIndex).toBe(-1)
+    expect(betaAction.tabIndex).toBe(-1)
+
+    alpha.focus()
+    fireEvent.keyDown(alpha, { key: 'b' })
+    expect(document.activeElement).toBe(beta)
+    fireEvent.keyDown(beta, { key: 'Home' })
+    expect(document.activeElement).toBe(alpha)
+    fireEvent.keyDown(alpha, { key: 'End' })
+    expect(document.activeElement).toBe(beta)
+    fireEvent.keyDown(beta, { key: 'ArrowUp' })
+    expect(document.activeElement).toBe(alpha)
+    expect(alphaAction.tabIndex).toBe(0)
+    expect(betaAction.tabIndex).toBe(-1)
+
+    fireEvent.keyDown(alpha, { key: 'ArrowRight' })
+    expect(alpha.getAttribute('aria-expanded')).toBe('true')
+    const session = screen.getByText('alpha-s').closest<HTMLElement>('[role="treeitem"]')!
+    expect(session.getAttribute('aria-level')).toBe('2')
+    fireEvent.keyDown(alpha, { key: 'ArrowRight' })
+    expect(document.activeElement).toBe(session)
+    fireEvent.keyDown(session, { key: 'ArrowLeft' })
+    expect(document.activeElement).toBe(alpha)
+    fireEvent.keyDown(alpha, { key: 'ArrowLeft' })
+    expect(alpha.getAttribute('aria-expanded')).toBe('false')
+    fireEvent.keyDown(alpha, { key: 'Enter' })
+    expect(alpha.getAttribute('aria-expanded')).toBe('true')
+
+    alphaAction.focus()
+    fireEvent.keyDown(alphaAction, { key: 'ArrowDown' })
+    expect(document.activeElement).toBe(alphaAction)
+    fireEvent.pointerDown(beta)
+    expect(document.activeElement).toBe(beta)
+    expect(beta.tabIndex).toBe(0)
+  })
+
+  it('keeps empty containers roleless and selects the current row as the flat and search entry', () => {
+    const sessions = sessionState([
+      summary('needle-a', 2, { displayTitle: 'Needle Alpha' }),
+      summary('needle-b', 1, { displayTitle: 'Needle Beta' }),
+    ], { current: sid('needle-b') })
+    const b = mount()
+    expect(screen.queryByRole('tree')).toBeNull()
+
+    rerender(b, { useSessions: hook(sessions) })
+    b.store.actions.setGroupBy('flat')
+    rerender(b, {})
+    const flatRows = screen.getAllByRole('treeitem')
+    expect(flatRows.map(row => row.tabIndex)).toEqual([-1, 0])
+    expect(flatRows.map(row => row.getAttribute('aria-level'))).toEqual(['1', '1'])
+    flatRows[1]!.focus()
+    fireEvent.keyDown(flatRows[1]!, { key: 'ArrowUp' })
+    expect(document.activeElement).toBe(flatRows[0])
+
+    fireEvent.change(screen.getByLabelText('搜索会话…'), { target: { value: 'needle' } })
+    const searchRows = screen.getAllByRole('treeitem')
+    expect(searchRows.map(row => row.tabIndex)).toEqual([-1, 0])
+    expect(searchRows.map(row => row.getAttribute('aria-level'))).toEqual(['1', '1'])
+    searchRows[1]!.focus()
+    fireEvent.keyDown(searchRows[1]!, { key: 'Home' })
+    expect(document.activeElement).toBe(searchRows[0])
+  })
+
   it('persists flat-list drag order locally and applies Last updated within that account', async () => {
     const insertSessionBefore = vi.fn(async () => {})
     const sessions = sessionState([summary('one', 3), summary('two', 2), summary('three', 1)])
@@ -862,6 +940,35 @@ describe('WorkspaceBrowser', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+
+  it('hides collapsed search and restores focus only for explicit dismissal', () => {
+    mount()
+    const searchButton = screen.getByRole('button', { name: '搜索会话' })
+    const input = screen.getByLabelText('搜索会话…')
+    expect(input.getAttribute('aria-hidden')).toBe('true')
+    expect(input.getAttribute('tabindex')).toBe('-1')
+
+    fireEvent.click(searchButton)
+    expect(document.activeElement).toBe(input)
+    expect(input.hasAttribute('aria-hidden')).toBe(false)
+    expect(fireEvent.keyDown(input, { key: 'Escape' })).toBe(false)
+    expect(document.activeElement).toBe(searchButton)
+    expect(input.getAttribute('aria-hidden')).toBe('true')
+
+    fireEvent.click(searchButton)
+    fireEvent.click(screen.getByRole('button', { name: '清除搜索' }))
+    expect(document.activeElement).toBe(searchButton)
+
+    const external = document.createElement('button')
+    external.textContent = 'outside'
+    document.body.append(external)
+    fireEvent.click(searchButton)
+    external.focus()
+    fireEvent.click(external)
+    expect(document.activeElement).toBe(external)
+    expect(searchButton.getAttribute('aria-expanded')).toBe('false')
+    external.remove()
   })
 
   it('keeps the rail-opened search expanded when the initiating click reaches document', () => {

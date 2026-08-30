@@ -67,11 +67,12 @@ describe('CI workflow', () => {
       || !isRecord(workflow.jobs['node-24'])
       || !isRecord(workflow.jobs['node-24-coverage'])
       || !isRecord(workflow.jobs['node-24-consumers'])
+      || !isRecord(workflow.jobs['node-24-accessibility'])
       || !isRecord(workflow.jobs['all-checks-passed'])
       || !isRecord(masterWorkflow.jobs)
       || !isRecord(masterWorkflow.jobs['wine-apt-cache'])
       || !isRecord(masterWorkflow.jobs['serial-windows'])) {
-      throw new TypeError('CI workflow must define windows, windows-build, windows-coverage, windows-native-tests, windows-observational, node-24, node-24-coverage, node-24-consumers, and all-checks-passed; ci-master must define wine-apt-cache and serial-windows')
+      throw new TypeError('CI workflow must define windows, windows-build, windows-coverage, windows-native-tests, windows-observational, node-24, node-24-coverage, node-24-consumers, node-24-accessibility, and all-checks-passed; ci-master must define wine-apt-cache and serial-windows')
     }
 
     const windows = workflow.jobs.windows
@@ -84,6 +85,7 @@ describe('CI workflow', () => {
     const node24 = workflow.jobs['node-24']
     const node24Coverage = workflow.jobs['node-24-coverage']
     const node24Consumers = workflow.jobs['node-24-consumers']
+    const node24Accessibility = workflow.jobs['node-24-accessibility']
     const aggregate = workflow.jobs['all-checks-passed']
     if (!Array.isArray(windows.steps) || !Array.isArray(aggregate.needs)) {
       throw new TypeError('Windows job must define steps and the aggregate must define needs')
@@ -183,10 +185,10 @@ describe('CI workflow', () => {
     expect(aggregate.needs).not.toContain('windows-observational')
     expect(aggregate.needs).not.toContain('serial-windows')
 
-    // Linux failover is a separate switch: the three required Linux workers
+    // Linux failover is a separate switch: the four required Linux workers
     // and the verdict job resolve their pool through DSH_CI_FAILOVER_LINUX,
     // never the Windows switch.
-    for (const [jobName, job] of [['node-24', node24], ['node-24-coverage', node24Coverage], ['node-24-consumers', node24Consumers]] as const) {
+    for (const [jobName, job] of [['node-24', node24], ['node-24-coverage', node24Coverage], ['node-24-consumers', node24Consumers], ['node-24-accessibility', node24Accessibility]] as const) {
       expect(typeof job['runs-on']).toBe('string')
       expect(job['runs-on'], `${jobName} runs-on must use the Linux failover switch`).toContain('DSH_CI_FAILOVER_LINUX')
       expect(job['runs-on'], `${jobName} runs-on must not use the Windows failover switch`).not.toContain('DSH_CI_FAILOVER_WINDOWS')
@@ -212,6 +214,24 @@ describe('CI workflow', () => {
     expect(node24Consumers.env.DSH_SNAPSHOT_MAX_CONCURRENCY).toContain(
       "github.repository_owner != 'deepseek-harness' && '2'",
     )
+    expect(node24Accessibility).toMatchObject({
+      name: 'node 24 / accessibility browser contracts',
+      env: { DSH_SNAPSHOT: 'replay' },
+      'timeout-minutes': 30,
+    })
+    if (!Array.isArray(node24Accessibility.steps)) {
+      throw new TypeError('Accessibility browser job must define steps')
+    }
+    const accessibilityCommands = node24Accessibility.steps
+      .filter((step): step is Record<string, unknown> & { run: string } => (
+        isRecord(step) && typeof step.run === 'string'
+      ))
+      .map(step => step.run)
+      .join('\n')
+    expect(accessibilityCommands).toContain('pnpm --filter @deepseek-ai/dsh-web-frontend exec playwright install --with-deps chromium firefox webkit')
+    expect(accessibilityCommands).toContain('pnpm --filter @deepseek-ai/dsh-web-frontend exec playwright install chromium firefox webkit')
+    expect(accessibilityCommands).toContain('pnpm run test:web:accessibility')
+    expect(aggregate.needs).toContain('node-24-accessibility')
     expect(aggregate['runs-on']).toContain('DSH_CI_FAILOVER_LINUX')
     expect(aggregate['runs-on']).not.toContain('DSH_CI_FAILOVER_WINDOWS')
     expect(aggregate['runs-on']).toContain('vm-backup')

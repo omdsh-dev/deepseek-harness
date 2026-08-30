@@ -512,6 +512,7 @@ describe('LocalPtySession readiness and output', () => {
     const session = makeSession(terminal, inspector, config())
     await initialize(session, terminal)
     expect(session.motd).toBe('dsh> ')
+    expect(session.hasSeenControlledPrompt()).toBe(true)
 
     inspector.waiting = true
     const operation = session.startSend({ text: 'python3', submit: true })
@@ -570,6 +571,39 @@ describe('LocalPtySession readiness and output', () => {
     await vi.advanceTimersByTimeAsync(10)
     expect(settled).toBe(true)
     expect((await operation.done).waitReason).toBe('stdin_read')
+  })
+
+  it('does not publish same-shell silence as readiness after echoed command input', async () => {
+    vi.useFakeTimers()
+    const terminal = new FakeTerminal()
+    const inspector = new FakeInspector()
+    const session = makeSession(terminal, inspector, config({ timeoutMs: 200 }))
+    await initialize(session, terminal)
+
+    const operation = session.startSend({ text: 'slow-shell-builtin', submit: true })
+    terminal.emitData('slow-shell-builtin\r\n')
+    let settled = false
+    void operation.done.then(() => { settled = true })
+    await vi.advanceTimersByTimeAsync(70)
+    expect(settled).toBe(false)
+
+    terminal.emitData('\x1b]133;D;0\x07dsh> ')
+    await vi.advanceTimersByTimeAsync(10)
+    expect((await operation.done).waitReason).toBe('stdin_read')
+  })
+
+  it('accepts the current exact stdin wait for a no-input readiness probe', async () => {
+    vi.useFakeTimers()
+    const terminal = new FakeTerminal()
+    const inspector = new FakeInspector()
+    const session = makeSession(terminal, inspector, config())
+    await initialize(session, terminal)
+
+    inspector.waiting = true
+    const operation = session.startSend({ text: '', submit: false })
+    await vi.advanceTimersByTimeAsync(20)
+    expect((await operation.done).waitReason).toBe('stdin_read')
+    expect(terminal.writes).toEqual([])
   })
 
   it('distinguishes inferred idle, timeout, exit signal, and operation reads', async () => {
@@ -865,9 +899,10 @@ describe('LocalPtySession readiness and output', () => {
     await rejected
     expect(inspector.groups).toEqual([])
 
+    inspector.waiting = true
     const next = session.startSend({ text: '', submit: false })
-    await vi.advanceTimersByTimeAsync(100)
-    expect((await next.done).waitReason).toBe('inferred_idle')
+    await vi.advanceTimersByTimeAsync(20)
+    expect((await next.done).waitReason).toBe('stdin_read')
   })
 
   it('releases a timed-out cancellation after the provider write and signal settle', async () => {
@@ -894,9 +929,10 @@ describe('LocalPtySession readiness and output', () => {
     await vi.advanceTimersByTimeAsync(0)
     expect(inspector.groups).toContainEqual([456, 'SIGINT'])
 
+    inspector.waiting = true
     const next = session.startSend({ text: '', submit: false })
-    await vi.advanceTimersByTimeAsync(100)
-    expect((await next.done).waitReason).toBe('inferred_idle')
+    await vi.advanceTimersByTimeAsync(20)
+    expect((await next.done).waitReason).toBe('stdin_read')
   })
 
   it('retains the absolute timeout after cancellation while output stays active', async () => {
@@ -971,9 +1007,10 @@ describe('LocalPtySession readiness and output', () => {
     await Promise.resolve()
     await Promise.resolve()
 
+    inspector.waiting = true
     const next = session.startSend({ text: '', submit: false })
-    await vi.advanceTimersByTimeAsync(100)
-    expect((await next.done).waitReason).toBe('inferred_idle')
+    await vi.advanceTimersByTimeAsync(20)
+    expect((await next.done).waitReason).toBe('stdin_read')
   })
 
   it('retains send ownership when cancellation signalling fails during an asynchronous write', async () => {

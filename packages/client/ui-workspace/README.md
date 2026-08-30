@@ -27,13 +27,17 @@ English | [中文](README.zh.md)
 
 Use the sidebar to browse Workspaces and their Sessions, reorder them, and start new ones; use the picker in the Session Intent hero to choose a Workspace for a new session. An open Workspace shows five non-blank Sessions by default and keeps the selected blank **New Session** as one provisional extra row until its first prompt. **Show more** reveals the hidden remainder; closing and reopening the Workspace restores this folded projection.
 
+### Keyboard and screen-reader navigation
+
+Grouped, flat, and search presentations expose a single-selection tree. When focus enters the tree, the selected current Session is preferred as its one sequential Tab entry; otherwise exactly one row remains tabbable. Use Up and Down to move between visible rows, Home and End to reach the boundary, Right to expand a Workspace or move to its first child, Left to collapse it or return to its parent, and Enter or Space to activate a row. Printable characters perform label typeahead, including repeated-character cycling. Pointer or focus interaction promotes that row to the active tree entry. When an active row has actions, Tab moves into them and their focus indication remains visible without requiring pointer hover.
+
 ### Reordering and view options
 
 View options combine grouping with one browser-persisted Session order per account: **Manual** and **Last updated** apply in either presentation. Entering Last updated performs a complete recency sort and later user prompts or steers promote their Session once; entering Manual preserves every current position and disables later promotion. Dragging edits the current order in either mode; Manual-mode drags for real Workspaces also update the Host Session account, while Ungrouped and flat-list orders remain browser-local. In a collapsed group, drag boundaries follow rendered rows and place the source before intervening hidden rows, so a drag cannot hide its source. Workspace drag order is Host-durable in either Session order mode.
 
 ### Search
 
-Collapsed search is one header action beside the view and add actions: activating it expands the field across the header. A non-blank query replaces either browsing mode with one flat result list — case-insensitive title and Workspace substring matches appear immediately, while a 250 ms debounced Host request adds ranked current-conversation content matches and snippets. Each new query aborts the preceding request; a failed content search leaves metadata matches visible with a warning. The list is capped at 20 and opens the selected Session without clearing the query.
+Collapsed search is one header action beside the view and add actions: activating it expands the field across the header. A non-blank query replaces either browsing mode with one flat result list — case-insensitive title and Workspace substring matches appear immediately, while a 250 ms debounced Host request adds ranked current-conversation content matches and snippets. Each new query aborts the preceding request; a failed content search leaves metadata matches visible with a warning. The list is capped at 20 and opens the selected Session without clearing the query. Escape or the clear action collapses the field, removes it from the accessibility tree and Tab order, and restores focus to the durable search button; pointer dismissal preserves focus if the user already moved it elsewhere.
 
 ### Managing sessions
 

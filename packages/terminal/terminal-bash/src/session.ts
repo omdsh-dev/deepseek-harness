@@ -84,6 +84,8 @@ class LocalSendOperation implements TerminalSendOperation {
   private readonly promise: PromiseWithResolvers<TerminalSendResult>
   private finished = false
   private cancellationRequested = false
+  private outputObserved = false
+  private inputWritten = false
   private initialForegroundLeftWait: boolean
   private initialForegroundPgid: number | undefined
 
@@ -109,8 +111,19 @@ class LocalSendOperation implements TerminalSendOperation {
     return this.cancellationRequested
   }
 
+  get hasOutput(): boolean {
+    return this.outputObserved
+  }
+
+  get hasInput(): boolean {
+    return this.inputWritten
+  }
+
   append(text: string): void {
-    if (!this.finished) this.output.append(text)
+    if (!this.finished) {
+      if (text.length > 0) this.outputObserved = true
+      this.output.append(text)
+    }
   }
 
   settle(waitReason: TerminalWaitReason, sessionStatus: TerminalSessionStatus, inheritedTruncation: boolean): void {
@@ -135,9 +148,16 @@ class LocalSendOperation implements TerminalSendOperation {
     return this.output.consume()
   }
 
-  setInitialForeground(foreground: SubprocessTerminalForeground | undefined): void {
+  setInitialForeground(
+    foreground: SubprocessTerminalForeground | undefined,
+    requireWaitTransition: boolean,
+  ): void {
     this.initialForegroundPgid = foreground?.processGroupId
-    this.initialForegroundLeftWait = foreground?.inputWaiting !== true
+    this.inputWritten = requireWaitTransition
+    // A write must not reuse the shell's pre-write stdin wait as completion
+    // evidence. A no-input probe performs no state transition, so its exact
+    // observation may accept the wait that already exists.
+    this.initialForegroundLeftWait = !requireWaitTransition || foreground?.inputWaiting !== true
   }
 
   acceptsStdinWait(pgid: number, waiting: boolean): boolean {
@@ -311,8 +331,8 @@ export class LocalPtySession implements TerminalBackendSession {
     }
     try {
       if (this.active !== operation || this.closing || this.interrupting === operation) return
-      operation.setInitialForeground(foreground)
       const input = `${request.text}${request.submit ? '\r' : ''}`
+      operation.setInitialForeground(foreground, input.length > 0)
       if (input.length > 0 && !operation.cancelRequested) {
         this.resetReadinessEvidence()
         const write = this.terminal.write(input)
@@ -330,11 +350,7 @@ export class LocalPtySession implements TerminalBackendSession {
         return
       }
       // Closing can race the awaited provider write even though static analysis sees only local assignments.
-      // oxlint-disable-next-line typescript/no-unnecessary-condition -- awaited provider writes can close the session.
-      if (this.active === operation && !this.closing) {
-        this.pollingReady = operation
-        this.schedulePoll(operation)
-      }
+      this.scheduleReadinessAfterWrite(operation)
     } catch (error: unknown) {
       if (this.active === operation && !this.closing) {
         if (operation.settled) this.releaseSettledActive()
@@ -479,6 +495,19 @@ export class LocalPtySession implements TerminalBackendSession {
     }, delayMs)
   }
 
+  /** Re-read send ownership after an awaited provider write. */
+  private scheduleReadinessAfterWrite(operation: LocalSendOperation): void {
+    if (this.active !== operation || this.closing) return
+    this.pollingReady = operation
+    this.schedulePoll(operation)
+  }
+
+  /** Re-read the poll owner after asynchronous foreground inspection. */
+  private scheduleOwnedPoll(): void {
+    const active = this.active
+    if (active !== undefined && this.pollingReady === active) this.schedulePoll(active)
+  }
+
   private async pollReadiness(operation: LocalSendOperation): Promise<void> {
     if (this.active !== operation || this.polling) return
     this.polling = true
@@ -517,7 +546,17 @@ export class LocalPtySession implements TerminalBackendSession {
       // on waiting for shell ownership instead of letting a child marker suppress
       // readiness until the absolute timeout.
       const handoffGrace = this.promptSeen ? this.config.handoffGraceMs : 0
-      if (startupHasOutput && idleFor >= this.config.idleSilenceMs + handoffGrace) {
+      // The controlled shell owns an exact prompt contract, so its own quiet
+      // period is never completion evidence: pwsh can echo a command and then
+      // remain silent while it is still executing. Keep the bounded silence
+      // fallback only for operation-owned child output or an uninspectable
+      // foreground group.
+      const acceptsIdleFallback = operation.hasOutput
+        && (!operation.hasInput
+          || foreground === undefined
+          || foreground.processGroupId !== this.shellPgid)
+      if (startupHasOutput && acceptsIdleFallback
+        && idleFor >= this.config.idleSilenceMs + handoffGrace) {
         this.settleActive('inferred_idle')
       }
     } catch (error: unknown) {
@@ -525,10 +564,7 @@ export class LocalPtySession implements TerminalBackendSession {
       if (this.active === operation && !this.closing && this.interrupting !== operation) this.failActive(error)
     } finally {
       this.polling = false
-      const active = this.active
-      // Awaited provider inspection can clear or replace the active send despite static analysis.
-      // oxlint-disable-next-line typescript/no-unnecessary-condition -- awaited inspection can replace the active send.
-      if (active !== undefined && this.pollingReady === active) this.schedulePoll(active)
+      this.scheduleOwnedPoll()
     }
   }
 

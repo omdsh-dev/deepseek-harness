@@ -16,13 +16,13 @@ Alpha.2 还保留了一些虽然暴露无障碍语义、却没有持有相应交
 
 核心组件继续持有必要的名称、状态、键盘操作、焦点、实时播报、对比度行为、回流与减少动态效果。可选无障碍插件通过已声明的扩展点增加诊断、偏好、内容创作辅助和证据采集能力；它们不通过观察 DOM 修补核心语义。
 
-首个垂直切片恢复共享对话框契约与 Workspace 接纳错误路径：`Button` 暴露原生焦点 owner；`Modal` 管理打开对话框栈、应用根节点 inert 状态、初始和受约束焦点、最上层关闭、描述关联以及仍连接目标的焦点恢复；Workspace 选择器关联其警报，把初始焦点放在“取消”上，并恢复到持久的选择器触发控件。后续切片覆盖 alpha.2 中剩余的交互 owner，包括菜单、Workspace 与 Session 导航、外壳地标与分隔条、对话视图、结构化工具与 trajectory 导航、问题与评审流程以及播报。
+已经迁移的 owner 切片现已恢复共享对话框契约、使用它的 Settings、Workspace 接纳错误路径以及 Workspace 与 Session 树导航。`Button` 暴露原生焦点 owner；`Modal` 管理打开对话框栈、应用根节点 inert 状态、初始和受约束焦点、最上层关闭、描述关联以及仍连接目标的焦点恢复；Settings 使用该共享 owner，而不再重复实现模态框生命周期；Workspace 选择器关联其警报，把初始焦点放在“取消”上，并恢复到持久的选择器触发控件。分组、平铺和搜索结果共用一个 roving 树入口，并持有方向键、Home、End、展开与折叠、激活、前缀输入和行操作焦点。构建后的组装应用契约会在 Chromium、Firefox 与 WebKit 中操作这些路径。后续切片覆盖 alpha.2 中剩余的交互 owner，包括菜单、外壳地标与分隔条、对话视图、结构化工具与 trajectory 导航、问题与评审流程以及播报。
 
 只有 owner 行为通过聚焦源码测试后，才基于 alpha.2 重新生成预期浏览器输出。证据记录精确产品 commit、浏览器和操作系统能力、辅助技术及版本、任务、结果、限制与评审者。自动化 DOM、无障碍树、浏览器、对比度、回流、动态效果和打包检查仍然必不可少，但绝不替代任务级辅助技术会话和残障开发者证据。
 
 公开证据 fork 无需依赖上游私有基础设施也能执行。非上游 owner 中的 Pull Request 选择 GitHub 标准托管的 Linux 与 Windows runner，并使用适合 4 核主机的工作负载预算；仅属于上游的 Cloudflare 部署与 Project 写入会明确中性跳过，只读策略则跟随当前仓库身份。这样既能保持公开验证可复现，也不会请求或计费使用上游 larger runner。
 
-只有任务解析到真实 `pwsh` 二进制文件时，PowerShell 结果才计入证据；主机缺少 PowerShell 时的跳过属于已记录的能力限制，而不是通过证据。启动过程会先通过无输入初始化观察 PowerShell 原生启动输出，再且仅再提交一次受控提示符 bootstrap，并等待后端 `stdin_read` 与自有标记相互印证，即使标记输出恰好落在两个启动 operation 之间也一样。返回内容只有简洁的受控提示符，不会暴露回显的初始化源码，从而为辅助技术保留有用且无噪声的终端反馈。后续持久 shell 发送同时接受通过提示符观察到的 `stdin_read` 与静默期得到的 `inferred_idle` 回退，因为两者都会让 shell 可以继续接收下一次发送；随后的发送仍须证明状态持久化与机密清理。PowerShell 所有的 session、system prompt 与 tool schema 快照必须一起从当前 alpha.2 profile 刷新、规范化为 canonical packed layout，并在具备 PowerShell 能力的主机上 replay。
+只有任务解析到真实 `pwsh` 二进制文件时，PowerShell 结果才计入证据；主机缺少 PowerShell 时的跳过属于已记录的能力限制，而不是通过证据。启动过程会先通过无输入初始化观察 PowerShell 原生启动输出，再且仅再提交一次受控提示符 bootstrap，并等待后端 `stdin_read` 与自有标记相互印证，即使标记输出恰好落在两个启动 operation 之间也一样。返回内容只有简洁的受控提示符，不会暴露回显的初始化源码，从而为辅助技术保留有用且无噪声的终端反馈。无输入就绪探测可以接受当前精确的 stdin 等待；但写入输入的持久 shell 发送必须观察到受控前台进程先离开、再返回 stdin 等待。静默期 `inferred_idle` 只限 operation 自有输出且没有写入输入、前台不可检查或由非 shell 子进程占用的情况；同一受控 shell 的回显输出不能只凭静默结束发送。随后的发送仍须证明状态持久化与机密清理。PowerShell 所有的 session、system prompt 与 tool schema 快照必须一起从当前 alpha.2 profile 刷新、规范化为 canonical packed layout，并在具备 PowerShell 能力的主机上 replay。
 
 ## Alternatives considered
 
@@ -39,7 +39,7 @@ Alpha.2 还保留了一些虽然暴露无障碍语义、却没有持有相应交
 - 残障开发者验证受支持核心任务可以独立、有效且安全地完成；失败与规避方式保留在公开台账中。
 - 发布元数据标明精确的 DSH 兼容范围与证据状态；只要仍缺少必需任务或辅助技术证据，任何 tag、包或文档都不得宣称完整无障碍。
 - 生成的快照、覆盖率职责与 CI 工作流变更均以 alpha.2 为基线，并且通过检查时不会擦除失败运行历史，也不会通过重跑让失败不可见。
-- PowerShell 证据记录解析到的运行时版本，在一次 bootstrap 前无输入观察原生启动输出，即使发生 operation 边界竞态也只返回受控启动提示符，使用真实 PowerShell replay 两个采用 canonical packed layout 的 PowerShell header owner 快照，并证明在任一受支持的后续发送就绪层级之后仍能完成第二次发送，同时不削弱状态持久化与机密清理断言。
+- PowerShell 证据记录解析到的运行时版本，在一次 bootstrap 前无输入观察原生启动输出，即使发生 operation 边界竞态也只返回受控启动提示符，使用真实 PowerShell replay 两个采用 canonical packed layout 的 PowerShell header owner 快照，拒绝把同一 shell 的回显加静默认作就绪，并证明受控 shell 返回 stdin 等待后仍能完成第二次发送，同时不削弱状态持久化与机密清理断言。
 - fork 的 Pull Request 任务会解析为标准托管 runner，在受限并发下保留全部必需场景，并让上游专属集成保持中性，而不是无限排队或误报失败。
 
 ## Risks

@@ -334,9 +334,10 @@ describe.skipIf(!hasPwsh)('terminal-bash pwsh real shell', () => {
         text: '$env:KEEP = "ok"; Set-Location /',
         submit: true,
       })
-      // PowerShell prompt publication and the silence fallback can race on a
-      // loaded host; either tier proves the persistent shell accepts another send.
-      expectReadyForNextSend((await first.done).waitReason)
+      // A command echo followed by silence is not completion: only the exact
+      // stdin/prompt contract proves this same persistent shell accepts the
+      // next send without crossing operation output boundaries.
+      expect((await first.done).waitReason).toBe('stdin_read')
       const second = ctx.terminals.startSend(agent, created.sessionId, {
         text: 'Write-Output "keep=$env:KEEP secret=$env:DSH_TEST_SECRET"',
         submit: true,

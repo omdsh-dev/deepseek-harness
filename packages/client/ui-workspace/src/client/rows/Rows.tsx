@@ -134,7 +134,9 @@ export function ProjectRowItem({ group, onToggle, onCreate, actions, drag, home,
     <div
       className={clsx(css.projectRow, menuOpen && css.menuOpen)}
       role="treeitem"
+      aria-level={1}
       aria-expanded={row.expanded}
+      data-tree-label={label}
       onClick={onToggle}
       draggable={drag !== undefined}
       onDragStart={drag === undefined
@@ -338,7 +340,9 @@ export function SearchResultItem({ result, currentId, onOpen, t }: {
       type="button"
       className={clsx(css.searchResultRow, selected && css.selected)}
       role="treeitem"
+      aria-level={1}
       aria-selected={selected}
+      data-tree-label={result.title}
       onClick={() => { onOpen(result.id) }}
     >
       <span className={css.searchResultHeading}>
@@ -417,7 +421,9 @@ export function SessionNodeItem({ node, currentId, now, onOpen, onRename, onFork
         drag?.marker === 'before' && css.dropBefore, drag?.marker === 'after' && css.dropAfter,
       )}
       role="treeitem"
+      aria-level={flat ? 1 : 2}
       aria-selected={selected}
+      data-tree-label={title}
       onClick={() => { onOpen(node.id) }}
       draggable={drag !== undefined}
       onDragStart={drag === undefined
