@@ -47,17 +47,10 @@ describe('PluginInventorySettingsTab', () => {
     expect(screen.getAllByRole('listitem')).toHaveLength(7)
     expect(screen.getAllByText(en.enabledTag)).toHaveLength(6)
     expect(screen.getByText(en.disabledTag)).toBeTruthy()
-    for (const value of [
-      'Mounted',
-      'Waiting for dependencies',
-      'Loading',
-      'Mount failed',
-      'Unloading',
-      'Not mounted',
-    ]) {
-      expect(screen.getByRole('img', { name: value })).toBeTruthy()
-    }
-    const active = screen.getByRole('button', { name: 'hmr, Mounted, Enabled' })
+    expect(screen.queryByRole('img')).toBeNull()
+    const active = screen.getByRole('button', {
+      name: 'hmr, @deepseek-ai/cordis-plugin-hmr, 8a1b2c3d, Mounted, Enabled',
+    })
     expect(active.getAttribute('aria-expanded')).toBe('false')
     fireEvent.click(active)
     expect(active.getAttribute('aria-expanded')).toBe('true')
@@ -72,7 +65,9 @@ describe('PluginInventorySettingsTab', () => {
       target: { value: 'disabled-entry' },
     })
     expect(view.container.querySelector('[data-loader-entry]')).toBeNull()
-    fireEvent.click(screen.getByRole('button', { name: 'directory-picker-native, Disabled' }))
+    fireEvent.click(screen.getByRole('button', {
+      name: 'directory-picker-native, @deepseek-ai/dsh-host-directory-picker-native, disabled-entry, Disabled',
+    }))
     expect(screen.getAllByText(en.disabledTag)).toHaveLength(2)
     expect(screen.queryByText(en.cordis)).toBeNull()
     expect(screen.queryByText(en.unobserved)).toBeNull()
