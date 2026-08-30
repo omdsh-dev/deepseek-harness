@@ -333,6 +333,57 @@ describe('web e2e: Trajectory virtualization over tail-paged history', () => {
           .__trajectoryScrollCalls ?? 0
       })
       expect(streamingScrollCalls).toBeLessThanOrEqual(5)
+
+      const ledger = page.getByRole('table', { name: 'Trajectory events' })
+      const ledgerTabStop = ledger.locator(
+        'tr[data-trajectory-row-key]:not([data-request-only])[tabindex="0"]',
+      )
+      const keyboardRows = await logicalRows(page)
+      await expect.poll(() => ledgerTabStop.count()).toBe(1)
+      await ledgerTabStop.focus()
+      await page.keyboard.press('End')
+      const focusedLedgerRow = ledger.locator('tr[data-trajectory-row-key]:focus')
+      await expect.poll(() => focusedLedgerRow.evaluateAll((rows, lastRowIndex) => ({
+        count: rows.length,
+        nearEnd: Number(rows[0]?.getAttribute('aria-rowindex')) >= lastRowIndex - 1,
+      }), keyboardRows), { timeout: 15_000 }).toEqual({ count: 1, nearEnd: true })
+      expect(await ledgerTabStop.count()).toBe(1)
+      const endRowIndex = await focusedLedgerRow.evaluateAll(rows =>
+        Number(rows[0]?.getAttribute('aria-rowindex')))
+      await page.keyboard.press('Home')
+      const homeFocusState = () => ledger.evaluate((table, finalRowIndex) => {
+        const rendered = [...table.querySelectorAll<HTMLTableRowElement>(
+          'tr[data-trajectory-row-key]:not([data-request-only])',
+        )]
+        const focused = rendered.filter(row => row.matches(':focus'))
+        const tabStop = rendered.find(row => row.tabIndex === 0)
+        const scroll = table.closest<HTMLElement>('[data-trajectory-scroll]')
+        const active = table.ownerDocument.activeElement as HTMLElement | null
+        return {
+          count: focused.length,
+          movedTowardStart:
+            Number(focused[0]?.getAttribute('aria-rowindex')) < finalRowIndex,
+          active: active?.tagName ?? null,
+          activeRole: active?.getAttribute('role') ?? null,
+          firstRendered: rendered[0]?.getAttribute('aria-rowindex') ?? null,
+          lastRendered: rendered.at(-1)?.getAttribute('aria-rowindex') ?? null,
+          scrollTop: scroll?.scrollTop ?? null,
+          tabStop: tabStop?.getAttribute('aria-rowindex') ?? null,
+        }
+      }, endRowIndex)
+      try {
+        await expect.poll(homeFocusState, { timeout: 15_000 }).toMatchObject({
+          count: 1,
+          movedTowardStart: true,
+        })
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error)
+        throw new Error(
+          `${detail}\nFinal Home focus state: ${JSON.stringify(await homeFocusState())}`,
+        )
+      }
+      expect(await ledgerTabStop.count()).toBe(1)
+
       expect(await mountedRows(page)).toBeLessThanOrEqual(MAX_MOUNTED_ROWS)
       expect({
         pageErrors: tripwire.pageErrors,

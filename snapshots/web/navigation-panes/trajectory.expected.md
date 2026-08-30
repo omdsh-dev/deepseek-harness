@@ -7,7 +7,8 @@
     - searchbox "Search trajectory"
   - region "Trajectory timeline":
     - tooltip "ASSISTANT {{clock}} → {{clock}} Total {{duration}} · TTFT {{duration}} · Decoding {{duration}}"
-  - table:
+  - table "Trajectory events":
+    - caption: Use Up and Down Arrow, Home, and End to move between events; press Enter or Space to open details. If the row has a request marker, Right Arrow enters it, and Left Arrow or Escape returns to the event.
     - rowgroup:
       - row "SYSTEM, Initial System Prompt":
         - cell "SYSTEM"

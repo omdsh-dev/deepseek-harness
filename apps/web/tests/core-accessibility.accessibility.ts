@@ -225,6 +225,58 @@ describe(`assembled core accessibility: ${browserName}`, () => {
     expect(tripwire.pageErrors).toEqual([])
   }, 60_000)
 
+  it('navigates Trajectory events and their details without repeated row Tab stops', async () => {
+    onTestFailed(() => saveFailureShot(page, `core-accessibility-${browserName}-trajectory`))
+    const sessionTabs = page.getByRole('tablist', { name: 'Session views' })
+    const chat = sessionTabs.getByRole('tab', { name: 'Chat' })
+    const trajectory = sessionTabs.getByRole('tab', { name: 'Trajectory' })
+    await tabTo(page, chat)
+    await page.keyboard.press('ArrowRight')
+    await expectFocused(trajectory)
+
+    const table = page.getByRole('table', { name: 'Trajectory events' })
+    await table.waitFor({ timeout: 15_000 })
+    const rows = table.locator('tr[data-trajectory-row-key]:not([data-request-only])')
+    const tabbableRows = table.locator(
+      'tr[data-trajectory-row-key]:not([data-request-only])[tabindex="0"]',
+    )
+    await expect.poll(() => rows.count()).toBeGreaterThan(1)
+    expect(await tabbableRows.count()).toBe(1)
+    const firstStop = tabbableRows
+    const firstKey = await firstStop.getAttribute('data-trajectory-row-key')
+    await tabTo(page, firstStop)
+    await expectFocused(firstStop)
+    await page.keyboard.press('ArrowDown')
+    const next = table.locator('tr[data-trajectory-row-key]:focus')
+    await expect.poll(() => next.count()).toBe(1)
+    expect(await next.getAttribute('data-trajectory-row-key')).not.toBe(firstKey)
+    expect(await tabbableRows.count()).toBe(1)
+
+    await page.keyboard.press('Enter')
+    const details = page.getByRole('complementary', { name: 'Event details' })
+    await details.waitFor({ timeout: 10_000 })
+    const detailTabs = details.getByRole('tablist', { name: 'Event details' })
+    expect(await detailTabs.locator('[role="tab"][tabindex="0"]').count()).toBe(1)
+    const activeTab = detailTabs.locator('[role="tab"][aria-selected="true"]')
+    await tabTo(page, activeTab)
+    await expectFocused(activeTab)
+    await page.keyboard.press('ArrowRight')
+    const nextTab = detailTabs.locator('[role="tab"]:focus')
+    await expect.poll(() => nextTab.count()).toBe(1)
+    expect(await nextTab.getAttribute('aria-selected')).toBe('true')
+    const panel = details.getByRole('tabpanel')
+    expect(await panel.getAttribute('aria-labelledby')).toBe(await nextTab.getAttribute('id'))
+
+    const close = details.getByRole('button', { name: 'Close details' })
+    await tabTo(page, close)
+    await page.keyboard.press('Enter')
+    await expect.poll(() => details.count()).toBe(0)
+    await tabTo(page, trajectory)
+    await page.keyboard.press('ArrowLeft')
+    await expectFocused(chat)
+    expect(tripwire.pageErrors).toEqual([])
+  }, 60_000)
+
   it('contains Settings focus, inerts the app, and restores the trigger', async () => {
     onTestFailed(() => saveFailureShot(page, `core-accessibility-${browserName}-settings-modal`))
     const trigger = page.getByRole('button', { name: 'Settings', exact: true })

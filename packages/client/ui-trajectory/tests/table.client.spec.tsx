@@ -173,6 +173,66 @@ describe('TrajectoryTable', () => {
     expect(screen.getByText('20.0 tok/s')).toBeTruthy()
   })
 
+  it('exposes one ledger row tab stop and moves through events without repeated Tab presses', () => {
+    render(<TrajectoryTable turns={TURNS} {...FOLD_PROPS} />)
+    const table = screen.getByRole('table', { name: 'Trajectory events' })
+    const rows = screen.getAllByRole('row') as HTMLTableRowElement[]
+    const [assistant, firstTool, secondTool] = rows
+    if (assistant === undefined || firstTool === undefined || secondTool === undefined) {
+      throw new Error('expected three trajectory rows')
+    }
+
+    expect(table.getAttribute('aria-describedby')).toBe('trajectory-events-keyboard-instructions')
+    expect(screen.getByText(/Use Up and Down Arrow/)).toBeTruthy()
+    expect(rows.filter(row => row.tabIndex === 0)).toEqual([assistant])
+
+    assistant.focus()
+    fireEvent.keyDown(assistant, { key: 'ArrowRight' })
+    const request = screen.getByRole('button', { name: 'Request #1' })
+    expect(document.activeElement).toBe(request)
+    expect(request.tabIndex).toBe(-1)
+    fireEvent.keyDown(request, { key: 'Escape' })
+    expect(document.activeElement).toBe(assistant)
+
+    fireEvent.keyDown(assistant, { key: 'ArrowDown' })
+    expect(document.activeElement).toBe(firstTool)
+    expect(rows.filter(row => row.tabIndex === 0)).toEqual([firstTool])
+    fireEvent.keyDown(firstTool, { key: 'End' })
+    expect(document.activeElement).toBe(secondTool)
+    fireEvent.keyDown(secondTool, { key: 'Home' })
+    expect(document.activeElement).toBe(assistant)
+    fireEvent.keyDown(assistant, { key: ' ' })
+    expect(assistant.getAttribute('aria-selected')).toBe('true')
+    expect(screen.getByRole('complementary', { name: 'Event details' })).toBeTruthy()
+  })
+
+  it('operates Event details as one wrapped keyboard tab stop', () => {
+    render(<TrajectoryTable turns={TURNS} {...FOLD_PROPS} />)
+    fireEvent.click(screen.getByRole('row', { name: /ASSISTANT/ }))
+    const tablist = screen.getByRole('tablist', { name: 'Event details' })
+    const summary = screen.getByRole('tab', { name: 'Summary' })
+    const preview = screen.getByRole('tab', { name: 'Preview' })
+    const raw = screen.getByRole('tab', { name: 'Raw' })
+
+    expect(tablist.querySelectorAll('[role="tab"][tabindex="0"]')).toHaveLength(1)
+    expect(summary.tabIndex).toBe(0)
+    expect(screen.getByRole('tabpanel', { name: 'Summary' }).tabIndex).toBe(0)
+    summary.focus()
+    fireEvent.keyDown(summary, { key: 'ArrowRight' })
+    expect(document.activeElement).toBe(preview)
+    expect(preview.getAttribute('aria-selected')).toBe('true')
+    expect(screen.getByRole('tabpanel', { name: 'Preview' })).toBeTruthy()
+    fireEvent.keyDown(preview, { key: 'End' })
+    expect(document.activeElement).toBe(raw)
+    expect(raw.getAttribute('aria-selected')).toBe('true')
+    fireEvent.keyDown(raw, { key: 'ArrowRight' })
+    expect(document.activeElement).toBe(summary)
+    fireEvent.keyDown(summary, { key: 'End' })
+    fireEvent.keyDown(raw, { key: 'Home' })
+    expect(document.activeElement).toBe(summary)
+    expect(summary.getAttribute('aria-selected')).toBe('true')
+  })
+
   it('shows a tool record Duration as exact milliseconds', () => {
     const turns: readonly TrajectoryTurnModel[] = [{
       turn: 1,
