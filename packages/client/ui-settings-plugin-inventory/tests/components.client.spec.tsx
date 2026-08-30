@@ -90,6 +90,21 @@ describe('PluginInventorySettingsTab', () => {
     expect(screen.getByText(en.emptySearch)).toBeTruthy()
   })
 
+  it('does not repeat a module name when its visual title is already exact', async () => {
+    render(<PluginInventorySettingsTab {...props(async () => ({
+      entries: [{
+        entryId: 'plain-entry', moduleName: 'plain-plugin', enabled: true, fiberPhase: 'active',
+      }],
+    }) as unknown as Snapshot)} />)
+
+    expect(await screen.findByRole('button', {
+      name: 'plain-plugin, plain-entry, Mounted, Enabled',
+    })).toBeTruthy()
+    expect(screen.queryByRole('button', {
+      name: 'plain-plugin, plain-plugin, plain-entry, Mounted, Enabled',
+    })).toBeNull()
+  })
+
   it('shows a generic failure and retries into the empty state', async () => {
     const list = vi.fn<PluginInventorySettingsTabInjected['list']>()
       .mockRejectedValueOnce(new Error('private transport detail'))

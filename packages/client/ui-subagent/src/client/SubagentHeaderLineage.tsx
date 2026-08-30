@@ -696,8 +696,10 @@ function CatalogDropdown({
     if (items.length === 0) return
     const currentIsVisible = items.some(item => item.dataset['treeitemId'] === tabStopId)
     if (!currentIsVisible) {
-      const firstId = items[0]?.dataset['treeitemId']
-      if (firstId !== undefined) setTabStopId(firstId as SessionId)
+      // CatalogRows authors data-treeitem-id on every enabled row returned by
+      // treeItems; the non-empty guard above therefore guarantees this id.
+      const first = items[0] as HTMLElement
+      setTabStopId(first.dataset['treeitemId'] as SessionId)
     }
   }, [open, tabStopId, expanded, presentedCatalog, catalogs])
 

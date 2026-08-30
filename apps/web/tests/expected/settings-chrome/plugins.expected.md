@@ -2,4 +2,3 @@
   - button "ui-settings, @deepseek-ai/dsh-client-ui-settings, ui-settings, 已挂载, 已启用":
     - strong: ui-settings
     - text: 已启用
-    - img

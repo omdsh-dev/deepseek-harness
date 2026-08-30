@@ -181,7 +181,9 @@ export function PluginInventorySettingsTab({ list, t }: PluginInventorySettingsT
                         <span className={css.configTag} data-enabled={entry.enabled ? 'true' : 'false'}>
                           {configuration}
                         </span>
-                        <IconChevronDownOutline14 className={css.chevron} size={12} aria-hidden="true" />
+                        <span aria-hidden="true">
+                          <IconChevronDownOutline14 className={css.chevron} size={12} />
+                        </span>
                       </span>
                     </button>
                     {open ? (

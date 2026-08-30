@@ -206,6 +206,12 @@ describe('SubagentHeaderLineage', () => {
     render(<SubagentHeaderLineage {...input} />)
     const trigger = screen.getByRole('button', { name: /2 个子代理/ })
     expect(trigger.getAttribute('aria-controls')).toBeTruthy()
+    fireEvent.keyDown(trigger, { key: 'ArrowUp' })
+    await Promise.resolve()
+    expect(document.activeElement).toBe(screen.getByRole('treeitem', { name: /reviewer/ }))
+    fireEvent.keyDown(document.activeElement as Element, { key: 'Escape' })
+    await Promise.resolve()
+    expect(document.activeElement).toBe(trigger)
     fireEvent.keyDown(trigger, { key: 'ArrowDown' })
     await Promise.resolve()
     expect(document.activeElement).toBe(screen.getByRole('treeitem', { name: /worker/ }))
@@ -215,6 +221,8 @@ describe('SubagentHeaderLineage', () => {
     fireEvent.keyDown(document.activeElement as Element, { key: 'Home' })
     expect(document.activeElement).toBe(screen.getByRole('treeitem', { name: /worker/ }))
     fireEvent.keyDown(document.activeElement as Element, { key: 'ArrowUp' })
+    expect(document.activeElement).toBe(screen.getByRole('treeitem', { name: /reviewer/ }))
+    fireEvent.keyDown(document.activeElement as Element, { key: 'ArrowLeft' })
     expect(document.activeElement).toBe(screen.getByRole('treeitem', { name: /reviewer/ }))
     expect(screen.getAllByRole('treeitem').filter(item => item.tabIndex === 0)).toHaveLength(1)
     fireEvent.keyDown(document.activeElement as Element, { key: 'Escape' })
@@ -548,6 +556,39 @@ describe('SubagentHeaderLineage', () => {
     fireEvent.keyDown(worker, { key: 'ArrowLeft' })
     expect(screen.queryByRole('treeitem', { name: /indexer/ })).toBeNull()
     expect(input.setCatalogOpen).toHaveBeenCalledWith(CHILD, false)
+  })
+
+  it('keeps focus on an expanded branch that has no enabled child row', () => {
+    const input = props(catalog(), {
+      [CHILD]: catalog({
+        entries: [{ kind: 'diagnostic', id: 'nested-bad' as SessionId, reason: 'corrupt' }],
+      }),
+    })
+    render(<SubagentHeaderLineage {...input} />)
+    fireEvent.click(screen.getByRole('button', { name: /2 个子代理/ }))
+    const worker = screen.getByRole('treeitem', { name: /worker/ })
+    worker.focus()
+
+    fireEvent.keyDown(worker, { key: 'ArrowRight' })
+    expect(screen.getByRole('treeitem', { name: 'nested-bad 会话记录损坏' })).toBeTruthy()
+    fireEvent.keyDown(worker, { key: 'ArrowRight' })
+    expect(document.activeElement).toBe(worker)
+  })
+
+  it('repairs the roving tab stop when a refreshed catalog removes its owner', () => {
+    const view = render(<SubagentHeaderLineage {...props(catalog())} />)
+    fireEvent.click(screen.getByRole('button', { name: /2 个子代理/ }))
+    const reviewer = screen.getByRole('treeitem', { name: /reviewer/ })
+    fireEvent.focus(reviewer)
+    expect(reviewer.tabIndex).toBe(0)
+
+    view.rerender(<SubagentHeaderLineage {...props(catalog({
+      entries: [{
+        kind: 'child', id: CHILD, mode: 'continuable', label: 'worker',
+        activity: 'running', hasChildren: false,
+      }],
+    }))} />)
+    expect(screen.getByRole('treeitem', { name: /worker/ }).tabIndex).toBe(0)
   })
 
   it('closes expanded descendants even when their own catalogs have not arrived', () => {
