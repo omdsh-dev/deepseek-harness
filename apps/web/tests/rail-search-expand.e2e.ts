@@ -41,10 +41,17 @@ describe('web e2e: rail search click survives its own document-level bubble', ()
 
   it('expands the search and lands focus in the input from one rail click', async () => {
     onTestFailed(() => saveFailureShot(page, 'web-e2e-rail-search-expand'))
+    const frame = page.locator('[class*="frame"]').first()
     await page.getByRole('button', { name: 'Collapse sidebar' }).click()
     const railSearch = page.getByRole('button', { name: 'Search sessions' })
     // The wide chrome stays mounted through the 150ms collapse crossfade; the
-    // rail control (no aria-expanded) replaces it at settle.
+    // rail control (no aria-expanded) replaces it at settle. Pin the owning
+    // frame too: observing only the child would not prove the layout store has
+    // committed the collapsed state that its expand callback must reverse.
+    await expect.poll(
+      async () => frame.getAttribute('data-sidebar-collapsed'),
+      { timeout: 10_000 },
+    ).toBe('true')
     await expect.poll(async () => railSearch.getAttribute('aria-expanded'), { timeout: 10_000 }).toBeNull()
 
     // The one real click under test: it must expand the sidebar AND leave the
@@ -52,7 +59,13 @@ describe('web e2e: rail search click survives its own document-level bubble', ()
     await railSearch.click()
 
     const wideSearch = page.getByRole('button', { name: 'Search sessions' })
-    await expect.poll(async () => wideSearch.getAttribute('aria-expanded'), { timeout: 10_000 }).toBe('true')
+    // Couple the owner and occupant postconditions. A future failure now says
+    // whether the rail's expand request failed or the wide search lost its
+    // local expanded state, instead of reporting one ambiguous null attribute.
+    await expect.poll(async () => ({
+      frameCollapsed: await frame.getAttribute('data-sidebar-collapsed'),
+      searchExpanded: await wideSearch.getAttribute('aria-expanded'),
+    }), { timeout: 10_000 }).toEqual({ frameCollapsed: null, searchExpanded: 'true' })
     const input = page.getByPlaceholder('Search sessions...')
     await expect.poll(
       async () => input.evaluate(el => document.activeElement === el),
