@@ -27,6 +27,10 @@ English | [中文](README.zh.md)
 
 Use the sidebar to browse Workspaces and their Sessions, reorder them, and start new ones; use the picker in the Session Intent hero to choose a Workspace for a new session. An open Workspace shows five non-blank Sessions by default and keeps the selected blank **New Session** as one provisional extra row until its first prompt. **Show more** reveals the hidden remainder; closing and reopening the Workspace restores this folded projection.
 
+### Keyboard and screen-reader navigation
+
+The grouped, flat, and search-result views are tree composites with one sequential entry. Tab reaches the current row; Up and Down or Home and End move between rows; Enter and Space activate a row. In the grouped view, Right opens a collapsed Workspace or enters its first Session, while Left closes an open Workspace or returns a Session to its Workspace row. Only actions owned by the current row participate in sequential Tab navigation.
+
 ### Reordering and view options
 
 View options combine grouping with one browser-persisted Session order per account: **Manual** and **Last updated** apply in either presentation. Entering Last updated performs a complete recency sort and later user prompts or steers promote their Session once; entering Manual preserves every current position and disables later promotion. Dragging edits the current order in either mode; Manual-mode drags for real Workspaces also update the Host Session account, while Ungrouped and flat-list orders remain browser-local. In a collapsed group, drag boundaries follow rendered rows and place the source before intervening hidden rows, so a drag cannot hide its source. Workspace drag order is Host-durable in either Session order mode.
@@ -35,9 +39,11 @@ View options combine grouping with one browser-persisted Session order per accou
 
 Collapsed search is one header action beside the view and add actions: activating it expands the field across the header. A non-blank query replaces either browsing mode with one flat result list — case-insensitive title and Workspace substring matches appear immediately, while a 250 ms debounced Host request adds ranked current-conversation content matches and snippets. Each new query aborts the preceding request; a failed content search leaves metadata matches visible with a warning. The list is capped at 20 and opens the selected Session without clearing the query.
 
+While search is collapsed, its input is absent from the accessibility tree and sequential navigation. Escape or the explicit Clear action dismisses search and returns focus to its persistent search button; an outside pointer dismissal leaves focus where the user moved it.
+
 ### Managing sessions
 
-The Session row's Rename action opens a dialog prefilled with the row's display title; confirming an unchanged title is deliberately allowed — it pins the current automatic title against regeneration. Archive commits without a confirmation dialog and the row disappears from every grouping surface when the archive-set echo lands. Fork forks at the source's last completed turn, increments the inherited persisted title on the client, and then opens the child. Workspace Delete opens a confirmation that states the retention boundary; success removes the group while its Sessions remain under Ungrouped.
+The Session row's Rename action opens a dialog prefilled with the row's display title; confirming an unchanged title is deliberately allowed — it pins the current automatic title against regeneration. Workspace Rename places initial focus in its selected name field; Session Rename does the same. The row-menu handoff records the durable row action as the dialog invoker, so cancellation, a rejected retry followed by cancellation, and successful rename restore focus while that row remains. Archive commits without a confirmation dialog and the row disappears from every grouping surface when the archive-set echo lands. Fork forks at the source's last completed turn, increments the inherited persisted title on the client, and then opens the child. Workspace Delete opens a confirmation that states the retention boundary and initially focuses its non-destructive Close action; cancellation returns to the row action, while successful deletion removes the group and leaves its Sessions under Ungrouped.
 
 ### Pending interactions
 

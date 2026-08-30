@@ -560,7 +560,7 @@ describe('dsh-workflow-worker-thread', { timeout: 120_000 }, () => {
           // The rejection VALUE's own coercion throws: a warn built with bare
           // String(error) would itself throw, skipping the ChildDisposed ack
           // and wedging the script's finally until the grace/terminate path.
-          // oxlint-disable-next-line typescript/prefer-promise-reject-errors -- the non-Error rejection IS the scenario under test
+          // oxlint-disable-next-line typescript/prefer-promise-reject-errors -- arbitrary provider rejection is the case under test
           dispose: () => Promise.reject({ toString: () => { throw new Error('coercion trap') } }),
         }),
       }
@@ -643,134 +643,135 @@ describe('dsh-workflow-worker-thread', { timeout: 120_000 }, () => {
   })
 
   describe('lifecycle: parse errors, cancellation, termination, disposal', () => {
-    it('start() throws synchronously for invalid meta data or an unparseable body (host-side pre-checks)', async () => {
-      const { ctx, parent } = await setup()
-      // Meta is DATA — shape violations reject loud, every one named.
-      expect(() => ctx.workflowEngine.start({ script: 'return 1', meta: { name: '', description: 'd' }, parent })).toThrow(/meta\.name must be a non-empty string/)
-      expect(() => ctx.workflowEngine.start({ script: 'return 1', meta: { name: 'x', description: 'd', extra: 1 } as unknown as WorkflowMeta, parent })).toThrow(/META_INVALID|not a recognized field/)
-      expect(() => ctx.workflowEngine.start({ ...scripted('return ((('), parent })).toThrow(/does not parse/)
-      // The likeliest authoring slip — a Claude Code-style meta header in the
-      // body — gets a pointed message, not a bare SyntaxError.
-      expect(() => ctx.workflowEngine.start({ ...scripted("export const meta = { name: 'x', description: 'd' }\nreturn 1"), parent })).toThrow(/meta rides the `meta` request field/)
-    })
-
-    it('cancel() aborts in-flight children (signal AND cancel RPC) and settles the run cancelled', async () => {
-      const { ctx, parent, provider } = await setup({ manual: true })
-      const ends: unknown[] = []
-      ctx.on('workflow/agent-end', (_info, agent) => { ends.push(agent) })
-      const runEnds: WorkflowResultInfo[] = []
-      ctx.on('workflow/end', (_info, result) => { runEnds.push(result) })
-      const handle = ctx.workflowEngine.start({ ...scripted("return await agent('long job')"), parent })
-      await waitFor(() => { expect(provider.runs.length).toBe(1) })
-      handle.cancel('user stopped it')
-      const result = await handle.result
-      expect(result.stopReason).toBe('cancelled')
-      expect(result.error).toContain('user stopped it')
-      await handle.dispose()
-      expect(provider.runs[0]!.disposed).toBe(true)
-      expect(ends).toEqual([expect.objectContaining({ seq: 1, outcome: 'cancelled' })])
-      // workflow/end is an observer's only death signal: it fires for a
-      // cancelled run too, mirroring the settled outcome data.
-      expect(runEnds).toEqual([{ stopReason: 'cancelled', error: result.error, agentsStarted: result.agentsStarted }])
-    })
-
-    it('an already-aborted request signal cancels before the body ever runs (the go handshake holds it)', async () => {
-      const { ctx, parent, provider } = await setup()
-      const controller = new AbortController()
-      controller.abort()
-      const logs: string[] = []
-      ctx.on('workflow/log', (_info, message) => { logs.push(message) })
-      const handle = ctx.workflowEngine.start({ ...scripted("log('ran')\nreturn 123"), parent, signal: controller.signal })
-      const result = await handle.result
-      expect(result.stopReason).toBe('cancelled')
-      expect(result.value).toBeNull()
-      expect(logs).toEqual([])
-      expect(provider.runs.length).toBe(0)
-      await handle.dispose()
-    })
-
-    it('cancel() right after start() cancels before the body runs; the signal aborting mid-run cancels like cancel()', async () => {
-      const { ctx, parent, provider } = await setup({ manual: true })
-      const first = ctx.workflowEngine.start({ ...scripted("return await agent('never')"), parent })
-      // No-reason cancel: the canonical default reason must ride the result.
-      first.cancel()
-      const firstResult = await first.result
-      expect(firstResult.stopReason).toBe('cancelled')
-      expect(firstResult.error).toContain('workflow cancelled')
-      expect(provider.runs.length).toBe(0)
-      await first.dispose()
-
-      const controller = new AbortController()
-      const second = ctx.workflowEngine.start({ ...scripted("return await agent('job')"), parent, signal: controller.signal })
-      await waitFor(() => { expect(provider.runs.length).toBe(1) })
-      controller.abort()
-      expect((await second.result).stopReason).toBe('cancelled')
-      await second.dispose()
-    })
-
-    it('removes the exact external abort callback on first settlement or teardown', async () => {
-      const { ctx, parent } = await setup()
-      const settledController = new AbortController()
-      const settledAdd = vi.spyOn(settledController.signal, 'addEventListener')
-      const settledRemove = vi.spyOn(settledController.signal, 'removeEventListener')
-      const completed = ctx.workflowEngine.start({ ...scripted('return 123'), parent, signal: settledController.signal })
-      const settledAbort = settledAdd.mock.calls.find(([type]) => type === 'abort')?.[1]
-      expect(typeof settledAbort).toBe('function')
-
-      await expect(completed.result).resolves.toMatchObject({ value: 123, stopReason: 'completed' })
-      expect(settledRemove).toHaveBeenCalledWith('abort', settledAbort)
-      const cancelAfterSettle = vi.spyOn(completed, 'cancel')
-      settledController.abort()
-      expect(cancelAfterSettle).not.toHaveBeenCalled()
-      cancelAfterSettle.mockRestore()
-      await completed.dispose()
-
-      const manual = await setup({ manual: true })
-      const teardownController = new AbortController()
-      const teardownAdd = vi.spyOn(teardownController.signal, 'addEventListener')
-      const teardownRemove = vi.spyOn(teardownController.signal, 'removeEventListener')
-      const tornDown = manual.ctx.workflowEngine.start({
-        ...scripted("return await agent('job')"),
-        parent: manual.parent,
-        signal: teardownController.signal,
+    describe('validation and cancellation', () => {
+      it('start() throws synchronously for invalid meta data or an unparseable body (host-side pre-checks)', async () => {
+        const { ctx, parent } = await setup()
+        // Meta is DATA — shape violations reject loud, every one named.
+        expect(() => ctx.workflowEngine.start({ script: 'return 1', meta: { name: '', description: 'd' }, parent })).toThrow(/meta\.name must be a non-empty string/)
+        expect(() => ctx.workflowEngine.start({ script: 'return 1', meta: { name: 'x', description: 'd', extra: 1 } as unknown as WorkflowMeta, parent })).toThrow(/META_INVALID|not a recognized field/)
+        expect(() => ctx.workflowEngine.start({ ...scripted('return ((('), parent })).toThrow(/does not parse/)
+        // The likeliest authoring slip — a Claude Code-style meta header in the
+        // body — gets a pointed message, not a bare SyntaxError.
+        expect(() => ctx.workflowEngine.start({ ...scripted("export const meta = { name: 'x', description: 'd' }\nreturn 1"), parent })).toThrow(/meta rides the `meta` request field/)
       })
-      await waitFor(() => { expect(manual.provider.runs).toHaveLength(1) })
-      const teardownAbort = teardownAdd.mock.calls.find(([type]) => type === 'abort')?.[1]
-      expect(typeof teardownAbort).toBe('function')
 
-      const disposing = tornDown.dispose()
-      expect(teardownRemove).toHaveBeenCalledWith('abort', teardownAbort)
-      await disposing
-    })
+      it('cancel() aborts in-flight children (signal AND cancel RPC) and settles the run cancelled', async () => {
+        const { ctx, parent, provider } = await setup({ manual: true })
+        const ends: unknown[] = []
+        ctx.on('workflow/agent-end', (_info, agent) => { ends.push(agent) })
+        const runEnds: WorkflowResultInfo[] = []
+        ctx.on('workflow/end', (_info, result) => { runEnds.push(result) })
+        const handle = ctx.workflowEngine.start({ ...scripted("return await agent('long job')"), parent })
+        await waitFor(() => { expect(provider.runs.length).toBe(1) })
+        handle.cancel('user stopped it')
+        const result = await handle.result
+        expect(result.stopReason).toBe('cancelled')
+        expect(result.error).toContain('user stopped it')
+        await handle.dispose()
+        expect(provider.runs[0]!.disposed).toBe(true)
+        expect(ends).toEqual([expect.objectContaining({ seq: 1, outcome: 'cancelled' })])
+        // workflow/end is an observer's only death signal: it fires for a
+        // cancelled run too, mirroring the settled outcome data.
+        expect(runEnds).toEqual([{ stopReason: 'cancelled', error: result.error, agentsStarted: result.agentsStarted }])
+      })
 
-    it('a child-start racing the host cancel is refused: no child starts after cancellation', async () => {
-      const { ctx, parent, provider } = await setup({ manual: true })
-      // Cancel from INSIDE the log listener: the worker has already posted
-      // its child-start (queued right behind the log message), so the host
-      // processes it with cancelReason set — the refusal arm no real-world
-      // timing can hit reliably. (The closure runs only after `handle` below
-      // is initialized — the listener fires on the worker's first message.)
-      ctx.on('workflow/log', () => { handle.cancel('cancelled from the log listener') })
-      const handle = ctx.workflowEngine.start({ ...scripted("log('mark')\nreturn await agent('late')"), parent })
-      const result = await handle.result
-      expect(result.stopReason).toBe('cancelled')
-      expect(provider.runs.length).toBe(0)
-      await handle.dispose()
-    })
+      it('an already-aborted request signal cancels before the body ever runs (the go handshake holds it)', async () => {
+        const { ctx, parent, provider } = await setup()
+        const controller = new AbortController()
+        controller.abort()
+        const logs: string[] = []
+        ctx.on('workflow/log', (_info, message) => { logs.push(message) })
+        const handle = ctx.workflowEngine.start({ ...scripted("log('ran')\nreturn 123"), parent, signal: controller.signal })
+        const result = await handle.result
+        expect(result.stopReason).toBe('cancelled')
+        expect(result.value).toBeNull()
+        expect(logs).toEqual([])
+        expect(provider.runs.length).toBe(0)
+        await handle.dispose()
+      })
 
-    it('post-cancel narration is suppressed host-side, and completion racing a cancel reports cancelled', async () => {
-      const { ctx, parent } = await setup()
-      const narration: string[] = []
-      ctx.on('workflow/log', (_info, message) => { narration.push(message) })
-      ctx.on('workflow/phase', (_info, title) => { narration.push(`phase:${title}`) })
-      const handle = ctx.workflowEngine.start({
+      it('cancel() right after start() cancels before the body runs; the signal aborting mid-run cancels like cancel()', async () => {
+        const { ctx, parent, provider } = await setup({ manual: true })
+        const first = ctx.workflowEngine.start({ ...scripted("return await agent('never')"), parent })
+        // No-reason cancel: the canonical default reason must ride the result.
+        first.cancel()
+        const firstResult = await first.result
+        expect(firstResult.stopReason).toBe('cancelled')
+        expect(firstResult.error).toContain('workflow cancelled')
+        expect(provider.runs.length).toBe(0)
+        await first.dispose()
+
+        const controller = new AbortController()
+        const second = ctx.workflowEngine.start({ ...scripted("return await agent('job')"), parent, signal: controller.signal })
+        await waitFor(() => { expect(provider.runs.length).toBe(1) })
+        controller.abort()
+        expect((await second.result).stopReason).toBe('cancelled')
+        await second.dispose()
+      })
+
+      it('removes the exact external abort callback on first settlement or teardown', async () => {
+        const { ctx, parent } = await setup()
+        const settledController = new AbortController()
+        const settledAdd = vi.spyOn(settledController.signal, 'addEventListener')
+        const settledRemove = vi.spyOn(settledController.signal, 'removeEventListener')
+        const completed = ctx.workflowEngine.start({ ...scripted('return 123'), parent, signal: settledController.signal })
+        const settledAbort = settledAdd.mock.calls.find(([type]) => type === 'abort')?.[1]
+        expect(typeof settledAbort).toBe('function')
+
+        await expect(completed.result).resolves.toMatchObject({ value: 123, stopReason: 'completed' })
+        expect(settledRemove).toHaveBeenCalledWith('abort', settledAbort)
+        const cancelAfterSettle = vi.spyOn(completed, 'cancel')
+        settledController.abort()
+        expect(cancelAfterSettle).not.toHaveBeenCalled()
+        cancelAfterSettle.mockRestore()
+        await completed.dispose()
+
+        const manual = await setup({ manual: true })
+        const teardownController = new AbortController()
+        const teardownAdd = vi.spyOn(teardownController.signal, 'addEventListener')
+        const teardownRemove = vi.spyOn(teardownController.signal, 'removeEventListener')
+        const tornDown = manual.ctx.workflowEngine.start({
+          ...scripted("return await agent('job')"),
+          parent: manual.parent,
+          signal: teardownController.signal,
+        })
+        await waitFor(() => { expect(manual.provider.runs).toHaveLength(1) })
+        const teardownAbort = teardownAdd.mock.calls.find(([type]) => type === 'abort')?.[1]
+        expect(typeof teardownAbort).toBe('function')
+
+        const disposing = tornDown.dispose()
+        expect(teardownRemove).toHaveBeenCalledWith('abort', teardownAbort)
+        await disposing
+      })
+
+      it('a child-start racing the host cancel is refused: no child starts after cancellation', async () => {
+        const { ctx, parent, provider } = await setup({ manual: true })
+        // Cancel from INSIDE the log listener: the worker has already posted
+        // its child-start (queued right behind the log message), so the host
+        // processes it with cancelReason set — the refusal arm no real-world
+        // timing can hit reliably. (The closure runs only after `handle` below
+        // is initialized — the listener fires on the worker's first message.)
+        ctx.on('workflow/log', () => { handle.cancel('cancelled from the log listener') })
+        const handle = ctx.workflowEngine.start({ ...scripted("log('mark')\nreturn await agent('late')"), parent })
+        const result = await handle.result
+        expect(result.stopReason).toBe('cancelled')
+        expect(provider.runs.length).toBe(0)
+        await handle.dispose()
+      })
+
+      it('post-cancel narration is suppressed host-side, and completion racing a cancel reports cancelled', async () => {
+        const { ctx, parent } = await setup()
+        const narration: string[] = []
+        ctx.on('workflow/log', (_info, message) => { narration.push(message) })
+        ctx.on('workflow/phase', (_info, title) => { narration.push(`phase:${title}`) })
+        const handle = ctx.workflowEngine.start({
         // The sync spin keeps the worker's loop busy so the cancel message
         // cannot be processed before the script settles `completed` — the
         // worker posts a completed result that must LOSE to the in-flight
         // host cancellation. The trailing narration exercises host-side
         // suppression: posted pre-cancel-processing worker-side, arriving
         // post-cancel host-side.
-        ...scripted(`
+          ...scripted(`
           log('started')
           const end = Date.now() + 1000
           while (Date.now() < end) {}
@@ -778,380 +779,387 @@ describe('dsh-workflow-worker-thread', { timeout: 120_000 }, () => {
           log('late log')
           return 'done'
         `),
-        parent,
-      })
-      await waitFor(() => { expect(narration).toContain('started') })
-      handle.cancel('raced the completion')
-      const result = await handle.result
-      expect(result.stopReason).toBe('cancelled')
-      expect(result.error).toContain('raced the completion')
-      expect(narration).toEqual(['started'])
-      await handle.dispose()
-    }, 90_000)
-
-    it('cancel() force-settles a script parked on a promise no hook owns, and TERMINATES its worker', async () => {
-      const { ctx, parent } = await setup({ config: { provider: 'stub', disposeGraceMs: 50 } })
-      const runEnds: WorkflowResultInfo[] = []
-      ctx.on('workflow/end', (_info, result) => { runEnds.push(result) })
-      const handle = ctx.workflowEngine.start({
-        ...scripted("await new Promise(() => {})\nreturn 'unreachable'"),
-        parent,
-      })
-      handle.cancel('user aborted')
-      const result = await handle.result
-      expect(result.stopReason).toBe('cancelled')
-      expect(result.error).toContain('user aborted')
-      // The grace force-settle fires workflow/end exactly like an ordinary
-      // settlement — a terminated script's death still reaches observers.
-      expect(runEnds).toEqual([{ stopReason: 'cancelled', error: result.error, agentsStarted: 0 }])
-      await handle.dispose()
+          parent,
+        })
+        await waitFor(() => { expect(narration).toContain('started') })
+        handle.cancel('raced the completion')
+        const result = await handle.result
+        expect(result.stopReason).toBe('cancelled')
+        expect(result.error).toContain('raced the completion')
+        expect(narration).toEqual(['started'])
+        await handle.dispose()
+      }, 90_000)
     })
 
-    it('dispose() on a stuck script returns within the grace instead of hanging (result settles cancelled)', async () => {
-      const { ctx, parent } = await setup({ config: { provider: 'stub', disposeGraceMs: 50 } })
-      const handle = ctx.workflowEngine.start({
-        ...scripted("await new Promise(() => {})\nreturn 'unreachable'"),
-        parent,
+    describe('termination and disposal', () => {
+      it('cancel() force-settles a script parked on a promise no hook owns, and TERMINATES its worker', async () => {
+        const { ctx, parent } = await setup({ config: { provider: 'stub', disposeGraceMs: 50 } })
+        const runEnds: WorkflowResultInfo[] = []
+        ctx.on('workflow/end', (_info, result) => { runEnds.push(result) })
+        const handle = ctx.workflowEngine.start({
+          ...scripted("await new Promise(() => {})\nreturn 'unreachable'"),
+          parent,
+        })
+        handle.cancel('user aborted')
+        const result = await handle.result
+        expect(result.stopReason).toBe('cancelled')
+        expect(result.error).toContain('user aborted')
+        // The grace force-settle fires workflow/end exactly like an ordinary
+        // settlement — a terminated script's death still reaches observers.
+        expect(runEnds).toEqual([{ stopReason: 'cancelled', error: result.error, agentsStarted: 0 }])
+        await handle.dispose()
       })
-      const before = Date.now()
-      await handle.dispose()
-      expect(Date.now() - before).toBeLessThan(2000)
-      const result = await handle.result
-      expect(result.stopReason).toBe('cancelled')
-    })
 
-    it('dispose() is idempotent and settles cleanly after a completed run', async () => {
-      const { ctx, parent } = await setup()
-      const handle = ctx.workflowEngine.start({ ...scripted('return 1'), parent })
-      await handle.result
-      await handle.dispose()
-      await handle.dispose()
-    })
+      it('dispose() on a stuck script returns within the grace instead of hanging (result settles cancelled)', async () => {
+        const { ctx, parent } = await setup({ config: { provider: 'stub', disposeGraceMs: 50 } })
+        const handle = ctx.workflowEngine.start({
+          ...scripted("await new Promise(() => {})\nreturn 'unreachable'"),
+          parent,
+        })
+        const before = Date.now()
+        await handle.dispose()
+        expect(Date.now() - before).toBeLessThan(2000)
+        const result = await handle.result
+        expect(result.stopReason).toBe('cancelled')
+      })
 
-    it('a settled run arms NO grace timer: disposing a completed run must not pin it for disposeGraceMs', async () => {
+      it('dispose() is idempotent and settles cleanly after a completed run', async () => {
+        const { ctx, parent } = await setup()
+        const handle = ctx.workflowEngine.start({ ...scripted('return 1'), parent })
+        await handle.result
+        await handle.dispose()
+        await handle.dispose()
+      })
+
+      it('a settled run arms NO grace timer: disposing a completed run must not pin it for disposeGraceMs', async () => {
       // A distinctive grace so the spy can tell the cancel-path grace timer
       // apart from every other timeout in flight.
-      const GRACE = 44_444
-      const { ctx, parent } = await setup({ config: { provider: 'stub', disposeGraceMs: GRACE } })
-      const handle = ctx.workflowEngine.start({ ...scripted('return 1'), parent })
-      await handle.result
-      const spy = vi.spyOn(globalThis, 'setTimeout')
-      try {
-        await handle.dispose()
-        // dispose()'s own bounded-wait sleep is the ONLY grace-sized timer
-        // allowed here; before the settled guard, cancel() armed a second one
-        // that nothing would ever clear (the run was already settled), keeping
-        // the WorkerRun/Worker closure alive until the grace expired.
-        const graceTimers = spy.mock.calls.filter(call => call[1] === GRACE)
-        expect(graceTimers.length).toBe(1)
-      } finally {
-        spy.mockRestore()
-      }
+        const GRACE = 44_444
+        const { ctx, parent } = await setup({ config: { provider: 'stub', disposeGraceMs: GRACE } })
+        const handle = ctx.workflowEngine.start({ ...scripted('return 1'), parent })
+        await handle.result
+        const spy = vi.spyOn(globalThis, 'setTimeout')
+        try {
+          await handle.dispose()
+          // dispose()'s own bounded-wait sleep is the ONLY grace-sized timer
+          // allowed here; before the settled guard, cancel() armed a second one
+          // that nothing would ever clear (the run was already settled), keeping
+          // the WorkerRun/Worker closure alive until the grace expired.
+          const graceTimers = spy.mock.calls.filter(call => call[1] === GRACE)
+          expect(graceTimers.length).toBe(1)
+        } finally {
+          spy.mockRestore()
+        }
+      })
     })
 
-    it('strays: children fired without await are aborted once the script settles, and dispose() waits for their disposal', async () => {
-      const { ctx, parent, provider } = await setup({ manual: true, disposeDelayMs: 40 })
-      const handle = ctx.workflowEngine.start({
-        ...scripted(`
+    describe('settlement reaping', () => {
+      it('strays: children fired without await are aborted once the script settles, and dispose() waits for their disposal', async () => {
+        const { ctx, parent, provider } = await setup({ manual: true, disposeDelayMs: 40 })
+        const handle = ctx.workflowEngine.start({
+          ...scripted(`
           agent('stray')
           return 'done without awaiting'
         `),
-        parent,
+          parent,
+        })
+        const result = await handle.result
+        expect(result.stopReason).toBe('completed')
+        await waitFor(() => { expect(provider.runs.length).toBe(1) })
+        await handle.dispose()
+        // Not a waitFor: by the time dispose() returns, the slow child disposal
+        // must already be complete (host-side registry quiescence).
+        expect(provider.runs[0]!.disposed).toBe(true)
       })
-      const result = await handle.result
-      expect(result.stopReason).toBe('completed')
-      await waitFor(() => { expect(provider.runs.length).toBe(1) })
-      await handle.dispose()
-      // Not a waitFor: by the time dispose() returns, the slow child disposal
-      // must already be complete (host-side registry quiescence).
-      expect(provider.runs[0]!.disposed).toBe(true)
-    })
 
-    it('result settlement reaps a registered stray even when the worker cannot relay disposal', async () => {
-      const { ctx, parent, provider } = await setup({
-        manual: true,
-        config: { provider: 'stub', disposeGraceMs: 30_000 },
+      it('result settlement reaps a registered stray even when the worker cannot relay disposal', async () => {
+        const { ctx, parent, provider } = await setup({
+          manual: true,
+          config: { provider: 'stub', disposeGraceMs: 30_000 },
+        })
+        const handle = ctx.workflowEngine.start({
+          ...scripted("agent('stray')\nawait new Promise(() => {})"),
+          parent,
+        })
+        await waitFor(() => { expect(provider.runs).toHaveLength(1) })
+
+        // Claim the host result while the real worker remains wedged, so it can
+        // send neither ChildDispose nor an exit. This leaves the accepted child
+        // in the host registry when public disposal begins.
+        const worker = (handle as unknown as { worker: Worker }).worker
+        worker.emit('message', {
+          type: WorkerToHostType.Result,
+          result: { value: 'synthetic completion', stopReason: 'completed', agentsStarted: 1 },
+        })
+        await expect(handle.result).resolves.toMatchObject({ stopReason: 'completed' })
+        await waitFor(() => { expect(provider.runs[0]!.disposed).toBe(true) }, 1000)
+
+        const disposal = handle.dispose()
+        await disposal
+        expect(provider.runs[0]!.disposeCalls).toBe(1)
+        await ctx.fiber.dispose()
       })
-      const handle = ctx.workflowEngine.start({
-        ...scripted("agent('stray')\nawait new Promise(() => {})"),
-        parent,
-      })
-      await waitFor(() => { expect(provider.runs).toHaveLength(1) })
 
-      // Claim the host result while the real worker remains wedged, so it can
-      // send neither ChildDispose nor an exit. This leaves the accepted child
-      // in the host registry when public disposal begins.
-      const worker = (handle as unknown as { worker: Worker }).worker
-      worker.emit('message', {
-        type: WorkerToHostType.Result,
-        result: { value: 'synthetic completion', stopReason: 'completed', agentsStarted: 1 },
-      })
-      await expect(handle.result).resolves.toMatchObject({ stopReason: 'completed' })
-      await waitFor(() => { expect(provider.runs[0]!.disposed).toBe(true) }, 1000)
-
-      const disposal = handle.dispose()
-      await disposal
-      expect(provider.runs[0]!.disposeCalls).toBe(1)
-      await ctx.fiber.dispose()
-    })
-
-    it('the settle-reap fires the request signal too: a provider honoring ONLY the signal winds its stray down promptly', async () => {
-      const ctx = new Context()
-      await ctx.plugin(SubagentRuntime)
-      const aborted: string[] = []
-      const provider: SubagentProvider = {
-        name: 'signal-only',
-        capabilities: { agentOptions: true, outputSchema: true, depthLimit: true, toolFilter: true, persona: false },
-        inheritsParentContext: false,
-        start: async (request) => {
-          let settle!: (result: SubagentResult) => void
-          const result = new Promise<SubagentResult>((resolve) => { settle = resolve })
-          request.signal.addEventListener('abort', () => {
-            aborted.push(String(request.signal.reason))
-            settle({ output: [], stopReason: 'aborted' })
-          }, { once: true })
-          return {
-            id: SessionId('signal-only-child'),
-            localAgent: undefined,
-            result,
-            dispose: () => Promise.resolve(),
-          }
-        },
-      }
-      ctx.subagents.registerProvider(provider)
-      await ctx.plugin(WorkerThreadWorkflowEngine, { provider: 'signal-only', maxConcurrentAgents: 2 })
-      const handle = ctx.workflowEngine.start({
-        ...scripted(`
+      it('the settle-reap fires the request signal too: a provider honoring ONLY the signal winds its stray down promptly', async () => {
+        const ctx = new Context()
+        await ctx.plugin(SubagentRuntime)
+        const aborted: string[] = []
+        const provider: SubagentProvider = {
+          name: 'signal-only',
+          capabilities: { agentOptions: true, outputSchema: true, depthLimit: true, toolFilter: true, persona: false },
+          inheritsParentContext: false,
+          start: async (request) => {
+            let settle!: (result: SubagentResult) => void
+            const result = new Promise<SubagentResult>((resolve) => { settle = resolve })
+            request.signal.addEventListener('abort', () => {
+              aborted.push(String(request.signal.reason))
+              settle({ output: [], stopReason: 'aborted' })
+            }, { once: true })
+            return {
+              id: SessionId('signal-only-child'),
+              localAgent: undefined,
+              result,
+              dispose: () => Promise.resolve(),
+            }
+          },
+        }
+        ctx.subagents.registerProvider(provider)
+        await ctx.plugin(WorkerThreadWorkflowEngine, { provider: 'signal-only', maxConcurrentAgents: 2 })
+        const handle = ctx.workflowEngine.start({
+          ...scripted(`
           agent('stray, never awaited')
           return 'done'
         `),
-        parent: fakeParent(),
+          parent: fakeParent(),
+        })
+        const result = await handle.result
+        expect(result.stopReason).toBe('completed')
+        // BEFORE dispose(): the settlement itself must have aborted the signal —
+        // without it this child would stay live until dispose's terminate. This
+        // is a HOST-PROMPTNESS claim, not a cold-start race — a tight explicit
+        // bound (unlike the file default) so a multi-second reap regression
+        // cannot pass by outlasting the wait.
+        await waitFor(() => { expect(aborted).toEqual(['workflow settled']) }, 1000)
+        await handle.dispose()
       })
-      const result = await handle.result
-      expect(result.stopReason).toBe('completed')
-      // BEFORE dispose(): the settlement itself must have aborted the signal —
-      // without it this child would stay live until dispose's terminate. This
-      // is a HOST-PROMPTNESS claim, not a cold-start race — a tight explicit
-      // bound (unlike the file default) so a multi-second reap regression
-      // cannot pass by outlasting the wait.
-      await waitFor(() => { expect(aborted).toEqual(['workflow settled']) }, 1000)
-      await handle.dispose()
-    })
 
-    it('the settle-reap aborts a pending provider start before workflow/end', async () => {
-      const { ctx, parent, provider } = await setup({ manual: true, deferStart: true })
-      const childLifecycle: string[] = []
-      let cancellationAtWorkflowEnd: string | undefined
-      ctx.on('workflow/agent-start', () => { childLifecycle.push('start') })
-      ctx.on('workflow/agent-end', () => { childLifecycle.push('end') })
-      ctx.on('workflow/end', () => {
-        cancellationAtWorkflowEnd = provider.runs[0]?.cancelled
-      })
-      const handle = ctx.workflowEngine.start({
-        ...scripted(`
+      it('the settle-reap aborts a pending provider start before workflow/end', async () => {
+        const { ctx, parent, provider } = await setup({ manual: true, deferStart: true })
+        const childLifecycle: string[] = []
+        let cancellationAtWorkflowEnd: string | undefined
+        ctx.on('workflow/agent-start', () => { childLifecycle.push('start') })
+        ctx.on('workflow/agent-end', () => { childLifecycle.push('end') })
+        ctx.on('workflow/end', () => {
+          cancellationAtWorkflowEnd = provider.runs[0]?.cancelled
+        })
+        const handle = ctx.workflowEngine.start({
+          ...scripted(`
           agent('start-pending stray')
           return 'done'
         `),
-        parent,
+          parent,
+        })
+
+        const result = await handle.result
+
+        expect(result.stopReason).toBe('completed')
+        expect(provider.runs).toHaveLength(1)
+        expect(provider.runs[0]!.request.signal?.aborted).toBe(true)
+        expect(provider.runs[0]!.request.signal?.reason).toBe('workflow settled')
+        expect(provider.runs[0]!.cancelled).toBe('workflow settled')
+        expect(cancellationAtWorkflowEnd).toBe('workflow settled')
+        expect(childLifecycle).toEqual([])
+        await handle.dispose()
+        expect(provider.runs[0]!.disposeCalls).toBe(1)
       })
 
-      const result = await handle.result
+      it('a duplicate Result after the terminal claim cannot repeat cleanup or rewrite the outcome', async () => {
+        let signalAborts = 0
+        const { ctx, parent, provider } = await setup({
+          manual: true,
+          onChildAbortString: (_reason, index) => { if (index === 0) signalAborts += 1 },
+        })
+        const handle = ctx.workflowEngine.start({
+          ...scripted("agent('stray')\nawait new Promise(() => {})"),
+          parent,
+        })
+        await waitFor(() => { expect(provider.runs).toHaveLength(1) })
+        const worker = (handle as unknown as { worker: Worker }).worker
 
-      expect(result.stopReason).toBe('completed')
-      expect(provider.runs).toHaveLength(1)
-      expect(provider.runs[0]!.request.signal?.aborted).toBe(true)
-      expect(provider.runs[0]!.request.signal?.reason).toBe('workflow settled')
-      expect(provider.runs[0]!.cancelled).toBe('workflow settled')
-      expect(cancellationAtWorkflowEnd).toBe('workflow settled')
-      expect(childLifecycle).toEqual([])
-      await handle.dispose()
-      expect(provider.runs[0]!.disposeCalls).toBe(1)
+        worker.emit('message', {
+          type: WorkerToHostType.Result,
+          result: { value: 'first', stopReason: 'completed', agentsStarted: 1 },
+        })
+        worker.emit('message', {
+          type: WorkerToHostType.Result,
+          result: { value: 'late', stopReason: 'completed', agentsStarted: 1 },
+        })
+
+        await expect(handle.result).resolves.toMatchObject({ value: 'first', stopReason: 'completed' })
+        expect(signalAborts).toBe(1)
+        await handle.dispose()
+        expect(signalAborts).toBe(1)
+        await ctx.fiber.dispose()
+      })
     })
 
-    it('a duplicate Result after the terminal claim cannot repeat cleanup or rewrite the outcome', async () => {
-      let signalAborts = 0
-      const { ctx, parent, provider } = await setup({
-        manual: true,
-        onChildAbortString: (_reason, index) => { if (index === 0) signalAborts += 1 },
-      })
-      const handle = ctx.workflowEngine.start({
-        ...scripted("agent('stray')\nawait new Promise(() => {})"),
-        parent,
-      })
-      await waitFor(() => { expect(provider.runs).toHaveLength(1) })
-      const worker = (handle as unknown as { worker: Worker }).worker
-
-      worker.emit('message', {
-        type: WorkerToHostType.Result,
-        result: { value: 'first', stopReason: 'completed', agentsStarted: 1 },
-      })
-      worker.emit('message', {
-        type: WorkerToHostType.Result,
-        result: { value: 'late', stopReason: 'completed', agentsStarted: 1 },
-      })
-
-      await expect(handle.result).resolves.toMatchObject({ value: 'first', stopReason: 'completed' })
-      expect(signalAborts).toBe(1)
-      await handle.dispose()
-      expect(signalAborts).toBe(1)
-      await ctx.fiber.dispose()
-    })
-
-    it('a grace-terminated worker reaps its child on exit without waiting for consumer dispose()', async () => {
-      const { ctx, parent, provider } = await setup({
-        manual: true,
-        config: { provider: 'stub', maxConcurrentAgents: 2, disposeGraceMs: 100 },
-      })
-      const handle = ctx.workflowEngine.start({
+    describe('wedged-worker cleanup and lifecycle pairing', () => {
+      it('a grace-terminated worker reaps its child on exit without waiting for consumer dispose()', async () => {
+        const { ctx, parent, provider } = await setup({
+          manual: true,
+          config: { provider: 'stub', maxConcurrentAgents: 2, disposeGraceMs: 100 },
+        })
+        const handle = ctx.workflowEngine.start({
         // Let child-start cross, then make the worker unable to process its
         // Cancel message. Grace settles the result and terminates the thread;
         // that exit must independently own the host registry's disposal pass.
-        ...scripted(`
+          ...scripted(`
           agent('survives until exit reap')
           for (let i = 0; i < 20; i++) await null
           const end = Date.now() + 1500
           while (Date.now() < end) {}
           return 'unreachable'
         `),
-        parent,
-      })
-      await waitFor(() => { expect(provider.runs).toHaveLength(1) })
+          parent,
+        })
+        await waitFor(() => { expect(provider.runs).toHaveLength(1) })
 
-      handle.cancel('force termination')
-      const result = await handle.result
+        handle.cancel('force termination')
+        const result = await handle.result
 
-      expect(result.stopReason).toBe('cancelled')
-      // Deliberately assert before handle.dispose(): host-owned worker exit,
-      // not consumer courtesy, is responsible for this resource guarantee.
-      await waitFor(() => { expect(provider.runs[0]!.disposed).toBe(true) }, 1000)
-      expect(provider.runs[0]!.disposeCalls).toBe(1)
-      await handle.dispose()
-      await ctx.fiber.dispose()
-    }, 90_000)
+        expect(result.stopReason).toBe('cancelled')
+        // Deliberately assert before handle.dispose(): host-owned worker exit,
+        // not consumer courtesy, is responsible for this resource guarantee.
+        await waitFor(() => { expect(provider.runs[0]!.disposed).toBe(true) }, 1000)
+        expect(provider.runs[0]!.disposeCalls).toBe(1)
+        await handle.dispose()
+        await ctx.fiber.dispose()
+      }, 90_000)
 
-    it('dispose() on a wedged worker host-drives child disposal inside the grace: it returns with the children DISPOSED, not with their teardown still in flight', async () => {
-      const { ctx, parent, provider } = await setup({
-        manual: true,
-        disposeDelayMs: 40,
-        config: { provider: 'stub', maxConcurrentAgents: 8, disposeGraceMs: 400 },
-      })
-      const handle = ctx.workflowEngine.start({
+      it('dispose() on a wedged worker host-drives child disposal inside the grace: it returns with the children DISPOSED, not with their teardown still in flight', async () => {
+        const { ctx, parent, provider } = await setup({
+          manual: true,
+          disposeDelayMs: 40,
+          config: { provider: 'stub', maxConcurrentAgents: 8, disposeGraceMs: 400 },
+        })
+        const handle = ctx.workflowEngine.start({
         // Same shape as the wedged-cancel test above: the child's start RPC
         // reaches the host, then the script seizes its worker's loop, so the
         // worker can relay NO dispose RPC — the host's own dispose() drive is
         // the only thing that can start (and finish) this child's disposal
         // before the grace runs out.
-        ...scripted(`
+          ...scripted(`
           agent('wedged child')
           for (let i = 0; i < 20; i++) await null
           const end = Date.now() + 1500
           while (Date.now() < end) {}
           return 'raced'
         `),
-        parent,
-      })
-      await waitFor(() => { expect(provider.runs.length).toBe(1) })
-      const before = Date.now()
-      await handle.dispose()
-      // Bounded by the grace (plus the terminate), never by the 1.5s spin.
-      expect(Date.now() - before).toBeLessThan(1200)
-      // Not a waitFor: dispose() resolving IS the quiescence claim — the slow
-      // child disposal must be complete, not merely started (before the
-      // host-driven drive, disposal only STARTED at the post-terminate reap,
-      // so dispose() returned with it still in flight).
-      expect(provider.runs[0]!.disposed).toBe(true)
-      const result = await handle.result
-      expect(result.stopReason).toBe('cancelled')
-    }, 90_000)
+          parent,
+        })
+        await waitFor(() => { expect(provider.runs.length).toBe(1) })
+        const before = Date.now()
+        await handle.dispose()
+        // Bounded by the grace (plus the terminate), never by the 1.5s spin.
+        expect(Date.now() - before).toBeLessThan(1200)
+        // Not a waitFor: dispose() resolving IS the quiescence claim — the slow
+        // child disposal must be complete, not merely started (before the
+        // host-driven drive, disposal only STARTED at the post-terminate reap,
+        // so dispose() returned with it still in flight).
+        expect(provider.runs[0]!.disposed).toBe(true)
+        const result = await handle.result
+        expect(result.stopReason).toBe('cancelled')
+      }, 90_000)
 
-    it('a live child disposed by the dispose() drive is disposed ONCE, and the worker\'s late dispose RPC still gets its ack (the script settles, not the grace)', async () => {
-      const { ctx, parent, provider } = await setup({ manual: true })
-      const handle = ctx.workflowEngine.start({
-        ...scripted(`
+      it('a live child disposed by the dispose() drive is disposed ONCE, and the worker\'s late dispose RPC still gets its ack (the script settles, not the grace)', async () => {
+        const { ctx, parent, provider } = await setup({ manual: true })
+        const handle = ctx.workflowEngine.start({
+          ...scripted(`
           await agent('long child')
           return 'unreachable'
         `),
-        parent,
+          parent,
+        })
+        await waitFor(() => { expect(provider.runs.length).toBe(1) })
+        const handleDispose = handle.dispose()
+        const result = await handle.result
+        // The script itself settled (the wrapper's own dispose RPC found the
+        // child already reaped host-side and was acked) — a missing ack would
+        // wedge the wrapper's finally until the 5s default grace force-settle.
+        expect(result.stopReason).toBe('cancelled')
+        expect(result.error).toContain('workflow disposed')
+        await handleDispose
+        expect(provider.runs[0]!.disposed).toBe(true)
+        // The memo: the host drive and the worker's RPC share one disposal.
+        expect(provider.runs[0]!.disposeCalls).toBe(1)
       })
-      await waitFor(() => { expect(provider.runs.length).toBe(1) })
-      const handleDispose = handle.dispose()
-      const result = await handle.result
-      // The script itself settled (the wrapper's own dispose RPC found the
-      // child already reaped host-side and was acked) — a missing ack would
-      // wedge the wrapper's finally until the 5s default grace force-settle.
-      expect(result.stopReason).toBe('cancelled')
-      expect(result.error).toContain('workflow disposed')
-      await handleDispose
-      expect(provider.runs[0]!.disposed).toBe(true)
-      // The memo: the host drive and the worker's RPC share one disposal.
-      expect(provider.runs[0]!.disposeCalls).toBe(1)
-    })
 
-    it('the grace force-settle pairs every stranded start: a host-synthesized cancelled agent-end lands before workflow/end', async () => {
-      const { ctx, parent, provider } = await setup({ manual: true, config: { provider: 'stub', maxConcurrentAgents: 8, disposeGraceMs: 300 } })
-      const ends: { seq: number; outcome: string }[] = []
-      const order: string[] = []
-      ctx.on('workflow/agent-start', (_info, agent) => { order.push(`start:${agent.seq}`) })
-      ctx.on('workflow/agent-end', (_info, agent) => {
-        ends.push({ seq: agent.seq, outcome: agent.outcome })
-        order.push(`end:${agent.seq}`)
-      })
-      ctx.on('workflow/end', () => { order.push('run-end') })
-      const handle = ctx.workflowEngine.start({
+      it('the grace force-settle pairs every stranded start: a host-synthesized cancelled agent-end lands before workflow/end', async () => {
+        const { ctx, parent, provider } = await setup({ manual: true, config: { provider: 'stub', maxConcurrentAgents: 8, disposeGraceMs: 300 } })
+        const ends: { seq: number; outcome: string }[] = []
+        const order: string[] = []
+        ctx.on('workflow/agent-start', (_info, agent) => { order.push(`start:${agent.seq}`) })
+        ctx.on('workflow/agent-end', (_info, agent) => {
+          ends.push({ seq: agent.seq, outcome: agent.outcome })
+          order.push(`end:${agent.seq}`)
+        })
+        ctx.on('workflow/end', () => { order.push('run-end') })
+        const handle = ctx.workflowEngine.start({
         // 'slow' starts and its agent-start crosses to observers (the awaited
         // 'fast' call keeps the worker loop turning), then the script seizes
         // the loop: the wedged worker can never author slow's agent-end —
         // only the host's ledger can close the pair.
-        ...scripted(`
+          ...scripted(`
           const p = agent('slow')
           await agent('fast')
           const end = Date.now() + 1500
           while (Date.now() < end) {}
           return 'raced'
         `),
-        parent,
-      })
-      await waitFor(() => { expect(order.filter(entry => entry.startsWith('start:')).length).toBe(2) })
-      const fast = provider.runs.find(run => (run.request.prompt[0] as { text?: string }).text === 'fast')!
-      fast.settle(text('fast done'))
-      handle.cancel('stop now')
-      const result = await handle.result
-      expect(result.stopReason).toBe('cancelled')
-      // fast's end is the worker's own report; slow's is host-synthesized at
-      // the force-settle — exactly one end per started seq, no third event.
-      expect(ends).toEqual([
-        { seq: 2, outcome: 'completed' },
-        { seq: 1, outcome: 'cancelled' },
-      ])
-      // Both ends reached observers BEFORE workflow/end: a progress consumer
-      // can finalize its state at run-end without dangling agents.
-      expect(order.indexOf('run-end')).toBe(order.length - 1)
-      await handle.dispose()
-    }, 90_000)
+          parent,
+        })
+        await waitFor(() => { expect(order.filter(entry => entry.startsWith('start:')).length).toBe(2) })
+        const fast = provider.runs.find(run => (run.request.prompt[0] as { text?: string }).text === 'fast')!
+        fast.settle(text('fast done'))
+        handle.cancel('stop now')
+        const result = await handle.result
+        expect(result.stopReason).toBe('cancelled')
+        // fast's end is the worker's own report; slow's is host-synthesized at
+        // the force-settle — exactly one end per started seq, no third event.
+        expect(ends).toEqual([
+          { seq: 2, outcome: 'completed' },
+          { seq: 1, outcome: 'cancelled' },
+        ])
+        // Both ends reached observers BEFORE workflow/end: a progress consumer
+        // can finalize its state at run-end without dangling agents.
+        expect(order.indexOf('run-end')).toBe(order.length - 1)
+        await handle.dispose()
+      }, 90_000)
 
-    it('graceful cancellation keeps pairing worker-authored: exactly one agent-end per start, nothing synthesized on top', async () => {
-      const { ctx, parent, provider } = await setup({ manual: true })
-      const ends: { seq: number; outcome: string }[] = []
-      const order: string[] = []
-      ctx.on('workflow/agent-end', (_info, agent) => {
-        ends.push({ seq: agent.seq, outcome: agent.outcome })
-        order.push(`end:${agent.seq}`)
+      it('graceful cancellation keeps pairing worker-authored: exactly one agent-end per start, nothing synthesized on top', async () => {
+        const { ctx, parent, provider } = await setup({ manual: true })
+        const ends: { seq: number; outcome: string }[] = []
+        const order: string[] = []
+        ctx.on('workflow/agent-end', (_info, agent) => {
+          ends.push({ seq: agent.seq, outcome: agent.outcome })
+          order.push(`end:${agent.seq}`)
+        })
+        ctx.on('workflow/end', () => { order.push('run-end') })
+        const handle = ctx.workflowEngine.start({
+          ...scripted("await parallel([() => agent('a'), () => agent('b')])\nreturn 'unreachable'"),
+          parent,
+        })
+        await waitFor(() => { expect(provider.runs.length).toBe(2) })
+        handle.cancel('user stop')
+        const result = await handle.result
+        expect(result.stopReason).toBe('cancelled')
+        // The live worker reported both pairs itself; the ledger must not add
+        // a synthesized duplicate on any path that settles inside the grace.
+        expect(ends.map(end => end.outcome)).toEqual(['cancelled', 'cancelled'])
+        expect(new Set(ends.map(end => end.seq)).size).toBe(2)
+        expect(order.indexOf('run-end')).toBe(order.length - 1)
+        await handle.dispose()
       })
-      ctx.on('workflow/end', () => { order.push('run-end') })
-      const handle = ctx.workflowEngine.start({
-        ...scripted("await parallel([() => agent('a'), () => agent('b')])\nreturn 'unreachable'"),
-        parent,
-      })
-      await waitFor(() => { expect(provider.runs.length).toBe(2) })
-      handle.cancel('user stop')
-      const result = await handle.result
-      expect(result.stopReason).toBe('cancelled')
-      // The live worker reported both pairs itself; the ledger must not add
-      // a synthesized duplicate on any path that settles inside the grace.
-      expect(ends.map(end => end.outcome)).toEqual(['cancelled', 'cancelled'])
-      expect(new Set(ends.map(end => end.seq)).size).toBe(2)
-      expect(order.indexOf('run-end')).toBe(order.length - 1)
-      await handle.dispose()
     })
   })
 

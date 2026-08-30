@@ -412,8 +412,9 @@ describe('web e2e: seeded history renders through cold resume', () => {
     // Interaction over cold-resumed history: read summaries are host-open
     // file links (not expand-in-place / not details). Runs after the golden
     // capture; still zero model calls.
-    const fileLink = page.locator('[data-variant="read"] button').first()
-    await expandOwningTurnProcess(page, fileLink)
+    const readRow = page.locator('[data-variant="read"]').first()
+    await expandOwningTurnProcess(page, readRow)
+    const fileLink = readRow.getByRole('button', { name: /^Open file / })
     await fileLink.waitFor({ timeout: 10_000 })
     const frame = page.locator('[style*="grid-template-columns"]').first()
     expect(await frame.getAttribute('data-details-collapsed')).toBe('true')
@@ -431,7 +432,9 @@ describe('web e2e: seeded history renders through cold resume', () => {
 
   it.skipIf(MODE === 'record')('a Host open refusal keeps the reason and retries the same path', async () => {
     onTestFailed(() => saveFailureShot(page, 'web-e2e-seeded-file-open-failure'))
-    const fileLink = page.locator('[data-variant="read"] button').first()
+    const readRow = page.locator('[data-variant="read"]').first()
+    await expandOwningTurnProcess(page, readRow)
+    const fileLink = readRow.getByRole('button', { name: /^Open file / })
     await fileLink.waitFor({ timeout: 10_000 })
     const openPath = vi.spyOn(scaffold.ctx.sessionController, 'openWorkspacePath')
       .mockRejectedValue(new Error('xdg-open is not available'))

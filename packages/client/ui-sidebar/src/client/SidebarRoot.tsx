@@ -23,8 +23,9 @@ import {
 import type { SidebarRootComponentProps } from './contract/slots.ts'
 import css from './SidebarRoot.module.css'
 
-/** Wide-content unmount delay; matches the 150ms wide-content fade-out. */
+/** Wide-content unmount delay; matches the 150ms wide-content fade-out outside reflow/reduced-motion modes. */
 const COLLAPSE_SETTLE_MS = 150
+const IMMEDIATE_COLLAPSE_QUERY = '(max-width: 600px), (prefers-reduced-motion: reduce)'
 
 /**
  * How long the column's scrollbars stay drawn after the pointer leaves it.
@@ -59,13 +60,19 @@ export function SidebarRoot({
 }: SidebarRootComponentProps) {
   // Wide content stays mounted while the collapse animates (fading via
   // .collapsed .wide), unmounts at settle, and remounts right away on expand.
+  // Reflow and reduced-motion modes have no matching track transition, so
+  // keeping full-width controls for the fade delay would expose clipped focus.
   const [settled, setSettled] = useState(collapsed)
+  const collapseWithoutTransition = collapsed
+    && typeof window.matchMedia === 'function'
+    && window.matchMedia(IMMEDIATE_COLLAPSE_QUERY).matches
   useEffect(() => {
     if (!collapsed) { setSettled(false); return }
+    if (collapseWithoutTransition) { setSettled(true); return }
     const timer = window.setTimeout(() => { setSettled(true) }, COLLAPSE_SETTLE_MS)
     return () => { window.clearTimeout(timer) }
-  }, [collapsed])
-  const wide = !collapsed || !settled
+  }, [collapsed, collapseWithoutTransition])
+  const wide = !collapsed || (!settled && !collapseWithoutTransition)
 
   // Freeze the content at its expanded width while it fades out (collapsed
   // && wide): the sliding column then clips it instead of reflowing it. The

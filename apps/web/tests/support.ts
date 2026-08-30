@@ -50,14 +50,35 @@ export async function expandTurnProcesses(page: Page): Promise<void> {
 /**
  * Expand the Turn-process group containing one possibly hidden descendant.
  * @param page - page containing the Chat view.
- * @param target - descendant whose owning Turn process should open.
+ * @param target - DOM locator that can match the descendant while its owning
+ * Turn process is hidden. Role locators exclude hidden descendants by default.
  */
 export async function expandOwningTurnProcess(page: Page, target: Locator): Promise<void> {
-  const turn = await target.evaluate(element => element.closest<HTMLElement>('[data-chat-turn]')?.dataset.chatTurn)
-  if (turn === undefined || await target.isVisible()) return
-  const control = page.locator(`[data-turn-process="${turn}"]`)
+  // `hidden="until-found"` keeps a layout box, so WebKit can report this member
+  // as visible even though its descendants cannot receive focus. Inspect the
+  // hidden contract itself instead of relying on Locator.isVisible().
+  const state = await target.evaluate((element) => {
+    const member = element.closest<HTMLElement>('[data-turn-process-member]')
+    return {
+      turn: element.closest<HTMLElement>('[data-chat-turn]')?.dataset.chatTurn,
+      hidden: member?.hasAttribute('hidden') ?? false,
+    }
+  })
+  if (state.turn === undefined || !state.hidden) return
+  const control = page.locator(`[data-turn-process="${state.turn}"]`)
   await control.waitFor({ state: 'visible', timeout: 10_000 })
   if (await control.getAttribute('aria-expanded') !== 'true') await control.click()
+  const targetHandle = await target.elementHandle()
+  if (targetHandle === null) throw new Error('Turn-process target detached while opening its owner')
+  try {
+    await page.waitForFunction(
+      element => (element as Element).closest('[hidden]') === null,
+      targetHandle,
+      { timeout: 10_000 },
+    )
+  } finally {
+    await targetHandle.dispose()
+  }
 }
 
 /** Fail loud on a stale checkout instead of testing yesterday's bundle. */

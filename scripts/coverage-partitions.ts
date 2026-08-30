@@ -3,6 +3,7 @@ import { spawn } from 'node:child_process'
 import { lstat, mkdir, readdir, rm, unlink } from 'node:fs/promises'
 import { join, relative, sep } from 'node:path'
 import { pnpmInvocation } from './pnpm-invocation.ts'
+import { PWSH_TEST_AVAILABLE_ENV, pinPwshTestAvailability } from './pwsh-test-availability.ts'
 
 /** Environment variable selecting the number of instrumented coverage processes. */
 export const COVERAGE_PARTITIONS_ENV = 'DSH_COVERAGE_PARTITIONS'
@@ -10,8 +11,60 @@ export const COVERAGE_PARTITIONS_ENV = 'DSH_COVERAGE_PARTITIONS'
 /** Internal marker that suppresses reports and thresholds inside a partition process. */
 export const COVERAGE_PARTITION_MODE_ENV = 'DSH_COVERAGE_PARTITION_MODE'
 
+/** Internal role selecting the ordinary shard inventory or one isolated suite. */
+export const COVERAGE_PARTITION_ROLE_ENV = 'DSH_COVERAGE_PARTITION_ROLE'
+
 /** Environment variable overriding instrumented test and polling timeouts. */
 export const COVERAGE_TEST_TIMEOUT_ENV = 'DSH_COVERAGE_TEST_TIMEOUT_MS'
+
+/** Worker-heavy coverage owner that must not share one long-lived fork on Windows. */
+export const WORKFLOW_WORKER_COVERAGE_FILE = 'packages/workflow/workflow-worker-thread/tests/workflow-worker-thread.spec.ts'
+
+/** One exclusive workflow-worker test owner collected in a fresh instrumented process. */
+export interface WorkflowWorkerCoverageOwner {
+  /** Stable diagnostic identity and blob suffix. */
+  label: string
+  /** Anchored Vitest full-name pattern selecting this owner's tests. */
+  testNamePattern: string
+}
+
+/**
+ * Exclusive workflow-worker coverage owners.
+ *
+ * The lifecycle suite creates real worker threads for every test. Keep its four
+ * resource-lifecycle responsibilities in separate Vitest processes so a loaded
+ * Windows runner never accumulates all 21 workers in one long-lived fork.
+ */
+export const workflowWorkerCoverageOwners: readonly WorkflowWorkerCoverageOwner[] = [
+  {
+    label: 'script-execution',
+    testNamePattern: '^dsh-workflow-worker-thread script execution over a real worker thread(?: |$)',
+  },
+  {
+    label: 'lifecycle-validation-cancellation',
+    testNamePattern: '^dsh-workflow-worker-thread lifecycle: parse errors, cancellation, termination, disposal validation and cancellation(?: |$)',
+  },
+  {
+    label: 'lifecycle-termination-disposal',
+    testNamePattern: '^dsh-workflow-worker-thread lifecycle: parse errors, cancellation, termination, disposal termination and disposal(?: |$)',
+  },
+  {
+    label: 'lifecycle-settlement-reaping',
+    testNamePattern: '^dsh-workflow-worker-thread lifecycle: parse errors, cancellation, termination, disposal settlement reaping(?: |$)',
+  },
+  {
+    label: 'lifecycle-wedged-cleanup',
+    testNamePattern: '^dsh-workflow-worker-thread lifecycle: parse errors, cancellation, termination, disposal wedged-worker cleanup and lifecycle pairing(?: |$)',
+  },
+  {
+    label: 'worker-death',
+    testNamePattern: '^dsh-workflow-worker-thread worker death(?: |$)',
+  },
+  {
+    label: 'service-api',
+    testNamePattern: '^dsh-workflow-worker-thread service API(?: |$)',
+  },
+] as const
 
 /** One child command owned by the coverage coordinator. */
 export interface CoverageCommand {
@@ -54,6 +107,8 @@ export interface CoveragePartitionCoordinatorOptions {
   pnpmEntrypoint: string
   /** Additional arguments shared by every partition. */
   vitestArgs?: string[]
+  /** Run-wide PowerShell probe result, injectable for scheduler tests. */
+  pwshAvailable?: boolean
   /** Child executor, injectable for scheduler tests. */
   runCommand?: CoverageCommandRunner
 }
@@ -90,6 +145,7 @@ export class CoveragePartitionCoordinator {
   private readonly pnpmEntrypoint: string
   private readonly vitestArgs: string[]
   private readonly runCommand: CoverageCommandRunner
+  private readonly pwshAvailable: boolean
   private readonly temporaryRoot: string
   private readonly blobsRoot: string
 
@@ -102,6 +158,7 @@ export class CoveragePartitionCoordinator {
     this.partitions = options.partitions
     this.pnpmEntrypoint = options.pnpmEntrypoint
     this.vitestArgs = options.vitestArgs ?? []
+    this.pwshAvailable = options.pwshAvailable ?? pinPwshTestAvailability()
     this.runCommand = options.runCommand ?? runCoverageCommand
     this.temporaryRoot = join(this.root, 'coverage', '.partitioned')
     this.blobsRoot = join(this.temporaryRoot, 'blobs')
@@ -116,30 +173,41 @@ export class CoveragePartitionCoordinator {
     await mkdir(this.blobsRoot, { recursive: true })
 
     try {
-      const commands = Array.from(
+      const partitionCommands = Array.from(
         { length: this.partitions },
         (_, index) => this.partitionCommand(index + 1),
       )
-      const results = await Promise.all(commands.map(async (command) => {
-        console.log(`coverage-partitions: start ${command.label}`)
-        const result = await this.runCommand(command)
-        if (commandFailed(result)) {
-          console.error(`coverage-partitions: FAIL ${command.label} (${commandFailureReason(result)})`)
-          if (result.outputTail !== undefined && result.outputTail !== '') {
-            console.error(`coverage-partitions: output tail for ${command.label}:\n${result.outputTail}`)
-          }
-        }
-        return result
-      }))
-      await this.assertCompleteBlobSet(commands)
+      const partitionResults = await Promise.all(
+        partitionCommands.map(command => this.runWithDiagnostics(command)),
+      )
+      const isolatedCommands = workflowWorkerCoverageOwners.map(owner => (
+        this.workflowWorkerCommand(owner)
+      ))
+      const isolatedResults: CoverageCommandResult[] = []
+      for (const command of isolatedCommands) {
+        isolatedResults.push(await this.runWithDiagnostics(command))
+      }
+      await this.assertCompleteBlobSet([...partitionCommands, ...isolatedCommands])
 
       const mergeCommand = this.mergeCommand()
       console.log(`coverage-partitions: start ${mergeCommand.label}`)
       const mergeResult = await this.runCommand(mergeCommand)
-      return results.some(commandFailed) || commandFailed(mergeResult) ? 1 : 0
+      return [...partitionResults, ...isolatedResults].some(commandFailed) || commandFailed(mergeResult) ? 1 : 0
     } finally {
       await removeOwnedTree(this.temporaryRoot)
     }
+  }
+
+  private async runWithDiagnostics(command: CoverageCommand): Promise<CoverageCommandResult> {
+    console.log(`coverage-partitions: start ${command.label}`)
+    const result = await this.runCommand(command)
+    if (commandFailed(result)) {
+      console.error(`coverage-partitions: FAIL ${command.label} (${commandFailureReason(result)})`)
+      if (result.outputTail !== undefined && result.outputTail !== '') {
+        console.error(`coverage-partitions: output tail for ${command.label}:\n${result.outputTail}`)
+      }
+    }
+    return result
   }
 
   private partitionCommand(index: number): CoverageCommand {
@@ -165,6 +233,41 @@ export class CoveragePartitionCoordinator {
       env: {
         [COVERAGE_PARTITIONS_ENV]: undefined,
         [COVERAGE_PARTITION_MODE_ENV]: '1',
+        [COVERAGE_PARTITION_ROLE_ENV]: 'main',
+        [PWSH_TEST_AVAILABLE_ENV]: this.pwshAvailable ? '1' : '0',
+      },
+      cwd: this.root,
+      blobPath,
+    }
+  }
+
+  private workflowWorkerCommand(owner: WorkflowWorkerCoverageOwner): CoverageCommand {
+    const blobPath = join(this.blobsRoot, `workflow-worker-${owner.label}.json`)
+    const reportsDirectory = join(this.temporaryRoot, `coverage-workflow-worker-${owner.label}`)
+    const invocation = pnpmInvocation([
+      'exec',
+      'vitest',
+      'run',
+      '--coverage',
+      '--coverage.reportOnFailure',
+      '--maxWorkers=1',
+      '--no-file-parallelism',
+      `--testNamePattern=${owner.testNamePattern}`,
+      '--reporter=default',
+      '--reporter=blob',
+      `--outputFile.blob=${this.relativePath(blobPath)}`,
+      `--coverage.reportsDirectory=${this.relativePath(reportsDirectory)}`,
+      ...this.vitestArgs,
+      WORKFLOW_WORKER_COVERAGE_FILE,
+    ], { npm_execpath: this.pnpmEntrypoint })
+    return {
+      label: `workflow worker owner ${owner.label}`,
+      ...invocation,
+      env: {
+        [COVERAGE_PARTITIONS_ENV]: undefined,
+        [COVERAGE_PARTITION_MODE_ENV]: '1',
+        [COVERAGE_PARTITION_ROLE_ENV]: 'isolated',
+        [PWSH_TEST_AVAILABLE_ENV]: this.pwshAvailable ? '1' : '0',
       },
       cwd: this.root,
       blobPath,
@@ -184,6 +287,8 @@ export class CoveragePartitionCoordinator {
       env: {
         [COVERAGE_PARTITIONS_ENV]: undefined,
         [COVERAGE_PARTITION_MODE_ENV]: undefined,
+        [COVERAGE_PARTITION_ROLE_ENV]: undefined,
+        [PWSH_TEST_AVAILABLE_ENV]: this.pwshAvailable ? '1' : '0',
       },
       cwd: this.root,
     }

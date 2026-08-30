@@ -111,15 +111,43 @@ describe('web e2e: settings modal and General preferences', () => {
     expect(await dialog.locator('[data-plugin-entry]').count()).toBe(expectedPluginCount)
     expect(await dialog.locator('[data-plugin-count]').getAttribute('data-plugin-count'))
       .toBe(String(expectedPluginCount))
+    expect(await dialog.locator('[data-plugin-count]').getAttribute('role')).toBe('status')
+    expect(await dialog.locator('[data-plugin-count]').getAttribute('aria-label'))
+      .toBe(`显示 ${expectedPluginCount} 个插件`)
     expect(await dialog.getByRole('button', { name: '插件', exact: true }).getAttribute('aria-current')).toBe('true')
     expect(await dialog.getByRole('tab', { name: '插件列表', exact: true }).getAttribute('aria-selected')).toBe('true')
     expect(await dialog.getByRole('button', { name: '模型' }).getAttribute('aria-current')).toBeNull()
+    const entryId = await pluginRow.getAttribute('data-plugin-entry')
+    if (entryId === null) throw new Error('stable plugin inventory row has no Loader entry id')
+    const disclosure = pluginRow.getByRole('button')
+    expect(await disclosure.getAttribute('aria-label')).toContain(entryId)
+    expect(await disclosure.getAttribute('aria-controls')).toBeTruthy()
+    expect(await pluginRow.getByRole('img').count()).toBe(0)
+    await dialog.getByRole('searchbox', { name: '搜索插件' }).fill(entryId)
+    await expect.poll(() => dialog.locator('[data-plugin-entry]').count()).toBe(1)
+    expect(await dialog.locator('[data-plugin-count]').getAttribute('aria-label')).toBe('显示 1 个插件')
+    await disclosure.focus()
+    await disclosure.press('Enter')
+    await expect.poll(() => disclosure.getAttribute('aria-expanded')).toBe('true')
+    const detailsId = await disclosure.getAttribute('aria-controls')
+    expect(detailsId).toBeTruthy()
+    expect(await dialog.locator(`[id="${detailsId}"]`).textContent()).toContain(entryId)
+    await disclosure.press('Space')
+    await expect.poll(() => disclosure.getAttribute('aria-expanded')).toBe('false')
     const pluginsSnapshot = await captureStableAria(
       page,
       PLUGIN_ROW_SELECTOR,
       scaffold.workspaceCwd,
     )
-    await compareOrRefreshGolden(PLUGINS_EXPECTED, pluginsSnapshot, MODE)
+    // Loader prefixes are generated per assembled process. The runtime
+    // assertions above prove the exact current id is exposed, searchable,
+    // and owns its details; normalize only that already-verified value in
+    // the durable shape golden.
+    await compareOrRefreshGolden(
+      PLUGINS_EXPECTED,
+      pluginsSnapshot.replaceAll(entryId, '<loader-entry-id>'),
+      MODE,
+    )
     // Close path 1: Escape.
     await page.keyboard.press('Escape')
     await expect.poll(() => page.getByRole('dialog', { name: '设置' }).count(), { timeout: 5_000 }).toBe(0)
@@ -167,7 +195,12 @@ describe('web e2e: settings modal and General preferences', () => {
     expect(await enable.isDisabled()).toBe(true)
     await confirmation.getByRole('checkbox').click()
     await enable.click()
-    await dialog.getByRole('button', { name: 'Full access' }).waitFor({ timeout: 10_000 })
+    const fullAccess = dialog.getByRole('button', { name: 'Full access' })
+    await fullAccess.waitFor({ timeout: 10_000 })
+    await expect.poll(
+      () => fullAccess.evaluate(node => node.ownerDocument.activeElement === node),
+      { timeout: 5_000 },
+    ).toBe(true)
     const confirmedDocument = await readFile(join(scaffold.harnessHome, 'settings.yaml'), 'utf8')
     expect(confirmedDocument).toContain('defaultPreset: danger-full-access')
     const confirmed = scaffold.ctx.sessions.create(SessionId('settings-permission-confirmed'))

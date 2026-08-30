@@ -271,7 +271,12 @@ describe('startup cleanup sweep', () => {
     const boundary = join(dir, 'boundary.txt')
     writeFileSync(boundary, 'x')
     utimesSync(boundary, cutoffMs / 1000, cutoffMs / 1000)
-    await sweepSpillRoots({ roots: [active(root)], cutoffMs, warn: () => {} })
+    // Compare against the timestamp the filesystem actually retained. The
+    // seconds conversion above can round a millisecond fraction down by a tiny
+    // amount on some filesystems, which would accidentally exercise the
+    // strictly-older branch instead of the equality boundary.
+    const storedCutoffMs = statSync(boundary).mtimeMs
+    await sweepSpillRoots({ roots: [active(root)], cutoffMs: storedCutoffMs, warn: () => {} })
     expect(existsSync(boundary)).toBe(true)
   })
 

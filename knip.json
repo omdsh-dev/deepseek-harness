@@ -10,8 +10,7 @@
     "python3",
     "sandbox-exec",
     "tar",
-    "taskkill",
-    "where.exe"
+    "taskkill"
   ],
   "ignoreWorkspaces": [
     "vendor/*",
@@ -653,6 +652,7 @@
     },
     "apps/web": {
       "entry": [
+        "tests/**/*.accessibility.ts",
         "tests/**/*.e2e.ts",
         "tests/**/*.perf.ts",
         "tests/**/*.snapshot.ts",

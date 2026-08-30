@@ -1,7 +1,7 @@
 /** Chrome-Network-style overview timeline for focusing the trajectory ledger. */
 
 import {
-  memo, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent,
+  memo, useEffect, useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent,
   type PointerEvent,
 } from 'react'
 import { Tooltip } from '@deepseek-ai/dsh-client-ui-primitives'
@@ -252,6 +252,7 @@ export const TrajectoryTimeline = memo(function TrajectoryTimeline({
   onRecordFocus,
 }: TrajectoryTimelineProps) {
   const model = useMemo(() => deriveTrajectoryTimeline(turns, mode), [mode, turns])
+  const optionIdPrefix = useId()
   const detailByIndex = useMemo(
     () => new Map(turns.flatMap(turn =>
       turn.groups.flatMap(group =>
@@ -267,6 +268,7 @@ export const TrajectoryTimeline = memo(function TrajectoryTimeline({
     recordIndex: number | null
   } | null>(null)
   const panRef = useRef<PanGesture | null>(null)
+  const keyboardRangeAnchor = useRef<number | null>(null)
   const rootRef = useRef<HTMLElement | null>(null)
   const trackRef = useRef<HTMLDivElement | null>(null)
   const [draft, setDraft] = useState<TrajectoryTimeRange | null>(null)
@@ -275,6 +277,9 @@ export const TrajectoryTimeline = memo(function TrajectoryTimeline({
   const [panning, setPanning] = useState(false)
   const [viewport, setViewport] = useState<TrajectoryTimeRange | null>(null)
   const [animateViewport, setAnimateViewport] = useState(false)
+  const [keyboardActiveIndex, setKeyboardActiveIndex] = useState<number | null>(
+    selectedIndex ?? model?.spans[0]?.index ?? null,
+  )
   useEffect(() => {
     if (
       model !== null
@@ -287,14 +292,22 @@ export const TrajectoryTimeline = memo(function TrajectoryTimeline({
   useEffect(() => {
     if (model === null) return
     setAnimateViewport(false)
+    setKeyboardActiveIndex(current => (
+      current !== null && model.spans.some(span => span.index === current)
+        ? current
+        : model.spans[0]?.index ?? null
+    ))
     setViewport(current =>
       current !== null && (current.end < model.start || current.start > model.end)
         ? null
         : current)
   }, [model])
   useEffect(() => {
-    if (model === null || selectedIndex === null) return
-    const selectedSpan = model.spans.find(span => span.index === selectedIndex)
+    if (selectedIndex !== null) setKeyboardActiveIndex(selectedIndex)
+  }, [selectedIndex])
+  useEffect(() => {
+    if (model === null || keyboardActiveIndex === null) return
+    const selectedSpan = model.spans.find(span => span.index === keyboardActiveIndex)
     if (selectedSpan === undefined) return
     setAnimateViewport(true)
     setViewport((current) => {
@@ -314,7 +327,7 @@ export const TrajectoryTimeline = memo(function TrajectoryTimeline({
       if (nextStart === current.start) return current
       return { start: nextStart, end: nextStart + duration }
     })
-  }, [model, selectedIndex])
+  }, [keyboardActiveIndex, model])
   const fullDuration = Math.max(1, (model?.end ?? 0) - (model?.start ?? 0))
   const viewportDuration = Math.min(
     fullDuration,
@@ -569,9 +582,56 @@ export const TrajectoryTimeline = memo(function TrajectoryTimeline({
   }
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key !== 'Escape' || range === null) return
+    if (event.key === 'Escape') {
+      if (range === null) return
+      event.preventDefault()
+      keyboardRangeAnchor.current = null
+      onRangeChange(null)
+      return
+    }
+    if ((event.ctrlKey || event.metaKey) && event.key.toLocaleLowerCase() === 'a') {
+      event.preventDefault()
+      keyboardRangeAnchor.current = model.spans[0]?.index ?? null
+      onRangeChange({ start: model.start, end: model.end })
+      return
+    }
+    if (event.key === 'Enter' || event.key === ' ') {
+      const activeIndex = keyboardActiveIndex ?? selectedIndex ?? model.spans[0]?.index
+      if (activeIndex === undefined) return
+      event.preventDefault()
+      keyboardRangeAnchor.current = null
+      onRangeChange(null)
+      onRecordSelect?.(activeIndex)
+      return
+    }
+    const targetEdge = event.key === 'Home'
+      ? 0
+      : event.key === 'End' ? model.spans.length - 1 : null
+    const direction = event.key === 'ArrowRight' || event.key === 'ArrowDown'
+      ? 1
+      : event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : null
+    if (targetEdge === null && direction === null) return
     event.preventDefault()
-    onRangeChange(null)
+    const currentIndex = keyboardActiveIndex ?? selectedIndex
+    const currentPosition = model.spans.findIndex(span => span.index === currentIndex)
+    const targetPosition = targetEdge ?? (currentPosition < 0
+      ? direction === -1 ? model.spans.length - 1 : 0
+      : (currentPosition + (direction ?? 0) + model.spans.length) % model.spans.length)
+    const target = model.spans[targetPosition]
+    if (target === undefined) return
+    if (event.shiftKey) {
+      const anchorIndex = keyboardRangeAnchor.current ?? currentIndex ?? target.index
+      keyboardRangeAnchor.current = anchorIndex
+      const anchor = model.spans.find(span => span.index === anchorIndex) ?? target
+      onRangeChange({
+        start: Math.min(anchor.start, target.start),
+        end: Math.max(anchor.end, target.end),
+      })
+    } else {
+      keyboardRangeAnchor.current = null
+    }
+    setKeyboardActiveIndex(target.index)
+    onRecordFocus?.(target.index)
   }
 
   const onPointerCancel = () => {
@@ -590,7 +650,13 @@ export const TrajectoryTimeline = memo(function TrajectoryTimeline({
           ref={trackRef}
           className={css.track}
           data-panning={panning || undefined}
+          role="listbox"
+          aria-multiselectable="true"
           aria-label={t('timeline.overviewAria')}
+          aria-description={t('timeline.keyboardDescription')}
+          aria-activedescendant={keyboardActiveIndex === null
+            ? undefined
+            : `${optionIdPrefix}-record-${keyboardActiveIndex}`}
           tabIndex={0}
           onKeyDown={onKeyDown}
           onPointerDown={onPointerDown}
@@ -680,6 +746,7 @@ export const TrajectoryTimeline = memo(function TrajectoryTimeline({
             {model.spans
               .filter(span =>
                 span.index === selectedIndex
+                || span.index === keyboardActiveIndex
                 || (span.end >= domainStart && span.start <= domainStart + domainDuration))
               .map((span) => {
                 const left = (span.start - model.start) / fullDuration
@@ -701,7 +768,17 @@ export const TrajectoryTimeline = memo(function TrajectoryTimeline({
                     delayMs={TIMELINE_TOOLTIP_DELAY_MS}
                   >
                     <span
-                      aria-hidden="true"
+                      id={`${optionIdPrefix}-record-${span.index}`}
+                      role="option"
+                      aria-label={t('timeline.recordAria', {
+                        detail: timelineTooltipLabel(span.kind, detail, t),
+                        record: span.index,
+                      })}
+                      aria-selected={span.index === selectedIndex || (
+                        activeRange !== null
+                        && span.start <= activeRange.end
+                        && span.end >= activeRange.start
+                      )}
                       className={css.span}
                       data-timeline-span={span.kind}
                       data-timeline-record-index={span.index}
@@ -709,6 +786,7 @@ export const TrajectoryTimeline = memo(function TrajectoryTimeline({
                       data-error={span.isError || undefined}
                       data-equal-duration={mode === 'time' || undefined}
                       data-current={span.index === selectedIndex || undefined}
+                      data-keyboard-active={span.index === keyboardActiveIndex || undefined}
                       data-hovered={hover?.recordIndex === span.index || undefined}
                       data-search-match={searchMatchIndexes === null
                         ? undefined

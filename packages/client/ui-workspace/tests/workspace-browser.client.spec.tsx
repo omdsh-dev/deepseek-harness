@@ -182,6 +182,84 @@ describe('WorkspaceBrowser', () => {
     expect(b.store.getSnapshot().groupBy).toBe('workspace')
   })
 
+  it('supports roving focus and disclosure keys in the grouped tree', () => {
+    mount({
+      useSessions: hook(sessionState([summary('alpha-s', 2), summary('beta-s', 1)])),
+      useWorkspaces: hook(workspaceState([
+        workspace('alpha', ['alpha-s']),
+        workspace('beta', ['beta-s']),
+      ])),
+    })
+    const alpha = screen.getByText('alpha').closest<HTMLElement>('[role="treeitem"]')!
+    const beta = screen.getByText('beta').closest<HTMLElement>('[role="treeitem"]')!
+    const alphaAction = screen.getByRole('button', { name: '在“alpha”中新建会话' })
+    const betaAction = screen.getByRole('button', { name: '在“beta”中新建会话' })
+    expect(alpha.tabIndex).toBe(0)
+    expect(alpha.getAttribute('aria-level')).toBe('1')
+    expect(alphaAction.tabIndex).toBe(0)
+    expect(beta.tabIndex).toBe(-1)
+    expect(betaAction.tabIndex).toBe(-1)
+
+    alpha.focus()
+    fireEvent.keyDown(alpha, { key: 'ArrowDown' })
+    expect(document.activeElement).toBe(beta)
+    expect(alphaAction.tabIndex).toBe(-1)
+    expect(betaAction.tabIndex).toBe(0)
+    fireEvent.keyDown(beta, { key: 'Home' })
+    expect(document.activeElement).toBe(alpha)
+    fireEvent.keyDown(alpha, { key: 'End' })
+    expect(document.activeElement).toBe(beta)
+    fireEvent.keyDown(beta, { key: 'ArrowUp' })
+    expect(document.activeElement).toBe(alpha)
+
+    fireEvent.keyDown(alpha, { key: 'ArrowRight' })
+    expect(alpha.getAttribute('aria-expanded')).toBe('true')
+    const session = screen.getByText('alpha-s').closest<HTMLElement>('[role="treeitem"]')!
+    expect(session.getAttribute('aria-level')).toBe('2')
+    fireEvent.keyDown(alpha, { key: 'ArrowRight' })
+    expect(document.activeElement).toBe(session)
+    fireEvent.keyDown(session, { key: 'ArrowLeft' })
+    expect(document.activeElement).toBe(alpha)
+    fireEvent.keyDown(alpha, { key: 'ArrowLeft' })
+    expect(alpha.getAttribute('aria-expanded')).toBe('false')
+    fireEvent.keyDown(alpha, { key: 'Enter' })
+    expect(alpha.getAttribute('aria-expanded')).toBe('true')
+
+    alphaAction.focus()
+    fireEvent.keyDown(alphaAction, { key: 'ArrowDown' })
+    expect(document.activeElement).toBe(alphaAction)
+    fireEvent.pointerDown(beta)
+    expect(document.activeElement).toBe(beta)
+    expect(beta.tabIndex).toBe(0)
+  })
+
+  it('keeps empty containers roleless and roves the flat and search trees', () => {
+    const sessions = sessionState([
+      summary('needle-a', 2, { displayTitle: 'Needle A' }),
+      summary('needle-b', 1, { displayTitle: 'Needle B' }),
+    ])
+    const b = mount()
+    expect(screen.queryByRole('tree')).toBeNull()
+
+    rerender(b, { useSessions: hook(sessions) })
+    b.store.actions.setGroupBy('flat')
+    rerender(b, {})
+    const flatRows = screen.getAllByRole('treeitem')
+    expect(flatRows.map(row => row.tabIndex)).toEqual([0, -1])
+    expect(flatRows.map(row => row.getAttribute('aria-level'))).toEqual(['1', '1'])
+    flatRows[0]!.focus()
+    fireEvent.keyDown(flatRows[0]!, { key: 'ArrowDown' })
+    expect(document.activeElement).toBe(flatRows[1])
+
+    fireEvent.change(screen.getByLabelText('搜索会话…'), { target: { value: 'needle' } })
+    const searchRows = screen.getAllByRole('treeitem')
+    expect(searchRows.map(row => row.tabIndex)).toEqual([0, -1])
+    expect(searchRows.map(row => row.getAttribute('aria-level'))).toEqual(['1', '1'])
+    searchRows[0]!.focus()
+    fireEvent.keyDown(searchRows[0]!, { key: 'End' })
+    expect(document.activeElement).toBe(searchRows[1])
+  })
+
   it('persists flat-list drag order locally and applies Last updated within that account', async () => {
     const insertSessionBefore = vi.fn(async () => {})
     const sessions = sessionState([summary('one', 3), summary('two', 2), summary('three', 1)])
@@ -865,6 +943,35 @@ describe('WorkspaceBrowser', () => {
     }
   })
 
+  it('hides collapsed search and restores focus only for explicit dismissal', () => {
+    mount()
+    const searchButton = screen.getByRole('button', { name: '搜索会话' })
+    const input = screen.getByLabelText('搜索会话…')
+    expect(input.getAttribute('aria-hidden')).toBe('true')
+    expect(input.getAttribute('tabindex')).toBe('-1')
+
+    fireEvent.click(searchButton)
+    expect(document.activeElement).toBe(input)
+    expect(input.hasAttribute('aria-hidden')).toBe(false)
+    expect(fireEvent.keyDown(input, { key: 'Escape' })).toBe(false)
+    expect(document.activeElement).toBe(searchButton)
+    expect(input.getAttribute('aria-hidden')).toBe('true')
+
+    fireEvent.click(searchButton)
+    fireEvent.click(screen.getByRole('button', { name: '清除搜索' }))
+    expect(document.activeElement).toBe(searchButton)
+
+    const external = document.createElement('button')
+    external.textContent = 'outside'
+    document.body.append(external)
+    fireEvent.click(searchButton)
+    external.focus()
+    fireEvent.click(external)
+    expect(document.activeElement).toBe(external)
+    expect(searchButton.getAttribute('aria-expanded')).toBe('false')
+    external.remove()
+  })
+
   it('keeps the rail-opened search expanded when the initiating click reaches document', () => {
     vi.useFakeTimers()
     try {
@@ -1173,10 +1280,14 @@ describe('WorkspaceBrowser', () => {
       useWorkspaces: hook(workspaceState([workspace('alpha', [], 'Alpha'), workspace('beta', [], 'Beta')])),
       renameWorkspace,
     })
-    fireEvent.click(screen.getByRole('button', { name: '工作区“Alpha”的操作' }))
+    const actionTrigger = screen.getByRole('button', { name: '工作区“Alpha”的操作' })
+    fireEvent.click(actionTrigger)
     fireEvent.click(screen.getByRole('menuitem', { name: '重命名' }))
     const input = screen.getByLabelText<HTMLInputElement>('工作区名称')
+    expect(document.activeElement).toBe(input)
     expect(input.value).toBe('Alpha')
+    expect(input.selectionStart).toBe(0)
+    expect(input.selectionEnd).toBe(input.value.length)
     // Unchanged and blank names stay blocked.
     expect(screen.getByRole<HTMLButtonElement>('button', { name: '重命名' }).disabled).toBe(true)
     fireEvent.change(input, { target: { value: '   ' } })
@@ -1194,6 +1305,7 @@ describe('WorkspaceBrowser', () => {
     expect(screen.getByRole('dialog')).toBeTruthy()
     await act(async () => { resolveRename() })
     expect(screen.queryByRole('dialog')).toBeNull()
+    expect(document.activeElement).toBe(actionTrigger)
   })
 
   it('rename via Enter, failure surfaces the error, Cancel closes', async () => {
@@ -1202,7 +1314,8 @@ describe('WorkspaceBrowser', () => {
       useWorkspaces: hook(workspaceState([workspace('alpha', [], 'Alpha')])),
       renameWorkspace,
     })
-    fireEvent.click(screen.getByRole('button', { name: '工作区“Alpha”的操作' }))
+    const actionTrigger = screen.getByRole('button', { name: '工作区“Alpha”的操作' })
+    fireEvent.click(actionTrigger)
     fireEvent.click(screen.getByRole('menuitem', { name: '重命名' }))
     const input = screen.getByLabelText<HTMLInputElement>('工作区名称')
     // Enter with a blocked draft (unchanged) does nothing.
@@ -1218,6 +1331,7 @@ describe('WorkspaceBrowser', () => {
     expect(screen.queryByRole('alert')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: '取消' }))
     expect(screen.queryByRole('dialog')).toBeNull()
+    expect(document.activeElement).toBe(actionTrigger)
   })
 
   it('reports non-Error rename failures as text', async () => {
@@ -1240,9 +1354,11 @@ describe('WorkspaceBrowser', () => {
       useWorkspaces: hook(workspaceState([workspace('alpha', ['session'], 'Alpha')])),
       deleteWorkspace,
     })
-    fireEvent.click(screen.getByRole('button', { name: '工作区“Alpha”的操作' }))
+    const actionTrigger = screen.getByRole('button', { name: '工作区“Alpha”的操作' })
+    fireEvent.click(actionTrigger)
     fireEvent.click(screen.getByRole('menuitem', { name: '删除工作区' }))
     const dialog = screen.getByRole('dialog', { name: '删除工作区' })
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: '关闭' }))
     expect(dialog.textContent).toContain('将把“Alpha”从工作区列表中移除')
     expect(dialog.textContent).toContain('文件夹与会话记录会保留')
     expect(dialog.textContent).toContain('其会话将显示在“未分组”下')
@@ -1293,15 +1409,21 @@ describe('WorkspaceBrowser', () => {
       deleteWorkspace,
     })
     const open = () => {
-      fireEvent.click(screen.getByRole('button', { name: '工作区“Alpha”的操作' }))
+      const actionTrigger = screen.getByRole('button', { name: '工作区“Alpha”的操作' })
+      fireEvent.click(actionTrigger)
       fireEvent.click(screen.getByRole('menuitem', { name: '删除工作区' }))
+      expect(document.activeElement).toBe(screen.getByRole('button', { name: '关闭' }))
+      return actionTrigger
     }
-    open()
+    let actionTrigger = open()
     fireEvent.click(screen.getByRole('button', { name: '取消' }))
-    open()
+    expect(document.activeElement).toBe(actionTrigger)
+    actionTrigger = open()
     fireEvent.keyDown(document, { key: 'Escape' })
-    open()
+    expect(document.activeElement).toBe(actionTrigger)
+    actionTrigger = open()
     fireEvent.click(screen.getByRole('button', { name: '关闭' }))
+    expect(document.activeElement).toBe(actionTrigger)
     expect(deleteWorkspace).not.toHaveBeenCalled()
     expect(screen.queryByRole('dialog', { name: '删除工作区' })).toBeNull()
   })

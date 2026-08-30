@@ -1,4 +1,5 @@
-- banner:
+- main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy":
     - button "Reply with a one-sentence description" [disabled]
   - img
@@ -6,44 +7,49 @@
   - button "Session log":
     - text: Session log
     - img
-  - tablist:
+  - tablist "Session views":
     - tab "Chat" [selected]
     - tab "Trajectory"
-- button "System prompt":
-  - img
-  - img
-  - text: System prompt
-- text: Reply with a one-sentence description of event sourcing, then stop. {{clock}}
-- button "Copy":
-  - img
-- button "Context injection @deepseek-ai/dsh-system-prompt":
-  - img
-  - img
-  - text: Context injection @deepseek-ai/dsh-system-prompt
-- paragraph: partial
-- status: Deep diving...
-- button "2 queued messages" [disabled] [expanded]
-- list:
-  - listitem:
-    - text: Queue item to remove
-    - button "Edit queued message":
-      - img
-    - button "Remove queued message":
-      - img
-    - button "Steer queued message":
-      - img
-  - listitem:
-    - textbox "Edit queued message": Edited queue item
-    - button "Save queued message":
-      - img
-    - tooltip "Save queued message"
-    - button "Cancel editing":
-      - img
-- textbox "Cmd/Ctrl+Enter steers all queued messages"
-- button "Commands":
-  - img
-- 'button "Access mode, current: Workspace Write"': Workspace Write
-- button "Select model, current DeepSeek-V4-Flash":
-  - text: DeepSeek-V4-Flash
-  - img
-- button "Stop generating"
+  - tabpanel "Chat":
+    - log "Conversation transcript":
+      - button "System prompt":
+        - img
+        - img
+        - text: System prompt
+      - article "User message":
+        - text: Reply with a one-sentence description of event sourcing, then stop. {{clock}}
+        - button "Copy":
+          - img
+      - button "Context injection @deepseek-ai/dsh-system-prompt":
+        - img
+        - img
+        - text: Context injection @deepseek-ai/dsh-system-prompt
+      - article "Assistant response":
+        - paragraph: partial
+      - status: Deep diving...
+  - button "2 queued messages" [disabled] [expanded]
+  - list:
+    - listitem:
+      - text: Queue item to remove
+      - button "Edit queued message":
+        - img
+      - button "Remove queued message":
+        - img
+      - button "Steer queued message":
+        - img
+    - listitem:
+      - textbox "Edit queued message": Edited queue item
+      - button "Save queued message":
+        - img
+      - tooltip "Save queued message"
+      - button "Cancel editing":
+        - img
+  - textbox "Cmd/Ctrl+Enter steers all queued messages"
+  - button "Commands":
+    - img
+  - 'button "Access mode, current: Workspace Write"': Workspace Write
+  - button "Select model, current DeepSeek-V4-Flash":
+    - text: DeepSeek-V4-Flash
+    - img
+  - button "Stop generating"
+  - separator "Resize session navigation"

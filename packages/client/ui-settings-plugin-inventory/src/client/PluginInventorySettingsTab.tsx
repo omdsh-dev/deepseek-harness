@@ -55,9 +55,22 @@ function moduleShortName(moduleName: string): string {
 
 /** Whether an inventory row matches the local catalog query. */
 function matches(entry: PluginInventoryEntry, normalizedQuery: string): boolean {
-  if (normalizedQuery.length === 0) return true
   return [entry.moduleName, entry.entryId]
     .some(value => value.toLocaleLowerCase().includes(normalizedQuery))
+}
+
+/** Prefer an exact Loader id before falling back to the fuzzy catalog search. */
+function filterEntries(
+  entries: PluginInventorySnapshot['entries'],
+  normalizedQuery: string,
+): PluginInventorySnapshot['entries'] {
+  if (normalizedQuery.length === 0) return entries
+  const exactEntryMatches = entries.filter(
+    entry => entry.entryId.toLocaleLowerCase() === normalizedQuery,
+  )
+  return exactEntryMatches.length > 0
+    ? exactEntryMatches
+    : entries.filter(entry => matches(entry, normalizedQuery))
 }
 
 /** Render the read-only current Loader inventory. */
@@ -80,7 +93,7 @@ export function PluginInventorySettingsTab({ list, t }: PluginInventorySettingsT
   const normalizedQuery = query.trim().toLocaleLowerCase()
   const filteredEntries = useMemo(
     () => state.status === 'ready'
-      ? state.snapshot.entries.filter(entry => matches(entry, normalizedQuery))
+      ? filterEntries(state.snapshot.entries, normalizedQuery)
       : [],
     [normalizedQuery, state],
   )
@@ -98,7 +111,9 @@ export function PluginInventorySettingsTab({ list, t }: PluginInventorySettingsT
 
   return (
     <div className={css.section} aria-busy={state.status === 'loading'}>
-      {state.status === 'loading' ? <p className={css.status}>{t('loading')}</p> : null}
+      {state.status === 'loading'
+        ? <p className={css.status} role="status">{t('loading')}</p>
+        : null}
       {state.status === 'error' ? (
         <div className={css.failure}>
           <p role="alert">{t('error')}</p>
@@ -120,7 +135,15 @@ export function PluginInventorySettingsTab({ list, t }: PluginInventorySettingsT
           </label>
           <div className={css.catalogHeading}>
             <h3>{t('catalog')}</h3>
-            <span data-plugin-count={filteredEntries.length}>{filteredEntries.length}</span>
+            <span
+              data-plugin-count={filteredEntries.length}
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+              aria-label={t('resultCount', { count: filteredEntries.length })}
+            >
+              {filteredEntries.length}
+            </span>
           </div>
           {state.snapshot.entries.length === 0 ? <p className={css.status}>{t('empty')}</p> : null}
           {state.snapshot.entries.length > 0 && filteredEntries.length === 0
@@ -132,6 +155,13 @@ export function PluginInventorySettingsTab({ list, t }: PluginInventorySettingsT
                 const status = phaseLabel(entry.fiberPhase, t)
                 const title = moduleShortName(entry.moduleName)
                 const configuration = t(entry.enabled ? 'enabledTag' : 'disabledTag')
+                const accessibleLabel = [
+                  title,
+                  ...(title === entry.moduleName ? [] : [entry.moduleName]),
+                  entry.entryId,
+                  ...(entry.enabled ? [status] : []),
+                  configuration,
+                ].join(', ')
                 const open = expanded === entry.entryId
                 const detailId = `${catalogId}-details-${encodeURIComponent(entry.entryId)}`
                 return (
@@ -146,7 +176,7 @@ export function PluginInventorySettingsTab({ list, t }: PluginInventorySettingsT
                       type="button"
                       aria-expanded={open}
                       aria-controls={detailId}
-                      aria-label={entry.enabled ? `${title}, ${status}, ${configuration}` : `${title}, ${configuration}`}
+                      aria-label={accessibleLabel}
                       onClick={() => {
                         setExpanded(current => current === entry.entryId ? null : entry.entryId)
                       }}
@@ -157,15 +187,16 @@ export function PluginInventorySettingsTab({ list, t }: PluginInventorySettingsT
                           <span
                             className={css.statusDot}
                             data-phase={entry.fiberPhase ?? 'unobserved'}
-                            role="img"
-                            aria-label={status}
+                            aria-hidden="true"
                             title={status}
                           />
                         ) : null}
                         <span className={css.configTag} data-enabled={entry.enabled ? 'true' : 'false'}>
                           {configuration}
                         </span>
-                        <IconChevronDownOutline14 className={css.chevron} size={12} aria-hidden="true" />
+                        <span aria-hidden="true">
+                          <IconChevronDownOutline14 className={css.chevron} size={12} />
+                        </span>
                       </span>
                     </button>
                     {open ? (

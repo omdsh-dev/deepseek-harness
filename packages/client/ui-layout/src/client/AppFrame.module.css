@@ -10,6 +10,19 @@
   transition: grid-template-columns var(--ds-transition-duration-slow) var(--ds-ease-in-out);
 }
 
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  border: 0;
+  white-space: nowrap;
+}
+
 /* Dragging writes widths at pointer cadence; easing them would detach the
    column from the handle. */
 .frame[data-dragging] {
@@ -22,9 +35,22 @@
   }
 }
 
+/* At high zoom and narrow reflow widths, settling the control rail before a
+   keyboard user can enter it is more important than animating the track. */
+@media (max-width: 600px) {
+  .frame {
+    transition: none;
+  }
+}
+
 .sidebarCol {
   min-width: 0;
+  /* `hidden` is the compatibility fallback; `clip` preserves track clipping
+     without creating a programmatically scrollable box. Chromium otherwise
+     pans this column while tabbing through the rail and can leave the focused
+     Settings control outside the viewport. */
   overflow: hidden;
+  overflow: clip;
   background: var(--dsw-specific-sidebar-fill);
   border-right: 1px solid var(--dsw-alias-border-l1);
 }
@@ -75,6 +101,12 @@
   }
 }
 
+@media (max-width: 600px) {
+  .handle {
+    transition: none;
+  }
+}
+
 .handle[data-side='details']::after {
   content: '';
   position: absolute;
@@ -95,7 +127,16 @@
     background var(--ds-transition-duration-slow) var(--ds-ease-in-out);
 }
 
-.detailsCol:hover ~ .handle[data-side='details']::after,
+.handle:focus-visible {
+  outline: 2px solid var(--dsw-alias-brand-primary);
+  outline-offset: 1px;
+}
+
+.handle[data-side='details']:focus-visible::after {
+  opacity: 1;
+}
+
+.frame:has(.detailsCol:hover) .handle[data-side='details']::after,
 .handle[data-side='details']:hover::after,
 .handle[data-side='details'][data-dragging='true']::after {
   opacity: 1;

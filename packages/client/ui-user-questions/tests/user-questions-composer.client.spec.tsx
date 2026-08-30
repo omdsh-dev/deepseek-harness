@@ -163,6 +163,41 @@ function wait(questions: PendingQuestion['questions'] = QUESTIONS) {
 const answerBatch = (answers: object[]) => ({ answers })
 
 describe('QuestionComposer', () => {
+  it('owns a named roving radio group and restores focus when selection advances', () => {
+    const { carrier } = wait()
+    render(<QuestionComposer matched={carrier} {...kit} />)
+
+    const group = screen.getByRole('radiogroup', { name: '选择候选人类型' })
+    const radios = screen.getAllByRole('radio')
+    const delivery = screen.getByRole('radio', { name: '工程落地型' })
+    const research = screen.getByRole('radio', { name: '研究潜力型' })
+    expect(group.contains(delivery)).toBe(true)
+    expect(radios.filter(radio => radio.tabIndex === 0)).toEqual([delivery])
+    expect(delivery.getAttribute('aria-describedby')).toBeTruthy()
+    const descriptions = delivery.getAttribute('aria-describedby')!.split(' ')
+      .map(id => document.getElementById(id)?.textContent)
+    expect(descriptions).toEqual(['推荐', '优先工程交付。'])
+
+    delivery.focus()
+    fireEvent.keyDown(delivery, { key: 'ArrowRight' })
+    expect(screen.getByText('1 / 3')).toBeTruthy()
+    expect(document.activeElement).toBe(research)
+    expect(research.getAttribute('aria-checked')).toBe('true')
+    expect(research.tabIndex).toBe(0)
+    expect(delivery.tabIndex).toBe(-1)
+
+    fireEvent.keyDown(research, { key: 'Home' })
+    expect(document.activeElement).toBe(delivery)
+    expect(delivery.getAttribute('aria-checked')).toBe('true')
+    fireEvent.keyDown(delivery, { key: 'ArrowLeft' })
+    expect(document.activeElement).toBe(research)
+
+    fireEvent.click(delivery)
+    const custom = screen.getByRole('textbox', { name: '输入你的答案' })
+    expect(screen.getByText('2 / 3')).toBeTruthy()
+    expect(document.activeElement).toBe(custom)
+  })
+
   it('collects single, custom, and multi-select answers before one batch submit', () => {
     const { carrier, answer } = wait()
     render(<QuestionComposer matched={carrier} {...kit} />)

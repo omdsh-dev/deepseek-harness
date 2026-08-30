@@ -12,13 +12,13 @@ Status: implemented
 
 [`base.cordis.yml`](../../../../packages/bundle/base/cordis.patch.yml) 为所有已交付的 TUI、Web 以及由浏览器支撑的无头会话统一持有一套沙箱与权限栈：`dsh-sandbox-local`、`dsh-sandbox-policy`、`dsh-bash-sandbox`、`dsh-fs-sandbox`、`dsh-user-approval` 和 `dsh-permission-presets`。组合回退值为 `workspace-write` preset，其中包含 `workspace-write` 文件效果模式与 `ask` 审批策略。`DSH_PERMISSION_MODE` 仍是显式的进程级覆盖；已存储的 `permission.defaultPreset` 仍是面向后续会话的用户偏好，并通过 Settings seam 优先于该回退值。
 
-真正的新会话会在执行前固定 `permission/preset: workspace-write`、`sandbox/mode: workspace-write` 和 `approval/policy: ask`。现有会话和恢复的会话保留日志中记录的权限，更改「通用」设置中的默认值只影响之后创建的会话。浏览器保留 Access 选择器、可应答的审批卡片，以及选择 Full access 时的风险确认。共享 Permission 服务在 TUI 中激活其命令子件，因此 TUI 会获得现有的 `/permission` 命令。
+真正的新会话会在执行前固定 `permission/preset: workspace-write`、`sandbox/mode: workspace-write` 和 `approval/policy: ask`。现有会话和恢复的会话保留日志中记录的权限，更改「通用」设置中的默认值只影响之后创建的会话。浏览器保留 Access 选择器、可应答的审批卡片，以及选择 Full access 时的风险确认。这个共享确认框会把风险文字关联为对话框描述、从无障碍树中隐藏警告图形、把初始焦点放在确认复选框上，并在取消或异步更改完成后把焦点返回持久的 Access 或 Settings 触发器。共享 Permission 服务在 TUI 中激活其命令子件，因此 TUI 会获得现有的 `/permission` 命令。
 
 该模式只管辖文件效果。受沙箱约束的 bash 与文件系统修改只允许写入会话工作区和平台临时根目录；读取、网络访问与进程可见性仍不受该策略约束。若没有平台 runner 能强制执行受限的 bash 调用，执行会以拒绝告终，不会退回不受限命令。
 
 ## 测试
 
-已交付 TUI 的无密钥伪终端冒烟测试会启动真实 Loader 树，读取已持久化的首个请求，并断言 bash schema 中的 `sandbox_permissions`／`justification`，以及初始的 workspace-write 事件三元组。已交付 Web 组合的冒烟测试断言相同的策略、审批与 Permission 默认值。组装后的浏览器 Settings 快照打开时选中 Workspace Write，在更改后续会话默认值时保持现有 `workspace-write` 会话不变，并仍然验证经确认后选择 Full access 的路径。
+已交付 TUI 的无密钥伪终端冒烟测试会启动真实 Loader 树，读取已持久化的首个请求，并断言 bash schema 中的 `sandbox_permissions`／`justification`，以及初始的 workspace-write 事件三元组。已交付 Web 组合的冒烟测试断言相同的策略、审批与 Permission 默认值。组件测试固定对话框描述、装饰图形、初始焦点、禁用的确认动作，以及取消、异步锁定、owner 不可用与卸载过程中的焦点恢复。组装后的 Chromium 场景通过真实命令／RPC 路径同时验证当前会话的 Access 选择器和后续会话的 Settings 选择器；无障碍树 golden 会保留风险文案，但不会把警告图形暴露成无名称图片。
 
 ## 曾考虑的替代方案
 

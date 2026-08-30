@@ -15,7 +15,10 @@ import type { ReactNode } from 'react'
 import type {
   PropsLocale, PropsRenderSlots, PropsRuntime, PropsStore,
 } from '@deepseek-ai/dsh-client-ui-slots'
-import { computeColumns, SIDEBAR_AUTO_COLLAPSE, SIDEBAR_DEFAULT } from './columns.ts'
+import {
+  computeColumns, DETAILS_MAX, DETAILS_MIN, SIDEBAR_AUTO_COLLAPSE,
+  SIDEBAR_DEFAULT, SIDEBAR_MAX, SIDEBAR_MIN,
+} from './columns.ts'
 import { DocumentTitle } from './DocumentTitle.tsx'
 import type { createLayoutStore } from './stores.ts'
 import css from './AppFrame.module.css'
@@ -29,25 +32,49 @@ export type AppFrameProps =
 
 /** Center column grid item (session-body building block). */
 function CenterColumn(props: { children?: ReactNode }) {
-  return <div className={css.centerCol}>{props.children}</div>
+  return <main className={css.centerCol}>{props.children}</main>
 }
 
 /** Details column grid item; width 0 keeps the subtree mounted (never unmount on close). */
-function DetailsColumn(props: { children?: ReactNode }) {
-  return <div className={css.detailsCol}>{props.children}</div>
+function DetailsColumn(props: { children?: ReactNode; collapsed: boolean; label: string }) {
+  return (
+    <aside
+      className={css.detailsCol}
+      aria-label={props.label}
+      aria-hidden={props.collapsed || undefined}
+      {...props.collapsed ? { inert: '' } : {}}
+    >
+      {props.children}
+    </aside>
+  )
 }
 
 /**
  * One drag handle: pointer capture, rAF-throttled dx reports against the drag-start origin.
  * `side` keys the hover-reveal CSS to the owning column.
  */
-function DragHandle(props: { side: 'sidebar' | 'details'; left: number; onStart: () => void; onDrag: (dx: number) => void; onEnd: () => void }) {
+function DragHandle(props: {
+  side: 'sidebar' | 'details'
+  left: number
+  value: number
+  min: number
+  max: number
+  label: string
+  onResize: (width: number) => void
+  onStart: () => void
+  onDrag: (dx: number) => void
+  onEnd: () => void
+}) {
   const [dragging, setDragging] = useState(false)
   const origin = useRef(0)
   const latest = useRef(0)
   const frame = useRef<number | null>(null)
-  const callbacks = useRef({ onStart: props.onStart, onDrag: props.onDrag, onEnd: props.onEnd })
-  callbacks.current = { onStart: props.onStart, onDrag: props.onDrag, onEnd: props.onEnd }
+  const callbacks = useRef({
+    onResize: props.onResize, onStart: props.onStart, onDrag: props.onDrag, onEnd: props.onEnd,
+  })
+  callbacks.current = {
+    onResize: props.onResize, onStart: props.onStart, onDrag: props.onDrag, onEnd: props.onEnd,
+  }
 
   const onPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     e.preventDefault()
@@ -73,6 +100,17 @@ function DragHandle(props: { side: 'sidebar' | 'details'; left: number; onStart:
     setDragging(false)
     callbacks.current.onEnd()
   }, [])
+  const onKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    const step = e.shiftKey ? 40 : 8
+    let next: number | undefined
+    if (e.key === 'ArrowLeft') next = props.value + (props.side === 'sidebar' ? -step : step)
+    else if (e.key === 'ArrowRight') next = props.value + (props.side === 'sidebar' ? step : -step)
+    else if (e.key === 'Home') next = props.min
+    else if (e.key === 'End') next = props.max
+    else return
+    e.preventDefault()
+    callbacks.current.onResize(next)
+  }, [props.max, props.min, props.side, props.value])
 
   return (
     <div
@@ -80,9 +118,17 @@ function DragHandle(props: { side: 'sidebar' | 'details'; left: number; onStart:
       style={{ left: props.left }}
       data-side={props.side}
       data-dragging={dragging || undefined}
+      role="separator"
+      aria-label={props.label}
+      aria-orientation="vertical"
+      aria-valuemin={props.min}
+      aria-valuemax={props.max}
+      aria-valuenow={props.value}
+      tabIndex={0}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
+      onKeyDown={onKeyDown}
     />
   )
 }
@@ -185,7 +231,7 @@ export function AppFrame({
         productTitle={productTitle}
         {...documentTitle === undefined ? {} : { title: documentTitle }}
       />
-      <div className={css.sidebarCol}>
+      <aside className={css.sidebarCol} aria-label={t('shell.sidebar')}>
         {/* Render-site slot call with live concession output: a closed
             sidebar keeps the mounted slot at the compact-rail width, and the
             component sees its rendered state as owner params decided here
@@ -195,24 +241,54 @@ export function AppFrame({
           collapsed: sidebarCollapsed,
           width: cols.sidebar,
         })}
-      </div>
-      <>
-        {/* Both column occupants stay at fixed tree positions from first
-            paint — no loading gate: a bare status line reads worse than
-            the shell's own pending rendering. The conversation
-            is session-maybe; SessionProvider withholds the strict details
-            entry while no session is current. */}
-        <CenterColumn>{renderSlot('conversation', {})}</CenterColumn>
-        <DetailsColumn>
-          <SessionProvider>{renderSlot('details', {})}</SessionProvider>
-        </DetailsColumn>
-      </>
-      <div className={css.overlayLayer} data-shell-overlay>
-        {renderSlot('shell.overlay', {})}
-      </div>
-      {/* The collapsed rail is fixed-width: no resize handle while closed. */}
-      {!sidebarCollapsed && <DragHandle side="sidebar" left={cols.sidebar} onStart={onSidebarStart} onDrag={onSidebarDrag} onEnd={onDragEnd} />}
-      {cols.details > 0 && <DragHandle side="details" left={viewport - cols.details} onStart={onDetailsStart} onDrag={onDetailsDrag} onEnd={onDragEnd} />}
+      </aside>
+      {/* Both column occupants stay at fixed tree positions from first
+          paint — no loading gate: a bare status line reads worse than
+          the shell's own pending rendering. Frame-level controls live inside
+          main so every focusable element is owned by a landmark while their
+          absolute geometry still anchors to the positioned frame. */}
+      <CenterColumn>
+        <h1 className={css.visuallyHidden}>{t('shell.application')}</h1>
+        {renderSlot('conversation', {})}
+        <div className={css.overlayLayer} data-shell-overlay>
+          {renderSlot('shell.overlay', {})}
+        </div>
+        {/* The collapsed rail is fixed-width: no resize handle while closed. */}
+        {!sidebarCollapsed && (
+          <DragHandle
+            side="sidebar"
+            left={cols.sidebar}
+            value={cols.sidebar}
+            min={SIDEBAR_MIN}
+            max={SIDEBAR_MAX}
+            label={t('shell.resizeSidebar')}
+            onResize={actions.setSidebar}
+            onStart={onSidebarStart}
+            onDrag={onSidebarDrag}
+            onEnd={onDragEnd}
+          />
+        )}
+        {cols.details > 0 && (
+          <DragHandle
+            side="details"
+            left={viewport - cols.details}
+            value={cols.details}
+            min={DETAILS_MIN}
+            max={DETAILS_MAX}
+            label={t('shell.resizeDetails')}
+            onResize={actions.setDetails}
+            onStart={onDetailsStart}
+            onDrag={onDetailsDrag}
+            onEnd={onDragEnd}
+          />
+        )}
+      </CenterColumn>
+      <DetailsColumn
+        collapsed={cols.details === 0}
+        label={t('shell.details')}
+      >
+        <SessionProvider>{renderSlot('details', {})}</SessionProvider>
+      </DetailsColumn>
     </div>
   )
 }

@@ -217,6 +217,70 @@ describe('TrajectoryTable', () => {
     expect(panel.querySelector('[data-summary-scroll-region]')).toBeNull()
   })
 
+  it('owns roving keyboard focus and panel relationships for detail tabs', () => {
+    render(<TrajectoryTable turns={TURNS} {...FOLD_PROPS} />)
+    fireEvent.click(screen.getByRole('row', { name: /ASSISTANT/ }))
+
+    const tabs = screen.getAllByRole('tab')
+    const summary = screen.getByRole('tab', { name: 'Summary' })
+    const preview = screen.getByRole('tab', { name: 'Preview' })
+    const panel = screen.getByRole('tabpanel')
+    expect(summary.getAttribute('aria-selected')).toBe('true')
+    expect(summary.tabIndex).toBe(0)
+    expect(tabs.filter(tab => tab.tabIndex === 0)).toEqual([summary])
+    expect(summary.getAttribute('aria-controls')).toBe(panel.id)
+    expect(panel.getAttribute('aria-labelledby')).toBe(summary.id)
+
+    summary.focus()
+    fireEvent.keyDown(summary, { key: 'ArrowRight' })
+    expect(document.activeElement).toBe(preview)
+    expect(preview.getAttribute('aria-selected')).toBe('true')
+    expect(preview.tabIndex).toBe(0)
+    expect(summary.tabIndex).toBe(-1)
+    expect(panel.getAttribute('aria-labelledby')).toBe(preview.id)
+
+    fireEvent.keyDown(preview, { key: 'Home' })
+    expect(document.activeElement).toBe(summary)
+    fireEvent.keyDown(summary, { key: 'ArrowLeft' })
+    expect(document.activeElement).toBe(tabs.at(-1))
+    fireEvent.keyDown(tabs.at(-1)!, { key: 'ArrowRight' })
+    expect(document.activeElement).toBe(summary)
+    fireEvent.keyDown(summary, { key: 'End' })
+    expect(document.activeElement).toBe(tabs.at(-1))
+  })
+
+  it('keeps one ledger row and only its nested request action in sequential navigation', () => {
+    const view = render(<TrajectoryTable turns={TURNS} {...FOLD_PROPS} />)
+    const rows = [...view.container.querySelectorAll<HTMLElement>(
+      'tr[data-trajectory-row-key]:not([data-request-only])',
+    )]
+    const first = rows[0]!
+    const second = rows[1]!
+    expect(rows.filter(row => row.tabIndex === 0)).toEqual([first])
+    expect(rows.slice(1).every(row => row.tabIndex === -1)).toBe(true)
+
+    first.focus()
+    fireEvent.keyDown(first, { key: 'ArrowDown' })
+    expect(document.activeElement).toBe(second)
+    expect(second.tabIndex).toBe(0)
+    expect(first.tabIndex).toBe(-1)
+
+    fireEvent.keyDown(second, { key: 'End' })
+    expect(document.activeElement).toBe(rows.at(-1))
+    fireEvent.keyDown(rows.at(-1)!, { key: 'Home' })
+    expect(document.activeElement).toBe(first)
+    fireEvent.keyDown(first, { key: 'ArrowUp' })
+    expect(document.activeElement).toBe(first)
+
+    const requestControls = [...view.container.querySelectorAll<HTMLButtonElement>(
+      '[data-request-boundary-control]',
+    )]
+    expect(requestControls.filter(control => control.tabIndex === 0).length).toBeLessThanOrEqual(1)
+    expect(requestControls.every(control => (
+      control.closest('tr') === first ? control.tabIndex === 0 : control.tabIndex === -1
+    ))).toBe(true)
+  })
+
   it('keeps long thinking collapsed until the user asks to render it', () => {
     const thinking = 'private chain '.repeat(1_000)
     const turns: readonly TrajectoryTurnModel[] = [{
@@ -674,6 +738,14 @@ describe('TrajectoryTable', () => {
     expect(view.container.querySelector('tr[data-virtual-spacer="bottom"]')).toBeTruthy()
     expect(screen.getByText('Context 1')).toBeTruthy()
     expect(screen.queryByText('Context 500')).toBeNull()
+
+    scrollTo.mockClear()
+    const firstRow = view.container.querySelector<HTMLElement>(
+      'tr[data-trajectory-row-key][tabindex="0"]',
+    )!
+    firstRow.focus()
+    fireEvent.keyDown(firstRow, { key: 'End' })
+    expect(scrollTo).toHaveBeenCalled()
 
     const tablePane = screen.getByRole('table').parentElement as HTMLElement
     tablePane.scrollTop = 9_000

@@ -401,6 +401,21 @@ describe('Node compatibility graph', () => {
       ],
     })
   })
+
+  it('runs the internal module-loader shape smoke on every advertised Node line', () => {
+    const subject = withPnpmEntrypoint(() => gatesForMode('node-compat'))
+
+    expect(subject.find(item => item.id === 'module-loader-internal-smoke')).toMatchObject({
+      label: 'Node internal module-loader smoke',
+      args: [
+        '/private/pnpm.cjs',
+        'exec',
+        'vitest',
+        'run',
+        'scripts/module-loader-internal.compat.spec.ts',
+      ],
+    })
+  })
 })
 
 describe('Node 24 lane ownership', () => {

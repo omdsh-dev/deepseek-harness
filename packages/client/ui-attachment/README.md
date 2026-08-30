@@ -33,7 +33,7 @@ A draft image shows as a fixed 64px thumbnail in one horizontally scrolling row;
 
 ### Message images and the lightbox
 
-A message's lone image renders at 240px on its longer edge (aspect clamped to [0.25, 4], never upscaled); images among several render as fixed 64px squares. A loaded image opens the document-level lightbox on click; a failed load shows a retry control instead. The lightbox closes on Escape, a mask press, or its close control, and restores focus to its opener.
+A message's lone image renders at 240px on its longer edge (aspect clamped to [0.25, 4], never upscaled); images among several render as fixed 64px squares. A loaded image opens the document-level lightbox on click; a failed load shows a retry control instead. The lightbox uses the shared modal owner: it makes the application inert, focuses and contains Tab on its close control, closes on Escape, a mask click, or the close control, and restores a connected opener.
 
 ### Drop overlay
 
@@ -91,7 +91,6 @@ These limits define the current attachment surface. They are package constraints
 
 - **Images only** — non-image files have no rail card or history renderer yet; DeepSeek Chat-style file cards and upload progress wait until the composer accepts non-image attachments.
 - **No zoom or download in the lightbox** — the preview renders the original at fit-to-viewport size only.
-- **The lightbox does not trap focus** — it sets `aria-modal` and restores focus on close, but Tab can reach the page behind it.
 
 <a id="dev-note"></a>
 ### Dev Note

@@ -10,6 +10,8 @@ English | [中文](README.zh.md)
 
 The browser Chat target for Conversation assembly. It registers Chat event definitions and snapshot construction, supplies `useChat`, renders transcript nodes and details, and owns Chat-specific stores, actions, localization, and scroll restoration; historical image URLs resolve through the Conversation-owned per-session cache (`ctx.uiConversation.imageUrl`). Its Assistant and Turn Tail definitions fold packed historical Assistant runs without expanding their members. The flow tail renders the session's local submission echoes (`SessionSnapshot.pendingSubmissions`) with the same bubble as their eventual durable user nodes, hidden per render once a user/steering node or queue occurrence carries the echo's prompt `rpcId`, so the echo-to-durable swap is atomic.
 
+The transcript exposes a named `log` with live updates disabled, while durable and pending human messages and visible Assistant responses expose named `article` boundaries. Streaming text therefore remains available to direct reading without generating token-by-token live-region speech. A Session that was observed running emits one visually hidden, atomic status when it becomes idle; opening settled history emits nothing.
+
 ## Table of Contents
 
 - [System prompt row](#system-prompt-row)

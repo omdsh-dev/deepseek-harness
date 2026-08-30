@@ -1,11 +1,15 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { useEffect, useState } from 'react'
+import type { ReactNode } from 'react'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import type { SettingsRootComponentProps } from '../src/client/shell-contract.ts'
 import { SettingsRoot } from '../src/client/SettingsRoot.tsx'
 
-afterEach(cleanup)
+afterEach(() => {
+  vi.unstubAllGlobals()
+  cleanup()
+})
 
 type Row = { id: string; order: number; label: string }
 type Step = { id: string; order: number }
@@ -34,14 +38,23 @@ function mount({
     { id: 'welcome', order: -100 },
     { id: 'credential', order: 0 },
   ],
-}: { wide?: boolean; onboardingActive?: boolean; rows?: Row[]; steps?: Step[] } = {}) {
+  sectionContent,
+}: {
+  wide?: boolean
+  onboardingActive?: boolean
+  rows?: Row[]
+  steps?: Step[]
+  sectionContent?: ReactNode
+} = {}) {
   // Mutable row source standing in for the bound useSections hook; bump()
   // plays a ledger change through the same observable contract.
   let current = rows
   const listeners = new Set<() => void>()
   const renderSlot = vi.fn(
     ((key: string, _owner: unknown, opts?: { only?: string }) => {
-      if (key === 'settings.section') return <div data-testid={`section-${opts?.only ?? 'all'}`} />
+      if (key === 'settings.section') {
+        return <div data-testid={`section-${opts?.only ?? 'all'}`}>{sectionContent}</div>
+      }
       return SEAT_CONTENT[key]
     }) as SettingsRootComponentProps['renderSlot'],
   )
@@ -93,7 +106,7 @@ describe('SettingsRoot trigger', () => {
     expect(trigger.getAttribute('aria-expanded')).toBe('false')
     fireEvent.click(trigger)
     expect(screen.getByRole('dialog')).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Settings', expanded: true })).toBeTruthy()
+    expect(trigger.getAttribute('aria-expanded')).toBe('true')
   })
 
   it('hands the rail state to the trigger seat', () => {
@@ -164,9 +177,77 @@ describe('SettingsPanel close paths', () => {
     openPanel()
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Close' }))
   })
+
+  it('traps keyboard focus and restores it to the opening trigger', () => {
+    mount()
+    const trigger = screen.getByRole('button', { name: 'Settings' })
+    trigger.focus()
+    openPanel()
+    const close = screen.getByRole('button', { name: 'Close' })
+    expect(document.activeElement).toBe(close)
+
+    fireEvent.keyDown(document, { key: 'Tab' })
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'General' }))
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true })
+    expect(document.activeElement).toBe(close)
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(document.activeElement).toBe(trigger)
+  })
 })
 
 describe('SettingsPanel navigation', () => {
+  it('scrolls a focused setting control into view after layout settles', () => {
+    const frames: FrameRequestCallback[] = []
+    vi.stubGlobal('requestAnimationFrame', vi.fn((callback: FrameRequestCallback) => {
+      frames.push(callback)
+      return frames.length
+    }))
+    mount({ sectionContent: <button type="button" data-testid="focused-setting">Setting control</button> })
+    openPanel()
+    const control = screen.getByTestId('focused-setting')
+    const scrollIntoView = vi.fn()
+    Object.defineProperty(control, 'scrollIntoView', { configurable: true, value: scrollIntoView })
+
+    control.focus()
+    expect(frames).toHaveLength(1)
+    act(() => { frames[0]!(0) })
+
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' })
+  })
+
+  it('does not scroll a stale focus target or a non-HTML focus event target', () => {
+    const frames: FrameRequestCallback[] = []
+    vi.stubGlobal('requestAnimationFrame', vi.fn((callback: FrameRequestCallback) => {
+      frames.push(callback)
+      return frames.length
+    }))
+    mount({
+      sectionContent: (
+        <>
+          <button type="button" data-testid="stale-setting">Stale setting</button>
+          <button type="button" data-testid="current-setting">Current setting</button>
+          <svg data-testid="setting-glyph" tabIndex={0} />
+        </>
+      ),
+    })
+    openPanel()
+    const stale = screen.getByTestId('stale-setting')
+    const staleScrollIntoView = vi.fn()
+    Object.defineProperty(stale, 'scrollIntoView', { configurable: true, value: staleScrollIntoView })
+
+    stale.focus()
+    screen.getByTestId('current-setting').focus()
+    fireEvent.focus(screen.getByTestId('setting-glyph'))
+    expect(frames).toHaveLength(3)
+    act(() => {
+      frames[0]!(0)
+      frames[2]!(0)
+    })
+
+    expect(staleScrollIntoView).not.toHaveBeenCalled()
+  })
+
   it('projects rows, marks the first active, and renders only that section', () => {
     mount()
     openPanel()

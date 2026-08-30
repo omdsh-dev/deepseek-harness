@@ -5,7 +5,7 @@
  * except workspace Rename/Delete and session Rename/Fork/Archive; the session
  * and workspace hover cards are suppressed while a menu is open.
  */
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import clsx from 'clsx'
 import {
   HoverCard, IconArchiveOutline20, IconBranchOutline16, IconEditOutline16,
@@ -125,6 +125,7 @@ export function ProjectRowItem({ group, onToggle, onCreate, actions, drag, home,
   const label = row.workspaceId === undefined ? t('group.ungrouped') : row.label
   const active = group.expanded && group.containsCurrent
   const [menuOpen, setMenuOpen] = useState(false)
+  const workspaceActionsRef = useRef<HTMLButtonElement>(null)
   const workspaceMenuItems = [
     { id: 'rename', label: t('rename'), icon: <IconEditOutline16 /> },
     { id: 'delete', label: t('delete.workspace'), icon: <IconTrashOutline16 />, danger: true },
@@ -133,6 +134,7 @@ export function ProjectRowItem({ group, onToggle, onCreate, actions, drag, home,
     <div
       className={clsx(css.projectRow, menuOpen && css.menuOpen)}
       role="treeitem"
+      aria-level={1}
       aria-expanded={row.expanded}
       onClick={onToggle}
       draggable={drag !== undefined}
@@ -166,6 +168,11 @@ export function ProjectRowItem({ group, onToggle, onCreate, actions, drag, home,
               // not inherit the destructive branch as an else fallback.
               /* v8 ignore next -- Menu can emit only the rename and delete rows supplied above. */
               if (id !== 'rename' && id !== 'delete') return
+              // The selected menu row is portaled and unmounts as the dialog
+              // opens. Hand focus back to the durable row trigger first so
+              // Modal records an invoker it can restore on cancellation or
+              // completion while the Workspace row remains connected.
+              workspaceActionsRef.current?.focus()
               if (id === 'rename') actions.rename()
               else actions.delete()
             }}
@@ -173,6 +180,7 @@ export function ProjectRowItem({ group, onToggle, onCreate, actions, drag, home,
             closeOnPointerLeave
             anchor={(
               <button
+                ref={workspaceActionsRef}
                 type="button"
                 className={css.iconButton}
                 aria-label={t('actions.workspace.aria', { name: label })}
@@ -322,6 +330,7 @@ export function SearchResultItem({ result, currentId, onOpen, t }: {
       type="button"
       className={clsx(css.searchResultRow, selected && css.selected)}
       role="treeitem"
+      aria-level={1}
       aria-selected={selected}
       onClick={() => { onOpen(result.id) }}
     >
@@ -382,6 +391,7 @@ export function SessionNodeItem({ node, currentId, now, onOpen, onRename, onFork
   const primaryStatus = statuses[0]
   const showStatus = primaryStatus.state !== 'done' || row.completed
   const [menuOpen, setMenuOpen] = useState(false)
+  const sessionActionsRef = useRef<HTMLButtonElement>(null)
   // Archive hides the row through the registry-global archive set and never
   // touches the session log, so it is not styled as destructive and needs no
   // confirmation dialog.
@@ -400,6 +410,7 @@ export function SessionNodeItem({ node, currentId, now, onOpen, onRename, onFork
         drag?.marker === 'before' && css.dropBefore, drag?.marker === 'after' && css.dropAfter,
       )}
       role="treeitem"
+      aria-level={flat ? 1 : 2}
       aria-selected={selected}
       onClick={() => { onOpen(node.id) }}
       draggable={drag !== undefined}
@@ -449,7 +460,12 @@ export function SessionNodeItem({ node, currentId, now, onOpen, onRename, onFork
             items={sessionMenuItems}
             onSelect={(id) => {
               setMenuOpen(false)
-              if (id === 'rename') onRename(node.id, row.title)
+              if (id === 'rename') {
+                // The portaled menu row is transient; give the rename Modal
+                // the connected session trigger as its return-focus target.
+                sessionActionsRef.current?.focus()
+                onRename(node.id, row.title)
+              }
               if (id === 'fork') onFork(node.id)
               if (id === 'archive') onArchive(node.id)
             }}
@@ -457,6 +473,7 @@ export function SessionNodeItem({ node, currentId, now, onOpen, onRename, onFork
             closeOnPointerLeave
             anchor={(
               <button
+                ref={sessionActionsRef}
                 type="button"
                 className={css.iconButton}
                 aria-label={t('actions.session.aria', { name: title })}

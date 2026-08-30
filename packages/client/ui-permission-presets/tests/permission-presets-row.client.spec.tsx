@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { Context } from '@deepseek-ai/cordis'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { bindSnapshotSelector } from '@deepseek-ai/dsh-client-test-runtime'
 import type { SettingsNamespaceView } from '@deepseek-ai/dsh-api-remotes/client'
 import { SettingsSchemaService } from '@deepseek-ai/dsh-client-ui-settings/src/client/schema.ts'
@@ -108,12 +108,15 @@ describe('PermissionRow', () => {
       },
     })
     mount(controller)
-    fireEvent.click(await screen.findByRole('button', { name: 'Read Only' }))
+    const selector = await screen.findByRole('button', { name: 'Read Only' })
+    fireEvent.click(selector)
     fireEvent.click(screen.getByRole('menuitem', { name: 'Full access' }))
     expect(mutate).not.toHaveBeenCalled()
+    expect(document.activeElement).toBe(screen.getByRole('checkbox', { name: 'I understand the risks and want to continue' }))
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
     expect(screen.queryByRole('dialog', { name: 'Enable Full access?' })).toBeNull()
-    fireEvent.click(screen.getByRole('button', { name: 'Read Only' }))
+    expect(document.activeElement).toBe(selector)
+    fireEvent.click(selector)
     fireEvent.click(screen.getByRole('menuitem', { name: 'Full access' }))
     const dialog = screen.getByRole('dialog', { name: 'Enable Full access?' })
     const enable = screen.getByRole('button', { name: 'Enable Full access' })
@@ -122,6 +125,7 @@ describe('PermissionRow', () => {
     fireEvent.click(enable)
     await waitFor(() => { expect(mutate).toHaveBeenCalledOnce() })
     expect(dialog.isConnected).toBe(false)
+    await waitFor(() => { expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Full access' })) })
   })
 
   it('hides an unavailable namespace and disables a read-only provider', async () => {
@@ -166,5 +170,47 @@ describe('PermissionRow', () => {
     fireEvent.click(button)
     fireEvent.click(screen.getByRole('menuitem', { name: 'Workspace Write' }))
     expect((await screen.findByRole('alert')).textContent).toBe('changed elsewhere')
+  })
+
+  it('drops deferred focus restoration when the settings owner becomes unavailable', async () => {
+    const mutation = Promise.withResolvers<ReturnType<typeof ok<SettingsNamespaceView>>>()
+    const controller = derivedController({
+      settings: {
+        describe: () => Promise.resolve(ok({ writable: true, hasDocument: false, namespaces: [view('read-only')] })),
+        mutate: () => mutation.promise,
+      },
+    })
+    const rendered = mount(controller)
+    fireEvent.click(await screen.findByRole('button', { name: 'Read Only' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Workspace Write' }))
+    act(() => {
+      controller.store.update((state) => {
+        state.status = 'unavailable'
+        state.writable = false
+      })
+    })
+    expect(rendered.container.textContent).toBe('')
+    await act(async () => {
+      mutation.resolve(ok(view('workspace-write', 1)))
+      await mutation.promise
+    })
+  })
+
+  it('does not target a detached selector when an in-flight save settles after unmount', async () => {
+    const mutation = Promise.withResolvers<ReturnType<typeof ok<SettingsNamespaceView>>>()
+    const controller = derivedController({
+      settings: {
+        describe: () => Promise.resolve(ok({ writable: true, hasDocument: false, namespaces: [view('read-only')] })),
+        mutate: () => mutation.promise,
+      },
+    })
+    const rendered = mount(controller)
+    fireEvent.click(await screen.findByRole('button', { name: 'Read Only' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Workspace Write' }))
+    rendered.unmount()
+    await act(async () => {
+      mutation.resolve(ok(view('workspace-write', 1)))
+      await mutation.promise
+    })
   })
 })

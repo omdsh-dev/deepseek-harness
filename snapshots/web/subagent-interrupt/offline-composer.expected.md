@@ -1,4 +1,5 @@
-- banner:
+- main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy":
     - button "Ask a research subagent to"
     - text: /
@@ -8,25 +9,30 @@
   - button "Session log":
     - text: Session log
     - img
-  - tablist:
+  - tablist "Session views":
     - tab "Chat" [selected]
     - tab "Trajectory"
-- button "System prompt":
-  - img
-  - img
-  - text: System prompt
-- text: Explain event sourcing in one sentence. {{clock}}
-- button "Copy":
-  - img
-- button "Context injection @deepseek-ai/dsh-system-prompt":
-  - img
-  - img
-  - text: Context injection @deepseek-ai/dsh-system-prompt
-- paragraph: partial
-- status: Deep diving...
-- textbox "Parent session offline; sending is unavailable but you can still stop the run" [disabled]
-- button "Commands" [disabled]:
-  - img
-- 'button "Access mode, current: Custom" [disabled]': Custom
-- button "Stop generating"
-- button "Send message" [disabled]
+  - tabpanel "Chat":
+    - log "Conversation transcript":
+      - button "System prompt":
+        - img
+        - img
+        - text: System prompt
+      - article "User message":
+        - text: Explain event sourcing in one sentence. {{clock}}
+        - button "Copy":
+          - img
+      - button "Context injection @deepseek-ai/dsh-system-prompt":
+        - img
+        - img
+        - text: Context injection @deepseek-ai/dsh-system-prompt
+      - article "Assistant response":
+        - paragraph: partial
+      - status: Deep diving...
+  - textbox "Parent session offline; sending is unavailable but you can still stop the run" [disabled]
+  - button "Commands" [disabled]:
+    - img
+  - 'button "Access mode, current: Custom" [disabled]': Custom
+  - button "Stop generating"
+  - button "Send message" [disabled]
+  - separator "Resize session navigation"

@@ -76,7 +76,7 @@ This section explains the cache's durability and storage ownership; the observab
 
 ### Design concept
 
-The cache is a fold shortcut over the projection registry's checkpoint face, stored in a `per-record` domain data table. It commits to six consequences: reads never bypass the domain write chain; every background write is fail-soft; a `ver` mismatch discards rather than migrates a row; a record must pass the live unit's `stateSchema`; writes replace one complete session record through the lossless-JSON boundary; and the log leads, the cache follows.
+The cache is a fold shortcut over the projection registry's checkpoint face, stored in a `per-record` domain data table. It commits to seven consequences: reads never bypass the domain write chain; each session's checkpoint commits preserve call order; every background write is fail-soft; a `ver` mismatch discards rather than migrates a row; a record must pass the live unit's `stateSchema`; writes replace one complete session record through the lossless-JSON boundary; and the log leads, the cache follows.
 
 ### Read and write ownership
 

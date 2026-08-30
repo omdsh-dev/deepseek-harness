@@ -200,6 +200,10 @@ interface TableStop {
  * @param target - the page whose pane to close.
  */
 async function closeDetailsPane(target: Page): Promise<void> {
+  // A zero-width details column is now inert and absent from the accessibility
+  // tree. Treat that already-settled state as closed instead of querying an
+  // intentionally unreachable descendant control.
+  if (await target.locator('[data-details-collapsed]').count() > 0) return
   await target.getByRole('button', { name: 'Close details', exact: true }).waitFor({ timeout: 10_000 })
   await target.evaluate(() => {
     document.querySelector<HTMLElement>('button[aria-label="Close details"]')?.click()

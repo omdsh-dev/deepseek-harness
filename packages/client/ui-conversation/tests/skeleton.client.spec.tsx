@@ -547,6 +547,39 @@ describe('ConversationRoot resident composer', () => {
     expect(b.view.getByRole('tab', { name: 'New view' }).getAttribute('aria-selected')).toBe('false')
   })
 
+  it('owns one named roving view tab and its active panel relationship', () => {
+    const b = mount(sessionSnapshotOf())
+    const tablist = b.view.getByRole('tablist', { name: '会话视图' })
+    const chat = b.view.getByRole('tab', { name: 'Chat' })
+    const trajectory = b.view.getByRole('tab', { name: 'Trajectory' })
+    const panel = b.view.getByRole('tabpanel')
+
+    expect(tablist.contains(chat)).toBe(true)
+    expect(chat.getAttribute('tabindex')).toBe('0')
+    expect(trajectory.getAttribute('tabindex')).toBe('-1')
+    expect(chat.getAttribute('aria-controls')).toBe(panel.id)
+    expect(panel.getAttribute('aria-labelledby')).toBe(chat.id)
+    expect(panel.getAttribute('tabindex')).toBe('0')
+
+    chat.focus()
+    fireEvent.keyDown(chat, { key: 'ArrowRight' })
+    expect(document.activeElement).toBe(trajectory)
+    expect(trajectory.getAttribute('aria-selected')).toBe('true')
+    expect(trajectory.getAttribute('tabindex')).toBe('0')
+    expect(b.view.getByTestId('view-trajectory')).toBeTruthy()
+    expect(b.view.getByRole('tabpanel').getAttribute('aria-labelledby')).toBe(trajectory.id)
+
+    fireEvent.keyDown(trajectory, { key: 'Home' })
+    expect(document.activeElement).toBe(chat)
+    expect(chat.getAttribute('aria-selected')).toBe('true')
+    fireEvent.keyDown(chat, { key: 'ArrowLeft' })
+    expect(document.activeElement).toBe(trajectory)
+    fireEvent.keyDown(trajectory, { key: 'ArrowRight' })
+    expect(document.activeElement).toBe(chat)
+    fireEvent.keyDown(chat, { key: 'End' })
+    expect(document.activeElement).toBe(trajectory)
+  })
+
   it('rolls the pending workspace label back when switching fails', async () => {
     const selectWorkspace = vi.fn(async () => { throw new Error('connect failed') })
     const b = mount(

@@ -505,6 +505,40 @@ describe('Chat node rendering', () => {
 })
 
 describe('ChatView', () => {
+  it('exposes a named non-live transcript with user and Assistant article boundaries', () => {
+    const h = makeHarness({ nodes: [user(1, 'question'), assistant(2, 'answer')] })
+    const view = render(<h.ChatView {...h.props} />)
+    const log = view.getByRole('log', { name: '对话记录' })
+
+    expect(log.getAttribute('aria-live')).toBe('off')
+    expect(log.getAttribute('aria-busy')).toBe('false')
+    expect(within(log).getByRole('article', { name: '用户消息' }).textContent).toContain('question')
+    expect(within(log).getByRole('article', { name: 'Assistant 回复' }).textContent).toContain('answer')
+  })
+
+  it('announces one bounded completion only after an observed running turn ends', () => {
+    const h = makeHarness({ nodes: [user(1, 'question')] })
+    const view = render(<h.ChatView {...h.props} />)
+    expect(view.queryByText('Assistant 回复已结束')).toBeNull()
+
+    act(() => { h.setSession({ running: true }) })
+    expect(view.getByRole('log', { name: '对话记录' }).getAttribute('aria-busy')).toBe('true')
+    expect(view.getByRole('status').textContent).toBe('深度求索中...')
+    act(() => {
+      h.setChat({ partial: { turn: 1, step: 1, blocks: [{ kind: 'text', text: 'streaming answer' }] } })
+    })
+    expect(view.queryByText('Assistant 回复已结束')).toBeNull()
+
+    act(() => { h.setSession({ running: false }) })
+    const announcement = view.getByRole('status')
+    expect(announcement.textContent).toBe('Assistant 回复已结束')
+    expect(announcement.getAttribute('aria-atomic')).toBe('true')
+    expect(view.getByRole('log', { name: '对话记录' }).getAttribute('aria-busy')).toBe('false')
+
+    act(() => { h.setSelection({ turnSeq: 1 }) })
+    expect(view.getByRole('status')).toBe(announcement)
+  })
+
   it('leaves the turn rail unrendered when an unrelated Chat update commits', () => {
     const snapshot = chatSnapshotFixture({
       nodes: [
