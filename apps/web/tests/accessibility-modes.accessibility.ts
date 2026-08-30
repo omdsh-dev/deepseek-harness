@@ -197,9 +197,7 @@ describe(`web accessibility modes: ${browserName}`, () => {
       await transcriptPage.keyboard.press('ArrowRight')
       await expect.poll(() => workspaceRow.getAttribute('aria-expanded')).toBe('true')
     }
-    const transcriptSession = tree.locator('[role="treeitem"][aria-level="2"]')
-      .filter({ hasText: 'Use the read tool twice' })
-      .first()
+    const transcriptSession = tree.locator('[role="treeitem"][aria-level="2"]').first()
     await transcriptSession.click()
 
     const log = transcriptPage.getByRole('log', { name: 'Conversation transcript' })
@@ -224,9 +222,7 @@ describe(`web accessibility modes: ${browserName}`, () => {
       await page.keyboard.press('ArrowRight')
       await expect.poll(() => workspaceRow.getAttribute('aria-expanded')).toBe('true')
     }
-    const fileSession = tree.locator('[role="treeitem"][aria-level="2"]')
-      .filter({ hasText: 'Use the read tool twice' })
-      .first()
+    const fileSession = tree.locator('[role="treeitem"][aria-level="2"]').first()
     await fileSession.click()
 
     const readRow = page.locator('[data-variant="read"]').first()
