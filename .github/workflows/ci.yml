@@ -589,14 +589,20 @@ jobs:
       - name: Install (immutable)
         shell: pwsh
         run: pnpm install --frozen-lockfile
-      - name: Run Windows-specific native tests
+      - name: Run Windows worker lifecycle tests
+        shell: pwsh
+        run: >-
+          pnpm exec vitest run
+          --no-file-parallelism
+          --testTimeout 90000
+          packages/workflow/workflow-worker-thread/tests/workflow-worker-thread.spec.ts
+      - name: Run remaining Windows-specific native tests
         shell: pwsh
         run: >-
           pnpm exec vitest run
           --no-file-parallelism
           --testTimeout 90000
           packages/shell/tool-pwsh/tests/loader.spec.ts
-          packages/workflow/workflow-worker-thread/tests/workflow-worker-thread.spec.ts
           packages/workflow/tool-ralph/tests/integration.spec.ts
           packages/subprocess/subprocess-local/tests/process-exit.spec.ts
           packages/session/session-persistence-sqlite/tests/differential.spec.ts
