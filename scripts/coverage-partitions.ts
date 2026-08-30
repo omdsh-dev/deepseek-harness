@@ -139,31 +139,15 @@ export class CoveragePartitionCoordinator {
         { length: this.partitions },
         (_, index) => this.partitionCommand(index + 1),
       )
-      const partitionResults = await Promise.all(partitionCommands.map(async (command) => {
-        console.log(`coverage-partitions: start ${command.label}`)
-        const result = await this.runCommand(command)
-        if (commandFailed(result)) {
-          console.error(`coverage-partitions: FAIL ${command.label} (${commandFailureReason(result)})`)
-          if (result.outputTail !== undefined && result.outputTail !== '') {
-            console.error(`coverage-partitions: output tail for ${command.label}:\n${result.outputTail}`)
-          }
-        }
-        return result
-      }))
+      const partitionResults = await Promise.all(
+        partitionCommands.map(command => this.runWithDiagnostics(command)),
+      )
       const isolatedCommands = workflowWorkerCoverageSuites.map((suite, index) => (
         this.workflowWorkerCommand(index + 1, suite)
       ))
       const isolatedResults: CoverageCommandResult[] = []
       for (const command of isolatedCommands) {
-        console.log(`coverage-partitions: start ${command.label}`)
-        const result = await this.runCommand(command)
-        if (commandFailed(result)) {
-          console.error(`coverage-partitions: FAIL ${command.label} (${commandFailureReason(result)})`)
-          if (result.outputTail !== undefined && result.outputTail !== '') {
-            console.error(`coverage-partitions: output tail for ${command.label}:\n${result.outputTail}`)
-          }
-        }
-        isolatedResults.push(result)
+        isolatedResults.push(await this.runWithDiagnostics(command))
       }
       await this.assertCompleteBlobSet([...partitionCommands, ...isolatedCommands])
 
@@ -174,6 +158,18 @@ export class CoveragePartitionCoordinator {
     } finally {
       await removeOwnedTree(this.temporaryRoot)
     }
+  }
+
+  private async runWithDiagnostics(command: CoverageCommand): Promise<CoverageCommandResult> {
+    console.log(`coverage-partitions: start ${command.label}`)
+    const result = await this.runCommand(command)
+    if (commandFailed(result)) {
+      console.error(`coverage-partitions: FAIL ${command.label} (${commandFailureReason(result)})`)
+      if (result.outputTail !== undefined && result.outputTail !== '') {
+        console.error(`coverage-partitions: output tail for ${command.label}:\n${result.outputTail}`)
+      }
+    }
+    return result
   }
 
   private partitionCommand(index: number): CoverageCommand {
