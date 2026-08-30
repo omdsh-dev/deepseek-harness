@@ -110,6 +110,7 @@ export function WorkspacePickFlow({
     ? workspaces.map(workspace => ({
       id: workspace.workspaceId,
       label: workspace.title,
+      selection: 'radio' as const,
       icon: <IconFolderClose16 size={16} />,
       disabled: flowBusy,
     }))

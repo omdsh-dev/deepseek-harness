@@ -13,6 +13,8 @@ export interface MenuItem {
   id: string
   label: ReactNode
   disabled?: boolean
+  /** Checked-choice semantics. Omit for an action; radio and checkbox items expose aria-checked. */
+  selection?: 'radio' | 'checkbox'
   /** Leading icon (figma .Menu_cell gap 8). */
   icon?: ReactNode
   /** Destructive row: error-colored text/icon and danger hover fill. */
@@ -45,6 +47,12 @@ function isLabel(entry: MenuEntry): entry is MenuLabel {
   return 'type' in entry && entry.type === 'label'
 }
 
+function menuItemRole(entry: MenuItem): 'menuitem' | 'menuitemradio' | 'menuitemcheckbox' {
+  if (entry.selection === 'radio') return 'menuitemradio'
+  if (entry.selection === 'checkbox') return 'menuitemcheckbox'
+  return 'menuitem'
+}
+
 /** Unplaced portal list: hidden but laid out at a fixed origin so offsetWidth/offsetHeight are real. */
 const MEASURE_STYLE: CSSProperties = { visibility: 'hidden', left: 0, top: 0 }
 
@@ -54,8 +62,10 @@ const DOCUMENT_FOCUSABLE = [
   '[tabindex]:not([tabindex="-1"])',
 ].join(',')
 
+const MENU_ITEM_SELECTOR = '[role="menuitem"], [role="menuitemradio"], [role="menuitemcheckbox"]'
+
 function menuItems(menu: HTMLElement): HTMLButtonElement[] {
-  return [...menu.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')]
+  return [...menu.querySelectorAll<HTMLButtonElement>(MENU_ITEM_SELECTOR)]
     .filter(item => !item.disabled && item.closest('[role="menu"]') === menu)
 }
 
@@ -77,7 +87,7 @@ function assignRef<T>(ref: React.Ref<T> | undefined, value: T | null): void {
  * @param props.open - whether the list is showing (owner-controlled).
  * @param props.anchor - the trigger element (rendered in place).
  * @param props.items - selectable rows and optional separators.
- * @param props.selectedId - row shown as selected.
+ * @param props.selectedId - row shown as selected; a row with `selection` also exposes its checked state.
  * @param props.selectedIds - rows shown as selected when a menu contains independent option groups.
  * @param props.onSelect - row click callback (not called for disabled rows or submenu parents that only open children).
  * @param props.onClose - invoked on outside click or Escape.
@@ -176,7 +186,7 @@ export function Menu({ open, anchor, items, selectedId, selectedIds, onSelect, o
 
   const onMenuKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>): void => {
     if (!(event.target instanceof Element)) return
-    const item = event.target.closest<HTMLButtonElement>('[role="menuitem"]')
+    const item = event.target.closest<HTMLButtonElement>(MENU_ITEM_SELECTOR)
     if (item === null || item.disabled || !listRef.current?.contains(item)) return
     const currentMenu = item.closest<HTMLElement>('[role="menu"]')
     if (currentMenu === null) return
@@ -224,7 +234,7 @@ export function Menu({ open, anchor, items, selectedId, selectedIds, onSelect, o
     if (event.key.length !== 1 || event.ctrlKey || event.metaKey || event.altKey) return
     const typed = event.key.toLocaleLowerCase()
     const repeatedCharacter = typeahead.current.length > 0
-      && [...typeahead.current].every(character => character === typed)
+      && Array.from(typeahead.current).every(character => character === typed)
     typeahead.current = repeatedCharacter ? typed : typeahead.current + typed
     if (typeaheadTimer.current !== null) clearTimeout(typeaheadTimer.current)
     typeaheadTimer.current = setTimeout(() => { typeahead.current = '' }, 500)
@@ -408,6 +418,7 @@ export function Menu({ open, anchor, items, selectedId, selectedIds, onSelect, o
     const hasSub = entry.submenu !== undefined && entry.submenu.length > 0
     const subOpen = hasSub && openSubmenuId === entry.id
     const selected = entry.id === selectedId || selectedIds?.includes(entry.id) === true
+    const role = menuItemRole(entry)
     return (
       <div
         key={entry.id}
@@ -417,7 +428,8 @@ export function Menu({ open, anchor, items, selectedId, selectedIds, onSelect, o
       >
         <button
           type="button"
-          role="menuitem"
+          role={role}
+          aria-checked={entry.selection === undefined ? undefined : selected}
           className={clsx(css.item, selected && css.selected, entry.danger === true && css.danger)}
           disabled={entry.disabled}
           aria-haspopup={hasSub ? 'menu' : undefined}
@@ -438,7 +450,7 @@ export function Menu({ open, anchor, items, selectedId, selectedIds, onSelect, o
           {entry.icon !== undefined && <span className={css.itemIcon}>{entry.icon}</span>}
           <span className={css.itemLabel}>{entry.label}</span>
           {/* Selection marker is a trailing check (figma .Menu_cell), not a fill. */}
-          {selected && <IconCheckOutline16 className={css.check} />}
+          {selected && <span className={css.check} aria-hidden="true"><IconCheckOutline16 /></span>}
         </button>
         {subOpen && entry.submenu !== undefined && (
           <div
@@ -447,20 +459,26 @@ export function Menu({ open, anchor, items, selectedId, selectedIds, onSelect, o
             role="menu"
             aria-labelledby={`${menuId}-item-${encodeURIComponent(entry.id)}`}
           >
-            {entry.submenu.map(sub => (
-              <button
-                key={sub.id}
-                type="button"
-                role="menuitem"
-                tabIndex={-1}
-                className={css.item}
-                disabled={sub.disabled}
-                onClick={() => { selectItem(sub.id) }}
-              >
-                {sub.icon !== undefined && <span className={css.itemIcon}>{sub.icon}</span>}
-                <span className={css.itemLabel}>{sub.label}</span>
-              </button>
-            ))}
+            {entry.submenu.map((sub) => {
+              const subSelected = sub.id === selectedId || selectedIds?.includes(sub.id) === true
+              const subRole = menuItemRole(sub)
+              return (
+                <button
+                  key={sub.id}
+                  type="button"
+                  role={subRole}
+                  aria-checked={sub.selection === undefined ? undefined : subSelected}
+                  tabIndex={-1}
+                  className={clsx(css.item, subSelected && css.selected)}
+                  disabled={sub.disabled}
+                  onClick={() => { selectItem(sub.id) }}
+                >
+                  {sub.icon !== undefined && <span className={css.itemIcon}>{sub.icon}</span>}
+                  <span className={css.itemLabel}>{sub.label}</span>
+                  {subSelected && <span className={css.check} aria-hidden="true"><IconCheckOutline16 /></span>}
+                </button>
+              )
+            })}
           </div>
         )}
       </div>

@@ -112,6 +112,7 @@ export function PermissionSelect({ value, locked, command, t }: PermissionSelect
       return {
         id: option.value,
         label: permissionLabel(option.value, option.name, t),
+        selection: 'radio',
         ...icon === undefined ? {} : { icon },
       }
     })

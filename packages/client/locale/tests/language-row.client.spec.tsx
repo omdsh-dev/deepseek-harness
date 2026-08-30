@@ -60,18 +60,18 @@ describe('LanguageRow', () => {
     const trigger = screen.getByRole('button', { name: /English/ })
     fireEvent.click(trigger)
     expect(trigger.getAttribute('aria-expanded')).toBe('true')
-    fireEvent.click(screen.getByRole('menuitem', { name: '中文' }))
+    fireEvent.click(screen.getByRole('menuitemradio', { name: '中文' }))
     expect(b.setLocale).toHaveBeenCalledWith('zh')
     expect(trigger.getAttribute('aria-expanded')).toBe('false')
-    expect(screen.queryByRole('menuitem', { name: '中文' })).toBeNull()
+    expect(screen.queryByRole('menuitemradio', { name: '中文' })).toBeNull()
   })
 
   it('closes on outside pointerdown without selecting', () => {
     const b = mount('en')
     fireEvent.click(screen.getByRole('button', { name: /English/ }))
-    expect(screen.getByRole('menuitem', { name: '中文' })).toBeDefined()
+    expect(screen.getByRole('menuitemradio', { name: '中文' })).toBeDefined()
     fireEvent.pointerDown(document.body)
-    expect(screen.queryByRole('menuitem', { name: '中文' })).toBeNull()
+    expect(screen.queryByRole('menuitemradio', { name: '中文' })).toBeNull()
     expect(b.setLocale).not.toHaveBeenCalled()
   })
 

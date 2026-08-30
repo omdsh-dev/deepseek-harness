@@ -278,7 +278,7 @@ describe('web e2e: composer shortcut follows the swapped busy behavior', () => {
     await page.getByRole('button', { name: 'Settings', exact: true }).click()
     const dialog = page.getByRole('dialog', { name: 'Settings' })
     await dialog.getByRole('button', { name: 'Queue' }).click()
-    await page.getByRole('menuitem', { name: 'Steer' }).click()
+    await page.getByRole('menuitemradio', { name: 'Steer' }).click()
     await dialog.getByRole('button', { name: 'Steer' }).waitFor({ timeout: 10_000 })
     await page.keyboard.press('Escape')
 

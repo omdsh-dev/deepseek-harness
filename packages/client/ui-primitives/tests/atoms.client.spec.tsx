@@ -101,9 +101,9 @@ describe('Menu', () => {
             open={open}
             anchor={<button type="button" onClick={() => { setOpen(value => !value) }}>Choose</button>}
             items={[
-              { id: 'a', label: 'Alpha' },
-              { id: 'b', label: 'Beta', disabled: true },
-              { id: 'g', label: 'Gamma' },
+              { id: 'a', label: 'Alpha', selection: 'radio' },
+              { id: 'b', label: 'Beta', selection: 'radio', disabled: true },
+              { id: 'g', label: 'Gamma', selection: 'radio' },
             ]}
             onSelect={() => { setOpen(false) }}
             onClose={() => { setOpen(false) }}
@@ -122,8 +122,8 @@ describe('Menu', () => {
       await Promise.resolve()
     })
     const menu = screen.getByRole('menu', { name: 'Choose' })
-    const alpha = screen.getByRole('menuitem', { name: 'Alpha' })
-    const gamma = screen.getByRole('menuitem', { name: 'Gamma' })
+    const alpha = screen.getByRole('menuitemradio', { name: 'Alpha' })
+    const gamma = screen.getByRole('menuitemradio', { name: 'Gamma' })
     expect(trigger.getAttribute('aria-controls')).toBe(menu.id)
     expect(document.activeElement).toBe(alpha)
     expect(alpha.tabIndex).toBe(-1)
@@ -148,7 +148,7 @@ describe('Menu', () => {
       fireEvent.click(trigger)
       await Promise.resolve()
     })
-    const reopenedAlpha = screen.getByRole('menuitem', { name: 'Alpha' })
+    const reopenedAlpha = screen.getByRole('menuitemradio', { name: 'Alpha' })
     await act(async () => {
       fireEvent.keyDown(reopenedAlpha, { key: 'Tab' })
       await Promise.resolve()
@@ -194,7 +194,7 @@ describe('Menu', () => {
     expect(onClose).not.toHaveBeenCalled()
   })
 
-  it('selected item shows the trailing check; align=end, side=top, and className apply', () => {
+  it('exposes radio and checkbox checked state while action rows stay plain', () => {
     const { container } = render(
       <Menu
         open
@@ -202,18 +202,29 @@ describe('Menu', () => {
         side="top"
         className="x"
         anchor={<span>trigger</span>}
-        items={items}
-        selectedId="a"
+        items={[
+          { id: 'a', label: 'Alpha', selection: 'radio' },
+          { id: 'b', label: 'Beta', selection: 'radio', disabled: true },
+          { type: 'separator', id: 'separator' },
+          { id: 'pinned', label: 'Pinned', selection: 'checkbox' },
+          { id: 'run', label: 'Run now' },
+        ]}
+        selectedIds={['a', 'pinned']}
         onSelect={() => {}}
         onClose={() => {}}
       />)
     expect((container.firstElementChild as HTMLElement).classList.contains('x')).toBe(true)
     const menu = screen.getByRole('menu')
     expect(menu.className).toMatch(/sideTop|alignEnd/)
-    const selected = screen.getByRole('menuitem', { name: 'Alpha' })
-    expect(selected.querySelector('svg')).not.toBeNull()
-    const other = screen.getByRole('menuitem', { name: 'Beta' })
+    const selected = screen.getByRole('menuitemradio', { name: 'Alpha' })
+    expect(selected.getAttribute('aria-checked')).toBe('true')
+    expect(selected.querySelector('[aria-hidden="true"] svg')).not.toBeNull()
+    const other = screen.getByRole('menuitemradio', { name: 'Beta' })
+    expect(other.getAttribute('aria-checked')).toBe('false')
     expect(other.querySelector('svg')).toBeNull()
+    const pinned = screen.getByRole('menuitemcheckbox', { name: 'Pinned' })
+    expect(pinned.getAttribute('aria-checked')).toBe('true')
+    expect(screen.getByRole('menuitem', { name: 'Run now' }).hasAttribute('aria-checked')).toBe(false)
     fireEvent.keyDown(document, { key: 'a' })
   })
 
@@ -354,10 +365,11 @@ describe('Menu', () => {
             id: 'new',
             label: 'New Workspace',
             submenu: [
-              { id: 'ok', label: 'Create ok', icon: <svg data-testid="sub-ic" /> },
+              { id: 'ok', label: 'Create ok', selection: 'radio', icon: <svg data-testid="sub-ic" /> },
             ],
           },
         ]}
+        selectedId="ok"
         onSelect={onSelect}
         onClose={() => {}}
       />)
@@ -371,10 +383,13 @@ describe('Menu', () => {
     fireEvent.focus(parent)
     fireEvent.mouseEnter(wrap)
     expect(screen.getByTestId('sub-ic')).toBeDefined()
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Create ok' }))
+    const nestedChoice = screen.getByRole('menuitemradio', { name: 'Create ok' })
+    expect(nestedChoice.getAttribute('aria-checked')).toBe('true')
+    expect(nestedChoice.querySelector('[aria-hidden="true"] svg')).not.toBeNull()
+    fireEvent.click(nestedChoice)
     expect(onSelect).toHaveBeenCalledWith('ok')
     fireEvent.mouseLeave(wrap)
-    expect(screen.queryByRole('menuitem', { name: 'Create ok' })).toBeNull()
+    expect(screen.queryByRole('menuitemradio', { name: 'Create ok' })).toBeNull()
   })
 
   it('enters and leaves a submenu with ArrowRight, ArrowLeft, and Escape', async () => {

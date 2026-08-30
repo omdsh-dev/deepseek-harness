@@ -385,7 +385,11 @@ export function PluginInventorySettingsTab({ list, presetName, t }: PluginInvent
                   <Menu
                     open={switcherOpen}
                     onClose={() => { setSwitcherOpen(false) }}
-                    items={presets.map(preset => ({ id: preset.id, label: presetLabel(preset, t, presetName) }))}
+                    items={presets.map(preset => ({
+                      id: preset.id,
+                      label: presetLabel(preset, t, presetName),
+                      selection: 'radio' as const,
+                    }))}
                     selectedId={selected.id}
                     onSelect={(id) => {
                       setSwitcherOpen(false)

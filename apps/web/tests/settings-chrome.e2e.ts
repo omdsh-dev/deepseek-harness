@@ -154,7 +154,7 @@ describe('web e2e: settings modal and General preferences', () => {
     await selector.waitFor({ timeout: 10_000 })
     await expect.poll(() => selector.isEnabled(), { timeout: 5_000 }).toBe(true)
     await selector.click()
-    await page.getByRole('menuitem', { name: '仅可查看' }).click()
+    await page.getByRole('menuitemradio', { name: '仅可查看' }).click()
     await dialog.getByRole('button', { name: '仅可查看' }).waitFor({ timeout: 10_000 })
 
     const document = await readFile(join(scaffold.harnessHome, 'settings.yaml'), 'utf8')
@@ -171,7 +171,7 @@ describe('web e2e: settings modal and General preferences', () => {
     ])
 
     await dialog.getByRole('button', { name: '仅可查看' }).click()
-    await page.getByRole('menuitem', { name: '完全权限' }).click()
+    await page.getByRole('menuitemradio', { name: '完全权限' }).click()
     const confirmation = page.getByRole('dialog', { name: '确认启用完全权限？' })
     const enable = confirmation.getByRole('button', { name: '启用完全权限' })
     expect(await enable.isDisabled()).toBe(true)
@@ -425,7 +425,7 @@ describe('web e2e: settings modal and General preferences', () => {
     await dialog.waitFor({ timeout: 10_000 })
     await dialog.getByText('对话显示', { exact: true }).waitFor({ timeout: 10_000 })
     await dialog.getByRole('button', { name: 'Compact', exact: true }).click()
-    await page.getByRole('menuitem', { name: 'Normal', exact: true }).click()
+    await page.getByRole('menuitemradio', { name: 'Normal', exact: true }).click()
     await dialog.getByRole('button', { name: 'Normal', exact: true }).waitFor({ timeout: 10_000 })
     await expect.poll(async () => readFile(join(scaffold.harnessHome, 'settings.yaml'), 'utf8'), { timeout: 5_000 })
       .toMatch(/ui-chat:\n\s+transcriptView: normal/)
@@ -440,7 +440,7 @@ describe('web e2e: settings modal and General preferences', () => {
     await reloaded.getByRole('button', { name: 'Normal', exact: true }).waitFor({ timeout: 10_000 })
 
     await reloaded.getByRole('button', { name: 'Normal', exact: true }).click()
-    await page.getByRole('menuitem', { name: 'Compact', exact: true }).click()
+    await page.getByRole('menuitemradio', { name: 'Compact', exact: true }).click()
     await reloaded.getByRole('button', { name: 'Compact', exact: true }).waitFor({ timeout: 10_000 })
     await expect.poll(async () => readFile(join(scaffold.harnessHome, 'settings.yaml'), 'utf8'), { timeout: 5_000 })
       .toMatch(/ui-chat:\n\s+transcriptView: compact/)
@@ -454,7 +454,7 @@ describe('web e2e: settings modal and General preferences', () => {
     const dialog = page.getByRole('dialog', { name: '设置' })
     await dialog.waitFor({ timeout: 10_000 })
     await dialog.getByRole('button', { name: '排队发送' }).click()
-    await page.getByRole('menuitem', { name: '插话发送' }).click()
+    await page.getByRole('menuitemradio', { name: '插话发送' }).click()
     await dialog.getByRole('button', { name: '插话发送' }).waitFor({ timeout: 10_000 })
     expect(await page.evaluate(() => localStorage.getItem('dsh.conversation.busyEnter'))).toBeNull()
     await expect.poll(async () => readFile(join(scaffold.harnessHome, 'settings.yaml'), 'utf8'), { timeout: 5_000 })
@@ -488,7 +488,7 @@ describe('web e2e: settings modal and General preferences', () => {
     }
 
     await reloaded.getByRole('button', { name: '插话发送' }).click()
-    await page.getByRole('menuitem', { name: '排队发送' }).click()
+    await page.getByRole('menuitemradio', { name: '排队发送' }).click()
     await reloaded.getByRole('button', { name: '排队发送' }).waitFor({ timeout: 10_000 })
     expect(await page.evaluate(() => localStorage.getItem('dsh.conversation.busyEnter'))).toBeNull()
     await expect.poll(async () => readFile(join(scaffold.harnessHome, 'settings.yaml'), 'utf8'), { timeout: 5_000 })
@@ -511,7 +511,7 @@ describe('web e2e: settings modal and General preferences', () => {
     const selector = zhDialog.getByRole('button', { name: '中文' })
     expect(await selector.getAttribute('aria-haspopup')).toBe('menu')
     await selector.click()
-    await page.getByRole('menuitem', { name: 'English' }).click()
+    await page.getByRole('menuitemradio', { name: 'English' }).click()
     // The settings-owned copy re-registers localized: dialog title, nav,
     // Appearance labels. (Only the settings namespaces are localized —
     // the rest of the app's copy is intentionally out of this row's scope.)
@@ -555,7 +555,7 @@ describe('web e2e: settings modal and General preferences', () => {
 
     await enTrigger.click()
     await page.getByRole('dialog', { name: 'Settings' }).getByRole('button', { name: 'English' }).click()
-    await page.getByRole('menuitem', { name: '中文' }).click()
+    await page.getByRole('menuitemradio', { name: '中文' }).click()
     await page.getByRole('dialog', { name: '设置' }).waitFor({ timeout: 10_000 })
     expect(await page.evaluate(() => localStorage.getItem('dsh.locale'))).toBeNull()
     await expect.poll(async () => readFile(join(scaffold.harnessHome, 'settings.yaml'), 'utf8'), { timeout: 5_000 })

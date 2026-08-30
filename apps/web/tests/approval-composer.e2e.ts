@@ -68,7 +68,7 @@ describe('web e2e: approval takeover keeps its actions reachable', () => {
     await input.fill('')
 
     await page.locator('[aria-label^="Access mode"]').click()
-    await page.getByRole('menuitem', { name: 'Read Only' }).click()
+    await page.getByRole('menuitemradio', { name: 'Read Only' }).click()
     await expect.poll(
       () => page.locator('[aria-label="Access mode, current: Read Only"]').count(),
       { timeout: 15_000 },

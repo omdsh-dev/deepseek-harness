@@ -53,7 +53,7 @@ describe('web e2e: Full access confirmation', () => {
     expect(await access.getAttribute('aria-label')).toBe('访问模式，当前：可写入工作区')
 
     await access.click()
-    await page.getByRole('menuitem', { name: '完全权限' }).click()
+    await page.getByRole('menuitemradio', { name: '完全权限' }).click()
     const dialog = page.getByRole('dialog', { name: '确认启用完全权限？' })
     await dialog.waitFor({ timeout: 10_000 })
     const enable = dialog.getByRole('button', { name: '启用完全权限' })

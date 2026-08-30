@@ -176,12 +176,12 @@ function ViewOptionsMenu({ groupBy, orderBy, onGroupPick, onOrderPick, t }: {
       onClose={() => { setOpen(false) }}
       items={[
         { type: 'label' as const, id: 'group-by', text: t('groupBy.label') },
-        { id: 'workspace', label: t('groupBy.workspace') },
-        { id: 'flat', label: t('groupBy.flat') },
+        { id: 'workspace', label: t('groupBy.workspace'), selection: 'radio' as const },
+        { id: 'flat', label: t('groupBy.flat'), selection: 'radio' as const },
         { type: 'separator' as const, id: 'order-by-separator' },
         { type: 'label' as const, id: 'order-by', text: t('orderBy.label') },
-        { id: 'manual', label: t('orderBy.manual') },
-        { id: 'updated', label: t('orderBy.updated') },
+        { id: 'manual', label: t('orderBy.manual'), selection: 'radio' as const },
+        { id: 'updated', label: t('orderBy.updated'), selection: 'radio' as const },
       ]}
       selectedIds={[groupBy, orderBy]}
       onSelect={(id) => {
