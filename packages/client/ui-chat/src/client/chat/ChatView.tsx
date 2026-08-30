@@ -12,6 +12,7 @@ import { PendingSteeringBubble, PendingSubmissionBubble } from './MessageItem.ts
 import { ChatNodeSeat } from './ChatNodeSeat.tsx'
 import { TurnNavigator } from './TurnNavigator.tsx'
 import { formatRunDuration } from './message-chrome.ts'
+import a11yCss from './accessibility.module.css'
 import css from './ChatView.module.css'
 
 const FOLLOW_THRESHOLD = 24
@@ -222,6 +223,21 @@ export function ChatView({
   const loadingOlder = useSession(s => s.loadingOlder)
   const selectedCallId = useStore(s => s.selection?.callId)
   const compactTranscript = useTranscriptView(mode => mode === 'compact')
+  // A Session first mounts silent: history is not a new event. Only an
+  // observed running -> idle edge creates one bounded completion announcement;
+  // streamed article text stays outside live regions throughout the run.
+  const wasRunningRef = useRef(running)
+  const [announceFinished, setAnnounceFinished] = useState(false)
+  useEffect(() => {
+    if (running) {
+      wasRunningRef.current = true
+      setAnnounceFinished(false)
+      return
+    }
+    if (!wasRunningRef.current) return
+    wasRunningRef.current = false
+    setAnnounceFinished(true)
+  }, [running])
   const inspectCall = useCallback((callId: string) => {
     openView('trajectory', callId)
   }, [openView])
@@ -578,7 +594,15 @@ export function ChatView({
           onNavigate={navigateToTurn}
           t={t}
         />
-        <div ref={columnRef} className={css.column} data-chat-flow="">
+        <div
+          ref={columnRef}
+          className={css.column}
+          data-chat-flow=""
+          role="log"
+          aria-label={t('chat.log')}
+          aria-live="off"
+          aria-busy={running}
+        >
           {openState === 'loading' && <div className={css.hint}>{t('chat.loadingHistory')}</div>}
           {openState === 'error' && openError !== null && (
             <div className={css.openError}>
@@ -635,6 +659,11 @@ export function ChatView({
             />
           ))}
         </div>
+        {announceFinished && (
+          <div className={a11yCss.visuallyHidden} role="status" aria-live="polite" aria-atomic="true">
+            {t('chat.responseFinished')}
+          </div>
+        )}
         {!atBottom && (
           <div className={css.toBottomSlot}>
             <button

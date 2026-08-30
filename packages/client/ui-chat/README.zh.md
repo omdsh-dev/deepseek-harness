@@ -10,6 +10,8 @@ kind: "package-reference"
 
 Conversation 组装的浏览器 Chat target。本包注册 Chat event definition 与 snapshot 构造、提供 `useChat`、渲染 transcript node 和详情，并拥有 Chat 专属 store、action、本地化与滚动位置恢复；历史图片 URL 通过 Conversation 持有的按会话缓存（`ctx.uiConversation.imageUrl`）解析。其中 Assistant 与 Turn Tail definition 会直接 fold packed Assistant 历史 run，不展开其成员。消息流尾部渲染 session 的本地提交回显（`SessionSnapshot.pendingSubmissions`），气泡与其最终的 durable user 节点一致；一旦某个 user/steering 节点或 queue occurrence 携带回显的 prompt `rpcId`，该回显即在同一渲染中隐藏，因此回显到 durable 的替换是原子的。
 
+对话记录暴露一个具名且关闭实时更新的 `log`，durable 与 pending 人工消息、可见 Assistant 回复分别暴露具名 `article` 边界。因此流式文本仍可直接阅读，但不会造成逐 token 实时区域播报。只有已观测到运行中的 Session 转为空闲时，才发出一次视觉隐藏且原子的状态通知；打开已完成历史不播报。
+
 ## 目录
 
 - [系统提示词行](#system-prompt-row)

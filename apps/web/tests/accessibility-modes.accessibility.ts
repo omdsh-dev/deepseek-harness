@@ -32,8 +32,25 @@ function seedLog(): string {
       data: { content: [{ type: 'text', text: 'Accessibility seed.' }], source: { kind: 'user', rpcId: 'seed' } },
       surfaceOp: 'append',
     }),
-    at(2, { type: 'session/title', data: { title: 'Accessibility seed', messageSeqs: [1], source: { kind: 'fallback' } } }),
-    at(3, { type: 'turn/end', data: { turn: 1, reason: { kind: 'completed' } } }),
+    at(2, { type: 'step/start', data: { turn: 1, step: 1 } }),
+    at(3, {
+      type: 'assistant/message',
+      data: {
+        turn: 1,
+        step: 1,
+        message: {
+          id: '00000000-0000-4000-8000-000000000001',
+          role: 'assistant',
+          content: [{ type: 'text', text: 'Accessibility response.' }],
+          source: { kind: 'model', provider: 'snapshot', model: 'snapshot-replier' },
+        },
+      },
+      sourceEventSeqs: [],
+      surfaceOp: 'append',
+    }),
+    at(4, { type: 'step/end', data: { turn: 1, step: 1 } }),
+    at(5, { type: 'session/title', data: { title: 'Accessibility seed', messageSeqs: [1], source: { kind: 'fallback' } } }),
+    at(6, { type: 'turn/end', data: { turn: 1, reason: { kind: 'completed' } } }),
   ].join('\n')
 }
 
@@ -195,6 +212,29 @@ describe(`web accessibility modes: ${browserName}`, () => {
       expect(main!.x).toBeGreaterThanOrEqual(-1)
       expect(main!.x + main!.width).toBeLessThanOrEqual(width + 1)
     }
+  })
+
+  it('exposes a quiet named transcript with navigable message articles', async () => {
+    onTestFailed(() => saveFailureShot(page, `web-accessibility-${browserName}-transcript-semantics`))
+    await page.setViewportSize({ width: 1280, height: 900 })
+    const tree = page.getByRole('tree', { name: 'Sessions' })
+    const workspaceRow = tree.locator('[role="treeitem"][aria-level="1"][aria-expanded]').first()
+    await workspaceRow.waitFor()
+    if (await workspaceRow.getAttribute('aria-expanded') === 'false') {
+      await workspaceRow.focus()
+      await page.keyboard.press('ArrowRight')
+      await expect.poll(() => workspaceRow.getAttribute('aria-expanded')).toBe('true')
+    }
+    await tree.locator('[role="treeitem"][aria-level="2"]').first().click()
+
+    const log = page.getByRole('log', { name: 'Conversation transcript' })
+    await log.waitFor()
+    expect(await log.getAttribute('aria-live')).toBe('off')
+    expect(await log.getAttribute('aria-busy')).toBe('false')
+    expect(await log.getByRole('article', { name: 'User message' }).textContent()).toContain('Accessibility seed.')
+    expect(await log.getByRole('article', { name: 'Assistant response' }).textContent()).toContain('Accessibility response.')
+    expect(await page.getByText('Assistant response finished', { exact: true }).count()).toBe(0)
+    expect(tripwire.pageErrors).toEqual([])
   })
 
   it('keeps keyboard focus visible and unobscured in the narrow shell and Settings modal', async () => {
