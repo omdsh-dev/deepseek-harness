@@ -339,7 +339,9 @@ describe(`web accessibility modes: ${browserName}`, () => {
     await page.emulateMedia({ reducedMotion: 'reduce' })
     expect(await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches)).toBe(true)
     await page.getByRole('heading', { level: 1, name: 'DSH application' }).waitFor()
-    await page.getByRole('textbox', { name: 'Choose workspace' }).waitFor()
+    await page.getByRole('textbox', {
+      name: 'Message or run a task... / commands, @ files or sessions',
+    }).waitFor()
     await page.locator('button[aria-haspopup="dialog"][aria-expanded]').waitFor()
     await expect.poll(() => page.evaluate(() => document.getAnimations()
       .filter(animation => animation.playState === 'running').length), { timeout: 5_000 }).toBe(0)
