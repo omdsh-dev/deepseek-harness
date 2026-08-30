@@ -7,16 +7,15 @@
 - text: Workspaces
 - button "Search sessions":
   - img
-- textbox "Search sessions..."
 - button "View options":
   - img
 - button "Add workspace":
   - img
 - tree "Sessions":
-  - treeitem "workspace" [expanded]:
+  - treeitem "workspace" [expanded] [level=1]:
     - img
     - text: workspace
-  - treeitem "New Session" [selected]
+  - treeitem "New Session" [level=2] [selected]
 - button "Settings":
   - img
   - text: Settings

@@ -573,6 +573,22 @@ describe('LocalPtySession readiness and output', () => {
     expect((await operation.done).waitReason).toBe('stdin_read')
   })
 
+  it('accepts an exact returned wait when fast command output proves input consumption', async () => {
+    vi.useFakeTimers()
+    const terminal = new FakeTerminal()
+    const inspector = new FakeInspector()
+    const session = makeSession(terminal, inspector, config())
+    await initialize(session, terminal)
+
+    inspector.waiting = true
+    const operation = session.startSend({ text: 'fast command', submit: true })
+    await Promise.resolve()
+    await Promise.resolve()
+    terminal.emitData('fast command\r\n')
+    await vi.advanceTimersByTimeAsync(20)
+    expect((await operation.done).waitReason).toBe('stdin_read')
+  })
+
   it('does not publish same-shell silence as readiness after echoed command input', async () => {
     vi.useFakeTimers()
     const terminal = new FakeTerminal()

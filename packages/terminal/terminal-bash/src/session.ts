@@ -85,7 +85,9 @@ class LocalSendOperation implements TerminalSendOperation {
   private finished = false
   private cancellationRequested = false
   private outputObserved = false
+  private postInputOutputObserved = false
   private inputWritten = false
+  private inputSubmissionStarted = false
   private initialForegroundLeftWait: boolean
   private initialForegroundPgid: number | undefined
 
@@ -121,7 +123,10 @@ class LocalSendOperation implements TerminalSendOperation {
 
   append(text: string): void {
     if (!this.finished) {
-      if (text.length > 0) this.outputObserved = true
+      if (text.length > 0) {
+        this.outputObserved = true
+        if (this.inputSubmissionStarted) this.postInputOutputObserved = true
+      }
       this.output.append(text)
     }
   }
@@ -160,13 +165,19 @@ class LocalSendOperation implements TerminalSendOperation {
     this.initialForegroundLeftWait = !requireWaitTransition || foreground?.inputWaiting !== true
   }
 
+  startInputSubmission(): void {
+    this.inputSubmissionStarted = true
+  }
+
   acceptsStdinWait(pgid: number, waiting: boolean): boolean {
     // The same group may still expose the wait that existed before terminal.write.
     // Observe every poll so a departure before the exact-settlement threshold
-    // still makes a later return to that wait post-write evidence.
+    // still makes a later return to that wait post-write evidence. A fast
+    // command may leave and return between polls; operation-owned output proves
+    // that the submitted input crossed that pre-write wait boundary.
     if (pgid !== this.initialForegroundPgid) return waiting
     if (!waiting) this.initialForegroundLeftWait = true
-    return waiting && this.initialForegroundLeftWait
+    return waiting && (this.initialForegroundLeftWait || this.postInputOutputObserved)
   }
 
   cancel(): boolean {
@@ -335,6 +346,7 @@ export class LocalPtySession implements TerminalBackendSession {
       operation.setInitialForeground(foreground, input.length > 0)
       if (input.length > 0 && !operation.cancelRequested) {
         this.resetReadinessEvidence()
+        operation.startInputSubmission()
         const write = this.terminal.write(input)
         this.activeWrite = write.then(() => true, () => false)
         try {

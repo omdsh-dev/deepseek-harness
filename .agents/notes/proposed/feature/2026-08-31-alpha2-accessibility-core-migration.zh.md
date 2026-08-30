@@ -22,7 +22,7 @@ Alpha.2 还保留了一些虽然暴露无障碍语义、却没有持有相应交
 
 公开证据 fork 无需依赖上游私有基础设施也能执行。非上游 owner 中的 Pull Request 选择 GitHub 标准托管的 Linux 与 Windows runner，并使用适合 4 核主机的工作负载预算；仅属于上游的 Cloudflare 部署与 Project 写入会明确中性跳过，只读策略则跟随当前仓库身份。这样既能保持公开验证可复现，也不会请求或计费使用上游 larger runner。
 
-只有任务解析到真实 `pwsh` 二进制文件时，PowerShell 结果才计入证据；主机缺少 PowerShell 时的跳过属于已记录的能力限制，而不是通过证据。启动过程会先通过无输入初始化观察 PowerShell 原生启动输出，再且仅再提交一次受控提示符 bootstrap，并等待后端 `stdin_read` 与自有标记相互印证，即使标记输出恰好落在两个启动 operation 之间也一样。返回内容只有简洁的受控提示符，不会暴露回显的初始化源码，从而为辅助技术保留有用且无噪声的终端反馈。无输入就绪探测可以接受当前精确的 stdin 等待；但写入输入的持久 shell 发送必须观察到受控前台进程先离开、再返回 stdin 等待。静默期 `inferred_idle` 只限 operation 自有输出且没有写入输入、前台不可检查或由非 shell 子进程占用的情况；同一受控 shell 的回显输出不能只凭静默结束发送。随后的发送仍须证明状态持久化与机密清理。PowerShell 所有的 session、system prompt 与 tool schema 快照必须一起从当前 alpha.2 profile 刷新、规范化为 canonical packed layout，并在具备 PowerShell 能力的主机上 replay。
+只有任务解析到真实 `pwsh` 二进制文件时，PowerShell 结果才计入证据；主机缺少 PowerShell 时的跳过属于已记录的能力限制，而不是通过证据。启动过程会先通过无输入初始化观察 PowerShell 原生启动输出，再且仅再提交一次受控提示符 bootstrap，并等待后端 `stdin_read` 与自有标记相互印证，即使标记输出恰好落在两个启动 operation 之间也一样。返回内容只有简洁的受控提示符，不会暴露回显的初始化源码，从而为辅助技术保留有用且无噪声的终端反馈。无输入就绪探测可以接受当前精确的 stdin 等待。写入输入的持久 shell 发送只有在轮询观察到同一受控前台进程先离开再返回，或提交后的输出证明快速命令跨过未被采样的状态转换后，才接受它精确的 stdin 等待；仅有写入前等待绝不会被复用。静默期 `inferred_idle` 只限 operation 自有输出且没有写入输入、前台不可检查或由非 shell 子进程占用的情况；同一受控 shell 的回显输出不能只凭静默结束发送。随后的发送仍须证明状态持久化与机密清理。PowerShell 所有的 session、system prompt 与 tool schema 快照必须一起从当前 alpha.2 profile 刷新、规范化为 canonical packed layout，并在具备 PowerShell 能力的主机上 replay。
 
 ## Alternatives considered
 
