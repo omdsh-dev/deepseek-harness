@@ -139,7 +139,15 @@ describe('web e2e: settings modal and General preferences', () => {
       PLUGIN_ROW_SELECTOR,
       scaffold.workspaceCwd,
     )
-    await compareOrRefreshGolden(PLUGINS_EXPECTED, pluginsSnapshot, MODE)
+    // Loader prefixes are generated per assembled process. The runtime
+    // assertions above prove the exact current id is exposed, searchable,
+    // and owns its details; normalize only that already-verified value in
+    // the durable shape golden.
+    await compareOrRefreshGolden(
+      PLUGINS_EXPECTED,
+      pluginsSnapshot.replaceAll(entryId, '<loader-entry-id>'),
+      MODE,
+    )
     // Close path 1: Escape.
     await page.keyboard.press('Escape')
     await expect.poll(() => page.getByRole('dialog', { name: '设置' }).count(), { timeout: 5_000 }).toBe(0)

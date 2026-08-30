@@ -143,6 +143,25 @@ async function waitForStoredRows(
   }, { timeout: 5_000, interval: 10 })
 }
 
+/** Observe real write calls while retaining their typed durability promises. */
+function observeWrites(cache: SessionProjectionCache) {
+  const promises: Promise<void>[] = []
+  const originalWrite = cache.write.bind(cache)
+  const spy = vi.spyOn(cache, 'write').mockImplementation((session) => {
+    const promise = originalWrite(session)
+    promises.push(promise)
+    return promise
+  })
+  return { spy, promises }
+}
+
+/** Await one write previously proved to have been started by its event path. */
+async function awaitObservedWrite(promises: readonly Promise<void>[], index: number, trigger: string): Promise<void> {
+  const promise = promises[index]
+  if (promise === undefined) throw new Error(`${trigger} write was not started`)
+  await promise
+}
+
 afterEach(async () => {
   vi.useRealTimers()
   await Promise.all(contexts.splice(0).map(ctx => ctx.fiber.dispose()))
@@ -174,60 +193,67 @@ describe('SessionProjectionCache write policy', () => {
   })
 
   it('writes a durable checkpoint at turn/end (mandatory point)', async () => {
-    const { ctx, root } = await harness()
+    const { ctx, root, cache } = await harness()
+    const writes = observeWrites(cache)
     const session = ctx.sessions.create(SessionId('turn-end'))
     mark(session, ['a'])
+    expect(writes.spy).toHaveBeenCalledTimes(1)
+    await awaitObservedWrite(writes.promises, 0, 'creation')
     // Creation already wrote the init cut; the mark is throttled, so the
     // stored row is still the creation-time cut (no marks folded).
-    await waitForStoredRows(root, session.id, (rows) => {
-      expect(rows?.['cache-test/marks']?.seq).toBe(-1)
-    })
+    expect((await storedRows(root, session.id))?.['cache-test/marks']?.seq).toBe(-1)
     const end = endTurn(session)
-    await waitForStoredRows(root, session.id, (rows) => {
-      expect(rows?.['cache-test/marks']).toEqual({ ver: 1, seq: end.seq, val: { marks: ['a'] } })
-    })
+    expect(writes.spy).toHaveBeenCalledTimes(2)
+    await awaitObservedWrite(writes.promises, 1, 'turn/end')
+    expect((await storedRows(root, session.id))?.['cache-test/marks'])
+      .toEqual({ ver: 1, seq: end.seq, val: { marks: ['a'] } })
   })
 
   it('writes a checkpoint at session creation, capturing the seed-derived cut', async () => {
-    const { ctx, root } = await harness()
+    const { ctx, root, cache } = await harness()
+    const writes = observeWrites(cache)
     // A forked child seeded with its ancestor's title-like event: no
     // conversation follows, yet the creation write must capture the fold so
     // a crash or a live-held fork still lists the derived value.
     const session = ctx.sessions.create(SessionId('seeded'), {
       seed: [{ type: 'cache-test/mark', seq: 0, time: 1, data: { marks: ['seed'] } }] as SessionEvent[],
     })
-    await waitForStoredRows(root, session.id, (rows) => {
-      expect(rows?.['cache-test/marks']?.val).toEqual({ marks: ['seed'] })
-    })
+    expect(writes.spy).toHaveBeenCalledTimes(1)
+    await awaitObservedWrite(writes.promises, 0, 'creation')
+    expect((await storedRows(root, session.id))?.['cache-test/marks']?.val).toEqual({ marks: ['seed'] })
   })
 
   it('writes at session disposal (detach, the live-to-cold moment)', async () => {
-    const { ctx, root } = await harness()
+    const { ctx, root, cache } = await harness()
+    const writes = observeWrites(cache)
     // Sessions dispose with their owning fiber: create in a child plugin.
     let session: Session | undefined
     const owner = await ctx.plugin(Object.assign((inner: Context) => {
       session = inner.sessions.create(SessionId('detach'))
     }, { inject: ['sessions'] }))
     if (session === undefined) throw new Error('session was not created')
+    expect(writes.spy).toHaveBeenCalledTimes(1)
+    await awaitObservedWrite(writes.promises, 0, 'creation')
     mark(session, ['live'])
     await owner.dispose()
-    await waitForStoredRows(root, session.id, (rows) => {
-      expect(rows?.['cache-test/marks']?.val).toEqual({ marks: ['live'] })
-    })
+    expect(writes.spy).toHaveBeenCalledTimes(2)
+    await awaitObservedWrite(writes.promises, 1, 'detach')
+    expect((await storedRows(root, session.id))?.['cache-test/marks']?.val).toEqual({ marks: ['live'] })
   })
 
   it('flushes when the in-turn event count reaches the configured threshold', async () => {
-    const { ctx, root } = await harness({ config: { writeEveryEvents: 3, writeIntervalMs: 60_000 } })
+    const { ctx, root, cache } = await harness({ config: { writeEveryEvents: 3, writeIntervalMs: 60_000 } })
+    const writes = observeWrites(cache)
     const session = ctx.sessions.create(SessionId('count'))
     mark(session, ['1'])
     mark(session, ['2'])
-    await waitForStoredRows(root, session.id, (rows) => {
-      expect(rows?.['cache-test/marks']?.seq).toBe(-1) // still the creation cut
-    })
+    expect(writes.spy).toHaveBeenCalledTimes(1)
+    await awaitObservedWrite(writes.promises, 0, 'creation')
+    expect((await storedRows(root, session.id))?.['cache-test/marks']?.seq).toBe(-1) // still the creation cut
     mark(session, ['3'])
-    await waitForStoredRows(root, session.id, (rows) => {
-      expect(rows?.['cache-test/marks']?.val).toEqual({ marks: ['3'] })
-    })
+    expect(writes.spy).toHaveBeenCalledTimes(2)
+    await awaitObservedWrite(writes.promises, 1, 'count-threshold')
+    expect((await storedRows(root, session.id))?.['cache-test/marks']?.val).toEqual({ marks: ['3'] })
   })
 
   it('flushes on the configured interval when the count threshold is not reached', async () => {
