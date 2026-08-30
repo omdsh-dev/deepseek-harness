@@ -10,8 +10,7 @@
     "python3",
     "sandbox-exec",
     "tar",
-    "taskkill",
-    "where.exe"
+    "taskkill"
   ],
   "ignoreWorkspaces": [
     "vendor/*",

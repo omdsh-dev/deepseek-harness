@@ -6,7 +6,7 @@ import { resolvePwshPath } from '../packages/shell/pwsh-local/src/resolve.ts'
 export const PWSH_TEST_AVAILABLE_ENV = 'DSH_TEST_PWSH_AVAILABLE'
 
 /** Probe the same executable and command used by the real PowerShell suites. */
-export function probePwshTestAvailability(): boolean {
+function probePwshTestAvailability(): boolean {
   return spawnSync(
     resolvePwshPath(),
     ['-NoLogo', '-NoProfile', '-NonInteractive', '-Command', '$true'],
