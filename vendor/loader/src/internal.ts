@@ -63,7 +63,7 @@ export interface ModuleLoaderV1 {
   load(specifier: string, context: Pick<LoadHookContext, 'format' | 'importAttributes'>): Promise<LoadResult>
 }
 
-/** Node 24+ module request object. */
+/** Newer Node 24+ module request object. */
 export interface ModuleRequest {
   specifier: string
   attributes?: ImportAttributes
@@ -80,7 +80,9 @@ export const enum ModulePhase {
 export type ModuleRequestType = unknown // internal symbols
 
 /**
- * Node 24+ ModuleLoader interface.
+ * Newer Node 24+ ModuleLoader interface. Early Node 24 releases still expose
+ * the v1 surface, so the runtime shape — not the Node major — selects this
+ * interface.
  *
  * Breaking changes from v1:
  * - getModuleJobForImport removed → getOrCreateModuleJob(parentURL, request, requestType)
@@ -121,12 +123,19 @@ export namespace ModuleLoader {
     if (_cachedLoader) return _cachedLoader
     const [major] = process.versions.node.split('.').map(Number)
 
-    if (major >= 24) {
-      const raw = requireInternal('internal/modules/esm/loader')?.getOrInitializeCascadedLoader()
-      if (raw) return _cachedLoader = Object.assign(raw, { version: 'v2' })
-    } else if (major >= 22) {
-      const raw = requireInternal('internal/modules/esm/loader')?.getOrInitializeCascadedLoader()
-      if (raw) return _cachedLoader = Object.assign(raw, { version: 'v1' })
+    if (major < 22) return
+    const raw = requireInternal('internal/modules/esm/loader')?.getOrInitializeCascadedLoader()
+    if (!raw || typeof raw.resolveSync !== 'function') return
+    // Node 24 changed this private interface during the release line. 24.3,
+    // for example, still has resolve(specifier, parentURL, attributes), while
+    // later releases expose getOrCreateModuleJob(parentURL, request, type).
+    // Function arity is not a discriminator (the early resolveSync reports 2
+    // despite accepting the v1 call), but these named capabilities are.
+    if (typeof raw.getOrCreateModuleJob === 'function') {
+      return _cachedLoader = Object.assign(raw, { version: 'v2' })
+    }
+    if (typeof raw.resolve === 'function') {
+      return _cachedLoader = Object.assign(raw, { version: 'v1' })
     }
   }
 }

@@ -362,6 +362,11 @@ function nodeCompatSmokeGates(options: { cliSmoke?: boolean } = {}): Gate[] {
       'run',
       'scripts/vitest-environment.compat.spec.ts',
     ], { label: 'Vitest jsdom smoke' }),
+    pnpmExec('module-loader-internal-smoke', [
+      'vitest',
+      'run',
+      'scripts/module-loader-internal.compat.spec.ts',
+    ], { label: 'Node internal module-loader smoke' }),
   ]
   if (options.cliSmoke) {
     gates.push(
