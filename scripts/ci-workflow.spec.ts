@@ -231,6 +231,13 @@ describe('CI workflow', () => {
     expect(accessibilityCommands).toContain('pnpm --filter @deepseek-ai/dsh-web-frontend exec playwright install --with-deps chromium firefox webkit')
     expect(accessibilityCommands).toContain('pnpm --filter @deepseek-ai/dsh-web-frontend exec playwright install chromium firefox webkit')
     expect(accessibilityCommands).toContain('pnpm run test:web:accessibility')
+    const packageJson = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8')) as unknown
+    if (!isRecord(packageJson) || !isRecord(packageJson.scripts)) {
+      throw new TypeError('package.json must define scripts')
+    }
+    expect(packageJson.scripts['test:web:accessibility']).toBe(
+      'pnpm run build && pnpm run test:web:accessibility:built',
+    )
     expect(aggregate.needs).toContain('node-24-accessibility')
     expect(aggregate['runs-on']).toContain('DSH_CI_FAILOVER_LINUX')
     expect(aggregate['runs-on']).not.toContain('DSH_CI_FAILOVER_WINDOWS')

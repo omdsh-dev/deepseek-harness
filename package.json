@@ -47,7 +47,7 @@
     "test:web:refresh": "npm run build && DSH_SNAPSHOT=refresh vitest run --config vitest.web.config.ts",
     "test:web:built": "vitest run --config vitest.web.config.ts",
     "test:web:ci": "tsx scripts/run-web-snapshots.ts",
-    "test:web:accessibility": "npm run build && npm run test:web:accessibility:built",
+    "test:web:accessibility": "pnpm run build && pnpm run test:web:accessibility:built",
     "test:web:accessibility:built": "tsx scripts/run-web-accessibility.ts",
     "test:web:perf": "npm run build && npm run test:web:perf:built",
     "test:web:perf:built": "DSH_SNAPSHOT=replay vitest run --config vitest.web.perf.config.ts",

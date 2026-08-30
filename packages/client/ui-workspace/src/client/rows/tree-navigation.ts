@@ -1,8 +1,16 @@
 import { useLayoutEffect, useRef } from 'react'
 import type {
   FocusEvent as ReactFocusEvent, KeyboardEvent as ReactKeyboardEvent,
+  MutableRefObject,
   PointerEvent as ReactPointerEvent,
 } from 'react'
+
+interface TreeKeyboardNavigationProps {
+  ref: MutableRefObject<HTMLDivElement | null>
+  onFocusCapture: (event: ReactFocusEvent<HTMLDivElement>) => void
+  onPointerDownCapture: (event: ReactPointerEvent<HTMLDivElement>) => void
+  onKeyDown: (event: ReactKeyboardEvent<HTMLDivElement>) => void
+}
 
 /** Return every rendered row in DOM order for one composite tree. */
 function renderedTreeItems(tree: HTMLElement): HTMLElement[] {
@@ -31,8 +39,10 @@ function treeItemLabel(item: HTMLElement): string {
  * Enter/Space activate a row, Left/Right operate Workspace disclosure, and
  * printable characters move to the next row whose owned label starts with
  * the buffered text.
+ *
+ * @returns Event props and the ref for the tree composite owner.
  */
-export function useTreeKeyboardNavigation() {
+export function useTreeKeyboardNavigation(): TreeKeyboardNavigationProps {
   const treeRef = useRef<HTMLDivElement | null>(null)
   const typeAhead = useRef({ value: '', lastAt: 0 })
 
