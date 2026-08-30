@@ -19,44 +19,9 @@ function selectedBrowser(): BrowserName {
 
 const browserName = selectedBrowser()
 const SEED_ID = 'accessibility-modes-seed'
-const FILE_SEED_ID = 'accessibility-file-actions-seed'
-const FILE_FIXTURE = fileURLToPath(new URL('../../../snapshots/web/seeded-history/session.jsonl', import.meta.url))
-
-/** One closed Session keeps the tree semantics and keyboard contract present in every engine. */
-function seedLog(): string {
-  const time = 1788048000000
-  const at = (index: number, event: Record<string, unknown>): string => (
-    JSON.stringify({ ...event, seq: index, time: time + index })
-  )
-  return [
-    JSON.stringify({ type: 'session', version: 0, id: '{{sessionId}}', createdAt: time, cwd: '{{cwd}}' }),
-    at(0, { type: 'turn/start', data: { turn: 1, trigger: { kind: 'message', source: { kind: 'user', rpcId: 'seed' } } } }),
-    at(1, {
-      type: 'user/message',
-      data: { content: [{ type: 'text', text: 'Accessibility seed.' }], source: { kind: 'user', rpcId: 'seed' } },
-      surfaceOp: 'append',
-    }),
-    at(2, { type: 'step/start', data: { turn: 1, step: 1 } }),
-    at(3, {
-      type: 'assistant/message',
-      data: {
-        turn: 1,
-        step: 1,
-        message: {
-          id: '00000000-0000-4000-8000-000000000001',
-          role: 'assistant',
-          content: [{ type: 'text', text: 'Accessibility response.' }],
-          source: { kind: 'model', provider: 'snapshot', model: 'snapshot-replier' },
-        },
-      },
-      sourceEventSeqs: [],
-      surfaceOp: 'append',
-    }),
-    at(4, { type: 'step/end', data: { turn: 1, step: 1 } }),
-    at(5, { type: 'session/title', data: { title: 'Accessibility seed', messageSeqs: [1], source: { kind: 'fallback' } } }),
-    at(6, { type: 'turn/end', data: { turn: 1, reason: { kind: 'completed' } } }),
-  ].join('\n')
-}
+const SEED_FIXTURE = fileURLToPath(new URL('../../../snapshots/web/seeded-history/session.jsonl', import.meta.url))
+const SEED_PROMPT = 'Use the read tool twice in one assistant message: read a.txt and b.txt. '
+  + 'Then reply with the single word DONE and stop.'
 
 interface FocusGeometry {
   tag: string
@@ -148,8 +113,7 @@ describe(`web accessibility modes: ${browserName}`, () => {
 
   beforeAll(async () => {
     scaffold = await launchWebScaffold({})
-    await seedSession(scaffold, seedLog(), SEED_ID)
-    await seedSession(scaffold, await readFile(FILE_FIXTURE, 'utf8'), FILE_SEED_ID)
+    await seedSession(scaffold, await readFile(SEED_FIXTURE, 'utf8'), SEED_ID)
     browser = await browserTypes[browserName].launch()
     page = await browser.newPage({ viewport: { width: 1280, height: 900 }, locale: 'en-US' })
     tripwire = watchConsole(page)
@@ -234,7 +198,7 @@ describe(`web accessibility modes: ${browserName}`, () => {
       await expect.poll(() => workspaceRow.getAttribute('aria-expanded')).toBe('true')
     }
     const transcriptSession = tree.locator('[role="treeitem"][aria-level="2"]')
-      .filter({ hasText: 'Accessibility seed' })
+      .filter({ hasText: 'Use the read tool twice' })
       .first()
     await transcriptSession.click()
 
@@ -242,8 +206,8 @@ describe(`web accessibility modes: ${browserName}`, () => {
     await log.waitFor()
     expect(await log.getAttribute('aria-live')).toBe('off')
     expect(await log.getAttribute('aria-busy')).toBe('false')
-    expect(await log.getByRole('article', { name: 'User message' }).textContent()).toContain('Accessibility seed.')
-    expect(await log.getByRole('article', { name: 'Assistant response' }).textContent()).toContain('Accessibility response.')
+    expect(await log.getByRole('article', { name: 'User message' }).textContent()).toContain(SEED_PROMPT)
+    expect(await log.getByRole('article', { name: 'Assistant response' }).last().textContent()).toContain('DONE')
     expect(await transcriptPage.getByText('Assistant response finished', { exact: true }).count()).toBe(0)
     expect(transcriptTripwire.pageErrors).toEqual([])
     await transcriptPage.close()
