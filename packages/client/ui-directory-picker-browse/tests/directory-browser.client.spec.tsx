@@ -1191,10 +1191,12 @@ describe('DirectoryBrowser', () => {
     await waitFor(() => { expect(screen.getByRole('listitem')).toBeTruthy() })
     fireEvent.click(screen.getByRole('button', { name: 'browser.editPath' }))
     const input = screen.getByLabelText('browser.editPath')
+    expect(document.activeElement).toBe(input)
     fireEvent.change(input, { target: { value: '/nope' } })
     fireEvent.keyDown(input, { key: 'Enter' })
     await waitFor(() => { expect(screen.getByRole('alert').textContent).toBe('cannot list /nope') })
     expect(screen.getByLabelText('browser.editPath')).toBeTruthy()
+    expect(document.activeElement).toBe(input)
     expect(screen.getByRole('listitem').textContent).toBe('Documents')
   })
 
@@ -1294,6 +1296,7 @@ describe('DirectoryBrowser', () => {
     // With no listed level, typing an absolute path is the one way forward.
     fireEvent.click(screen.getByRole('button', { name: 'browser.editPath' }))
     const input = screen.getByLabelText('browser.editPath')
+    expect(document.activeElement).toBe(input)
     fireEvent.change(input, { target: { value: DOCS } })
     // With no level listed there is no platform separator to read, so the
     // draft-following wait resolves to nothing and the editor types blind.
@@ -1588,9 +1591,12 @@ describe('DirectoryBrowser', () => {
     await waitFor(() => { expect(screen.getByRole('listitem')).toBeTruthy() })
     b.createDirectory.mockRejectedValueOnce(
       new Error('taken already'))
-    fireEvent.click(screen.getByRole('button', { name: 'browser.newFolder' }))
+    const newFolder = screen.getByRole('button', { name: 'browser.newFolder' })
+    newFolder.focus()
+    fireEvent.click(newFolder)
     expect(screen.getByText('browser.createIn:browser.home')).toBeTruthy()
     const input = screen.getByLabelText('browser.folderName')
+    expect(document.activeElement).toBe(input)
     // A blank name never submits.
     fireEvent.change(input, { target: { value: '   ' } })
     fireEvent.keyDown(input, { key: 'Enter' })
@@ -1598,8 +1604,10 @@ describe('DirectoryBrowser', () => {
     fireEvent.change(input, { target: { value: 'x' } })
     fireEvent.keyDown(input, { key: 'Enter' })
     await waitFor(() => { expect(screen.getByRole('alert').textContent).toBe('taken already') })
+    expect(document.activeElement).toBe(input)
     fireEvent.keyDown(screen.getByLabelText('browser.folderName'), { key: 'Escape' })
     await waitFor(() => { expect(screen.queryByLabelText('browser.folderName')).toBeNull() })
+    expect(document.activeElement).toBe(newFolder)
 
     // The nested Cancel button and the nested mask both close only the child dialog.
     fireEvent.click(screen.getByRole('button', { name: 'browser.newFolder' }))

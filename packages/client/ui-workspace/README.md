@@ -43,7 +43,7 @@ While search is collapsed, its input is absent from the accessibility tree and s
 
 ### Managing sessions
 
-The Session row's Rename action opens a dialog prefilled with the row's display title; confirming an unchanged title is deliberately allowed — it pins the current automatic title against regeneration. Archive commits without a confirmation dialog and the row disappears from every grouping surface when the archive-set echo lands. Fork forks at the source's last completed turn, increments the inherited persisted title on the client, and then opens the child. Workspace Delete opens a confirmation that states the retention boundary; success removes the group while its Sessions remain under Ungrouped.
+The Session row's Rename action opens a dialog prefilled with the row's display title; confirming an unchanged title is deliberately allowed — it pins the current automatic title against regeneration. Workspace Rename places initial focus in its selected name field; Session Rename does the same. The row-menu handoff records the durable row action as the dialog invoker, so cancellation, a rejected retry followed by cancellation, and successful rename restore focus while that row remains. Archive commits without a confirmation dialog and the row disappears from every grouping surface when the archive-set echo lands. Fork forks at the source's last completed turn, increments the inherited persisted title on the client, and then opens the child. Workspace Delete opens a confirmation that states the retention boundary and initially focuses its non-destructive Close action; cancellation returns to the row action, while successful deletion removes the group and leaves its Sessions under Ungrouped.
 
 ### Pending interactions
 

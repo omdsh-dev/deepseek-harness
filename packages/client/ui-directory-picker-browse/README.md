@@ -31,6 +31,8 @@ Mount this plugin alongside `ui-workspace` and the host backend [`dsh-host-direc
 
 Step through folders, edit the path directly, or filter the last pane by prefix; a Host-flagged hidden entry stays hidden until the footer toggle reveals it. **New folder** opens a nested create dialog targeting the selected folder and selects what it creates; **Open** adopts the selected folder, falling back to the listed level. Confirming a directory is the picked path; dismissing the dialog is the cancellation.
 
+Listing and creation failures are live alerts inside the active dialog, not separate error dialogs. An unreadable typed path keeps focus in the path editor and preserves the previous listing for correction; a failed initial home listing keeps that editor available as the recovery route. A failed folder creation keeps focus in the nested name field for retry, and dismissing the nested dialog returns focus to **New folder** while the parent browser remains open.
+
 -----
 
 <a id="understand-the-implementation"></a>
@@ -39,7 +41,7 @@ Step through folders, edit the path directly, or filter the last pane by prefix;
 <details>
 <summary>Implementation internals — click to expand</summary>
 
-The dialog is a 680×500 Miller-column view (clamped on short or narrow viewports), driven by the host `listDirectory` and `createDirectory` primitives through `ctx.workspaces`. Both registrations install as one transactional effect through nested `ctx.slots.inject()` calls, because either declaring entry may activate later or replace its declaration; the dialog's copy lives in this package's own locale namespace so the two dictionaries land as a unit. Browse failures stay inside the dialog's own alert surfaces, so this occupant never drives the owner's `onError` arm. The node half is an empty `apply` that keeps the plugin on the host roster.
+The dialog is a 680×500 Miller-column view (clamped on short or narrow viewports), driven by the host `listDirectory` and `createDirectory` primitives through `ctx.workspaces`. Both registrations install as one transactional effect through nested `ctx.slots.inject()` calls, because either declaring entry may activate later or replace its declaration; the dialog's copy lives in this package's own locale namespace so the two dictionaries land as a unit. Browse failures stay inside the dialog's own `role="alert"` surfaces, so this occupant never drives the owner's `onError` arm. The node half is an empty `apply` that keeps the plugin on the host roster.
 
 </details>
 

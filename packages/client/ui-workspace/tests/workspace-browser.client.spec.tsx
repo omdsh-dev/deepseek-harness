@@ -1280,10 +1280,14 @@ describe('WorkspaceBrowser', () => {
       useWorkspaces: hook(workspaceState([workspace('alpha', [], 'Alpha'), workspace('beta', [], 'Beta')])),
       renameWorkspace,
     })
-    fireEvent.click(screen.getByRole('button', { name: '工作区“Alpha”的操作' }))
+    const actionTrigger = screen.getByRole('button', { name: '工作区“Alpha”的操作' })
+    fireEvent.click(actionTrigger)
     fireEvent.click(screen.getByRole('menuitem', { name: '重命名' }))
     const input = screen.getByLabelText<HTMLInputElement>('工作区名称')
+    expect(document.activeElement).toBe(input)
     expect(input.value).toBe('Alpha')
+    expect(input.selectionStart).toBe(0)
+    expect(input.selectionEnd).toBe(input.value.length)
     // Unchanged and blank names stay blocked.
     expect(screen.getByRole<HTMLButtonElement>('button', { name: '重命名' }).disabled).toBe(true)
     fireEvent.change(input, { target: { value: '   ' } })
@@ -1301,6 +1305,7 @@ describe('WorkspaceBrowser', () => {
     expect(screen.getByRole('dialog')).toBeTruthy()
     await act(async () => { resolveRename() })
     expect(screen.queryByRole('dialog')).toBeNull()
+    expect(document.activeElement).toBe(actionTrigger)
   })
 
   it('rename via Enter, failure surfaces the error, Cancel closes', async () => {
@@ -1309,7 +1314,8 @@ describe('WorkspaceBrowser', () => {
       useWorkspaces: hook(workspaceState([workspace('alpha', [], 'Alpha')])),
       renameWorkspace,
     })
-    fireEvent.click(screen.getByRole('button', { name: '工作区“Alpha”的操作' }))
+    const actionTrigger = screen.getByRole('button', { name: '工作区“Alpha”的操作' })
+    fireEvent.click(actionTrigger)
     fireEvent.click(screen.getByRole('menuitem', { name: '重命名' }))
     const input = screen.getByLabelText<HTMLInputElement>('工作区名称')
     // Enter with a blocked draft (unchanged) does nothing.
@@ -1325,6 +1331,7 @@ describe('WorkspaceBrowser', () => {
     expect(screen.queryByRole('alert')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: '取消' }))
     expect(screen.queryByRole('dialog')).toBeNull()
+    expect(document.activeElement).toBe(actionTrigger)
   })
 
   it('reports non-Error rename failures as text', async () => {
@@ -1347,9 +1354,11 @@ describe('WorkspaceBrowser', () => {
       useWorkspaces: hook(workspaceState([workspace('alpha', ['session'], 'Alpha')])),
       deleteWorkspace,
     })
-    fireEvent.click(screen.getByRole('button', { name: '工作区“Alpha”的操作' }))
+    const actionTrigger = screen.getByRole('button', { name: '工作区“Alpha”的操作' })
+    fireEvent.click(actionTrigger)
     fireEvent.click(screen.getByRole('menuitem', { name: '删除工作区' }))
     const dialog = screen.getByRole('dialog', { name: '删除工作区' })
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: '关闭' }))
     expect(dialog.textContent).toContain('将把“Alpha”从工作区列表中移除')
     expect(dialog.textContent).toContain('文件夹与会话记录会保留')
     expect(dialog.textContent).toContain('其会话将显示在“未分组”下')
@@ -1400,15 +1409,21 @@ describe('WorkspaceBrowser', () => {
       deleteWorkspace,
     })
     const open = () => {
-      fireEvent.click(screen.getByRole('button', { name: '工作区“Alpha”的操作' }))
+      const actionTrigger = screen.getByRole('button', { name: '工作区“Alpha”的操作' })
+      fireEvent.click(actionTrigger)
       fireEvent.click(screen.getByRole('menuitem', { name: '删除工作区' }))
+      expect(document.activeElement).toBe(screen.getByRole('button', { name: '关闭' }))
+      return actionTrigger
     }
-    open()
+    let actionTrigger = open()
     fireEvent.click(screen.getByRole('button', { name: '取消' }))
-    open()
+    expect(document.activeElement).toBe(actionTrigger)
+    actionTrigger = open()
     fireEvent.keyDown(document, { key: 'Escape' })
-    open()
+    expect(document.activeElement).toBe(actionTrigger)
+    actionTrigger = open()
     fireEvent.click(screen.getByRole('button', { name: '关闭' }))
+    expect(document.activeElement).toBe(actionTrigger)
     expect(deleteWorkspace).not.toHaveBeenCalled()
     expect(screen.queryByRole('dialog', { name: '删除工作区' })).toBeNull()
   })

@@ -80,12 +80,16 @@ describe('session rename through the assembled browser', () => {
 
     // The current session's group auto-expands; open the row's action menu.
     const row = (await view.findByText('旧标题')).closest('[role="treeitem"]')!
-    fireEvent.click(within(row as HTMLElement).getByLabelText('会话“旧标题”的操作'))
+    const actionTrigger = within(row as HTMLElement).getByLabelText('会话“旧标题”的操作')
+    fireEvent.click(actionTrigger)
     fireEvent.click(view.getByRole('menuitem', { name: '重命名', hidden: true }))
 
     // The dialog seeds from the current title; submit a padded value.
     const input = await view.findByLabelText('会话名称') as HTMLInputElement
+    expect(document.activeElement).toBe(input)
     expect(input.value).toBe('旧标题')
+    expect(input.selectionStart).toBe(0)
+    expect(input.selectionEnd).toBe(input.value.length)
     fireEvent.change(input, { target: { value: '  分叉  实验记录  ' } })
     fireEvent.click(view.getByRole('button', { name: '重命名' }))
 
@@ -94,6 +98,7 @@ describe('session rename through the assembled browser', () => {
     await waitFor(() => { expect(rename).toHaveBeenCalledWith('分叉  实验记录') })
     // Acceptance closes the dialog without any push-frame wait.
     await waitFor(() => { expect(view.queryByLabelText('会话名称')).toBeNull() })
+    expect(document.activeElement).toBe(actionTrigger)
     // The manager lands the unary echo in the list store (its own package
     // tests own that hop); the row re-labels from list state alone.
     await runtime.sessions.updateSummary(SID, { displayTitle: '分叉 实验记录', title: '分叉 实验记录' })
@@ -137,7 +142,7 @@ describe('session rename through the assembled browser', () => {
     // stays open with the alert and the row keeps its title.
     const alert = await view.findByRole('alert')
     expect(alert.textContent).toContain('title write failed')
-    expect(view.getByLabelText('会话名称')).toBeTruthy()
+    expect(document.activeElement).toBe(view.getByLabelText('会话名称'))
     expect(view.getByText('旧标题')).toBeTruthy()
     await runtime.dispose()
   })
