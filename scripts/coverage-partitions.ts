@@ -20,12 +20,50 @@ export const COVERAGE_TEST_TIMEOUT_ENV = 'DSH_COVERAGE_TEST_TIMEOUT_MS'
 /** Worker-heavy coverage owner that must not share one long-lived fork on Windows. */
 export const WORKFLOW_WORKER_COVERAGE_FILE = 'packages/workflow/workflow-worker-thread/tests/workflow-worker-thread.spec.ts'
 
-/** Exact top-level suites collected in fresh instrumented processes. */
-export const workflowWorkerCoverageSuites = [
-  'script execution over a real worker thread',
-  'lifecycle: parse errors, cancellation, termination, disposal',
-  'worker death',
-  'service API',
+/** One exclusive workflow-worker test owner collected in a fresh instrumented process. */
+export interface WorkflowWorkerCoverageOwner {
+  /** Stable diagnostic identity and blob suffix. */
+  label: string
+  /** Anchored Vitest full-name pattern selecting this owner's tests. */
+  testNamePattern: string
+}
+
+/**
+ * Exclusive workflow-worker coverage owners.
+ *
+ * The lifecycle suite creates real worker threads for every test. Keep its four
+ * resource-lifecycle responsibilities in separate Vitest processes so a loaded
+ * Windows runner never accumulates all 21 workers in one long-lived fork.
+ */
+export const workflowWorkerCoverageOwners: readonly WorkflowWorkerCoverageOwner[] = [
+  {
+    label: 'script-execution',
+    testNamePattern: '^dsh-workflow-worker-thread script execution over a real worker thread(?: |$)',
+  },
+  {
+    label: 'lifecycle-validation-cancellation',
+    testNamePattern: '^dsh-workflow-worker-thread lifecycle: parse errors, cancellation, termination, disposal validation and cancellation(?: |$)',
+  },
+  {
+    label: 'lifecycle-termination-disposal',
+    testNamePattern: '^dsh-workflow-worker-thread lifecycle: parse errors, cancellation, termination, disposal termination and disposal(?: |$)',
+  },
+  {
+    label: 'lifecycle-settlement-reaping',
+    testNamePattern: '^dsh-workflow-worker-thread lifecycle: parse errors, cancellation, termination, disposal settlement reaping(?: |$)',
+  },
+  {
+    label: 'lifecycle-wedged-cleanup',
+    testNamePattern: '^dsh-workflow-worker-thread lifecycle: parse errors, cancellation, termination, disposal wedged-worker cleanup and lifecycle pairing(?: |$)',
+  },
+  {
+    label: 'worker-death',
+    testNamePattern: '^dsh-workflow-worker-thread worker death(?: |$)',
+  },
+  {
+    label: 'service-api',
+    testNamePattern: '^dsh-workflow-worker-thread service API(?: |$)',
+  },
 ] as const
 
 /** One child command owned by the coverage coordinator. */
@@ -142,8 +180,8 @@ export class CoveragePartitionCoordinator {
       const partitionResults = await Promise.all(
         partitionCommands.map(command => this.runWithDiagnostics(command)),
       )
-      const isolatedCommands = workflowWorkerCoverageSuites.map((suite, index) => (
-        this.workflowWorkerCommand(index + 1, suite)
+      const isolatedCommands = workflowWorkerCoverageOwners.map(owner => (
+        this.workflowWorkerCommand(owner)
       ))
       const isolatedResults: CoverageCommandResult[] = []
       for (const command of isolatedCommands) {
@@ -203,9 +241,9 @@ export class CoveragePartitionCoordinator {
     }
   }
 
-  private workflowWorkerCommand(index: number, suite: string): CoverageCommand {
-    const blobPath = join(this.blobsRoot, `workflow-worker-${index}.json`)
-    const reportsDirectory = join(this.temporaryRoot, `coverage-workflow-worker-${index}`)
+  private workflowWorkerCommand(owner: WorkflowWorkerCoverageOwner): CoverageCommand {
+    const blobPath = join(this.blobsRoot, `workflow-worker-${owner.label}.json`)
+    const reportsDirectory = join(this.temporaryRoot, `coverage-workflow-worker-${owner.label}`)
     const invocation = pnpmInvocation([
       'exec',
       'vitest',
@@ -214,7 +252,7 @@ export class CoveragePartitionCoordinator {
       '--coverage.reportOnFailure',
       '--maxWorkers=1',
       '--no-file-parallelism',
-      `--testNamePattern=${suite}`,
+      `--testNamePattern=${owner.testNamePattern}`,
       '--reporter=default',
       '--reporter=blob',
       `--outputFile.blob=${this.relativePath(blobPath)}`,
@@ -223,7 +261,7 @@ export class CoveragePartitionCoordinator {
       WORKFLOW_WORKER_COVERAGE_FILE,
     ], { npm_execpath: this.pnpmEntrypoint })
     return {
-      label: `workflow worker suite ${index}/${workflowWorkerCoverageSuites.length}`,
+      label: `workflow worker owner ${owner.label}`,
       ...invocation,
       env: {
         [COVERAGE_PARTITIONS_ENV]: undefined,

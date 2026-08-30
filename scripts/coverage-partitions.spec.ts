@@ -12,7 +12,7 @@ import {
   coverageTestTimeoutArgs,
   forwardedCoverageArgs,
   parseCoveragePartitionCount,
-  workflowWorkerCoverageSuites,
+  workflowWorkerCoverageOwners,
   type CoverageCommand,
   type CoverageCommandResult,
 } from './coverage-partitions.ts'
@@ -86,11 +86,46 @@ describe('coverage forwarded arguments', () => {
 })
 
 describe('coverage partition coordinator', () => {
-  it('enumerates every workflow-worker top-level suite exactly once', async () => {
+  it('assigns every workflow-worker test to exactly one isolated owner', async () => {
     const source = await readFile(WORKFLOW_WORKER_COVERAGE_FILE, 'utf8')
-    const topLevelSuites = [...source.matchAll(/^  describe\('([^']+)'/gm)]
-      .map(match => match[1])
-    expect(workflowWorkerCoverageSuites).toEqual(topLevelSuites)
+    const suiteAtIndent = new Map<number, string>()
+    const testNames: string[] = []
+    for (const line of source.split('\n')) {
+      const suite = /^(\s*)describe\('([^']+)'/.exec(line)
+      if (suite !== null) {
+        const indent = suite[1]!.length
+        suiteAtIndent.set(indent, suite[2]!)
+        for (const level of [...suiteAtIndent.keys()]) {
+          if (level > indent) suiteAtIndent.delete(level)
+        }
+        continue
+      }
+      const test = /^(\s*)it\('((?:\\'|[^'])+)'/.exec(line)
+      if (test === null) continue
+      const indent = test[1]!.length
+      const suites = [...suiteAtIndent.entries()]
+        .filter(([level]) => level < indent)
+        .sort(([left], [right]) => left - right)
+        .map(([, name]) => name)
+      testNames.push([...suites, test[2]!.replaceAll("\\'", "'")].join(' '))
+    }
+
+    expect(testNames).toHaveLength(54)
+    const ownership = testNames.map(name => workflowWorkerCoverageOwners.filter(owner => (
+      new RegExp(owner.testNamePattern).test(name)
+    )))
+    expect(ownership.every(owners => owners.length === 1)).toBe(true)
+    expect(ownership.map(([owner]) => owner!.label)).toEqual([
+      ...Array<string>(22).fill('script-execution'),
+      ...Array<string>(7).fill('lifecycle-validation-cancellation'),
+      ...Array<string>(4).fill('lifecycle-termination-disposal'),
+      ...Array<string>(5).fill('lifecycle-settlement-reaping'),
+      ...Array<string>(5).fill('lifecycle-wedged-cleanup'),
+      ...Array<string>(7).fill('worker-death'),
+      ...Array<string>(4).fill('service-api'),
+    ])
+    expect(new Set(workflowWorkerCoverageOwners.map(owner => owner.label)).size)
+      .toBe(workflowWorkerCoverageOwners.length)
   })
 
   it('runs every single-worker partition before one merged threshold check', async () => {
@@ -112,10 +147,13 @@ describe('coverage partition coordinator', () => {
       'partition 1/3',
       'partition 2/3',
       'partition 3/3',
-      'workflow worker suite 1/4',
-      'workflow worker suite 2/4',
-      'workflow worker suite 3/4',
-      'workflow worker suite 4/4',
+      'workflow worker owner script-execution',
+      'workflow worker owner lifecycle-validation-cancellation',
+      'workflow worker owner lifecycle-termination-disposal',
+      'workflow worker owner lifecycle-settlement-reaping',
+      'workflow worker owner lifecycle-wedged-cleanup',
+      'workflow worker owner worker-death',
+      'workflow worker owner service-api',
       'merged coverage report',
     ])
     for (const [index, command] of commands.slice(0, 3).entries()) {
@@ -137,13 +175,13 @@ describe('coverage partition coordinator', () => {
         [PWSH_TEST_AVAILABLE_ENV]: '0',
       })
     }
-    for (const [index, command] of commands.slice(3, 7).entries()) {
+    for (const [index, command] of commands.slice(3, 10).entries()) {
       expect(command.args).toEqual(expect.arrayContaining([
         '--coverage',
         '--coverage.reportOnFailure',
         '--maxWorkers=1',
         '--no-file-parallelism',
-        `--testNamePattern=${workflowWorkerCoverageSuites[index]}`,
+        `--testNamePattern=${workflowWorkerCoverageOwners[index]!.testNamePattern}`,
         '--reporter=default',
         '--reporter=blob',
         '--testTimeout=30000',
@@ -156,7 +194,7 @@ describe('coverage partition coordinator', () => {
         [PWSH_TEST_AVAILABLE_ENV]: '0',
       })
     }
-    const mergeCommand = commands[7]
+    const mergeCommand = commands[10]
     if (mergeCommand === undefined) throw new Error('coverage merge command was not observed')
     expect(mergeCommand.args).toContain('--coverage')
     expect(mergeCommand.args.some(argument => argument.startsWith('--merge-reports='))).toBe(true)
@@ -180,7 +218,7 @@ describe('coverage partition coordinator', () => {
     })
 
     await expect(coordinator.run()).resolves.toBe(0)
-    expect(commands).toHaveLength(7)
+    expect(commands).toHaveLength(10)
     for (const command of commands) {
       expect(command.command).toBe('/tools/pnpm')
       expect(command.args[0]).toBe('exec')
@@ -208,7 +246,7 @@ describe('coverage partition coordinator', () => {
     expect(reported).toHaveBeenCalledWith(
       'coverage-partitions: output tail for partition 2/2:\nspecific Vitest failure',
     )
-    expect(runCommand).toHaveBeenCalledTimes(7)
+    expect(runCommand).toHaveBeenCalledTimes(10)
   })
 
   it('rejects a missing partition blob before merge', async () => {
@@ -225,7 +263,7 @@ describe('coverage partition coordinator', () => {
     })
 
     await expect(coordinator.run()).rejects.toThrow('coverage partitions produced')
-    expect(runCommand).toHaveBeenCalledTimes(6)
+    expect(runCommand).toHaveBeenCalledTimes(9)
   })
 
   it('reports signal termination before missing-blob validation', async () => {
@@ -270,7 +308,7 @@ describe('coverage partition coordinator', () => {
     await expect(coordinator.run()).resolves.toBe(1)
     expect(reported).toHaveBeenCalledWith('coverage-partitions: FAIL partition 1/2 (spawn unavailable)')
     expect(secondFinished).toBe(true)
-    expect(runCommand).toHaveBeenCalledTimes(7)
+    expect(runCommand).toHaveBeenCalledTimes(10)
   })
 
   it('unlinks a link-shaped coverage path without touching its target', async () => {
