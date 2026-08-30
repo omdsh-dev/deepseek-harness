@@ -1,5 +1,7 @@
 /** Cross-engine accessibility modes over the assembled Web application. */
 
+import { readFile } from 'node:fs/promises'
+import { fileURLToPath } from 'node:url'
 import type { Browser, Locator, Page } from 'playwright'
 import { chromium, firefox, webkit } from 'playwright'
 import { afterAll, beforeAll, describe, expect, it, onTestFailed, vi } from 'vitest'
@@ -17,6 +19,8 @@ function selectedBrowser(): BrowserName {
 
 const browserName = selectedBrowser()
 const SEED_ID = 'accessibility-modes-seed'
+const FILE_SEED_ID = 'accessibility-file-actions-seed'
+const FILE_FIXTURE = fileURLToPath(new URL('../../../snapshots/web/seeded-history/session.jsonl', import.meta.url))
 
 /** One closed Session keeps the tree semantics and keyboard contract present in every engine. */
 function seedLog(): string {
@@ -41,41 +45,16 @@ function seedLog(): string {
         message: {
           id: '00000000-0000-4000-8000-000000000001',
           role: 'assistant',
-          content: [
-            { type: 'text', text: 'Accessibility response.' },
-            {
-              type: 'tool-call', id: 'accessibility-read', name: 'read',
-              arguments: '{"file_path":"README.md"}',
-            },
-          ],
+          content: [{ type: 'text', text: 'Accessibility response.' }],
           source: { kind: 'model', provider: 'snapshot', model: 'snapshot-replier' },
         },
       },
       sourceEventSeqs: [],
       surfaceOp: 'append',
     }),
-    at(4, {
-      type: 'tool/call',
-      data: {
-        turn: 1, step: 1, callId: 'accessibility-read', name: 'read',
-        arguments: '{"file_path":"README.md"}',
-      },
-    }),
-    at(5, {
-      type: 'tool/result',
-      data: {
-        turn: 1, step: 1, callId: 'accessibility-read', isError: false,
-        content: [{
-          type: 'text',
-          text: '<path>{{cwd}}/README.md</path>\n<type>file</type>\n<content>\n1: DSH\n</content>',
-        }],
-      },
-      sourceEventSeqs: [],
-      surfaceOp: 'append',
-    }),
-    at(6, { type: 'step/end', data: { turn: 1, step: 1 } }),
-    at(7, { type: 'session/title', data: { title: 'Accessibility seed', messageSeqs: [1], source: { kind: 'fallback' } } }),
-    at(8, { type: 'turn/end', data: { turn: 1, reason: { kind: 'completed' } } }),
+    at(4, { type: 'step/end', data: { turn: 1, step: 1 } }),
+    at(5, { type: 'session/title', data: { title: 'Accessibility seed', messageSeqs: [1], source: { kind: 'fallback' } } }),
+    at(6, { type: 'turn/end', data: { turn: 1, reason: { kind: 'completed' } } }),
   ].join('\n')
 }
 
@@ -170,6 +149,7 @@ describe(`web accessibility modes: ${browserName}`, () => {
   beforeAll(async () => {
     scaffold = await launchWebScaffold({})
     await seedSession(scaffold, seedLog(), SEED_ID)
+    await seedSession(scaffold, await readFile(FILE_FIXTURE, 'utf8'), FILE_SEED_ID)
     browser = await browserTypes[browserName].launch()
     page = await browser.newPage({ viewport: { width: 1280, height: 900 }, locale: 'en-US' })
     tripwire = watchConsole(page)
@@ -253,7 +233,10 @@ describe(`web accessibility modes: ${browserName}`, () => {
       await transcriptPage.keyboard.press('ArrowRight')
       await expect.poll(() => workspaceRow.getAttribute('aria-expanded')).toBe('true')
     }
-    await tree.locator('[role="treeitem"][aria-level="2"]').first().click()
+    const transcriptSession = tree.locator('[role="treeitem"][aria-level="2"]')
+      .filter({ hasText: 'Accessibility seed' })
+      .first()
+    await transcriptSession.click()
 
     const log = transcriptPage.getByRole('log', { name: 'Conversation transcript' })
     await log.waitFor()
@@ -277,14 +260,17 @@ describe(`web accessibility modes: ${browserName}`, () => {
       await page.keyboard.press('ArrowRight')
       await expect.poll(() => workspaceRow.getAttribute('aria-expanded')).toBe('true')
     }
-    await tree.locator('[role="treeitem"][aria-level="2"]').first().click()
+    const fileSession = tree.locator('[role="treeitem"][aria-level="2"]')
+      .filter({ hasText: 'Use the read tool twice' })
+      .first()
+    await fileSession.click()
 
     const readRow = page.locator('[data-variant="read"]').first()
     await expandOwningTurnProcess(page, readRow)
     await readRow.waitFor({ timeout: 15_000 })
     const header = readRow.locator('[data-disclosure-row]')
-    const disclosure = readRow.getByRole('button', { name: 'Read README.md', exact: true })
-    const openFile = readRow.getByRole('button', { name: 'Open file README.md', exact: true })
+    const disclosure = readRow.getByRole('button', { name: 'Read a.txt', exact: true })
+    const openFile = readRow.getByRole('button', { name: 'Open file a.txt', exact: true })
     expect(await header.getAttribute('role')).toBeNull()
     expect(await header.getAttribute('tabindex')).toBeNull()
     expect(await readRow.locator('[role="button"] button').count()).toBe(0)
