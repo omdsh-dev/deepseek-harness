@@ -231,16 +231,18 @@ describe(`web accessibility modes: ${browserName}`, () => {
     expect(await disclosure.getAttribute('aria-expanded')).toBe('false')
 
     await disclosure.focus()
-    await page.keyboard.press('Enter')
+    expect(await disclosure.evaluate(element => document.activeElement === element)).toBe(true)
+    await disclosure.press('Enter')
     await expect.poll(() => disclosure.getAttribute('aria-expanded')).toBe('true')
-    await page.keyboard.press('Space')
+    await disclosure.press('Space')
     await expect.poll(() => disclosure.getAttribute('aria-expanded')).toBe('false')
 
     const openPath = vi.spyOn(scaffold.ctx.sessionController, 'openWorkspacePath')
       .mockResolvedValue({ opened: true })
     try {
       await openFile.focus()
-      await page.keyboard.press('Enter')
+      expect(await openFile.evaluate(element => document.activeElement === element)).toBe(true)
+      await openFile.press('Enter')
       await expect.poll(() => openPath.mock.calls.length).toBe(1)
       expect(await disclosure.getAttribute('aria-expanded')).toBe('false')
     } finally {
