@@ -131,6 +131,9 @@ export function ToolRow({
   const summaryText = failureLine ?? terminalBody?.description ?? summary
   const suffix = failureLine === null ? summarySuffix ?? null : null
   const fileLink = filePath !== undefined && onOpenFile !== undefined && failureLine === null
+  const fileDisclosureLabel = fileLink
+    ? [title, status, summaryText, suffix].filter(part => part !== null && part !== '').join(' ')
+    : undefined
   const toggleExpand = () => {
     setExpanded(v => !v)
   }
@@ -158,9 +161,11 @@ export function ToolRow({
         chevronClassName={css.chevron}
         icon={leadingFor(state, icon)}
         title={title}
+        accessibleLabel={fileDisclosureLabel}
         open={open}
         expandable={expandable}
         expandOnRowClick
+        interactiveCollapsedContent={fileLink}
         keepContentWhenOpen
         onToggle={toggleExpand}
         collapsedContent={summaryText !== '' && (
@@ -172,6 +177,7 @@ export function ToolRow({
               <button
                 type="button"
                 className={css.fileLink}
+                aria-label={t('row.openFile', { path: summaryText })}
                 onClick={openFile}
                 onKeyDown={fileLinkKeyDown}
               >

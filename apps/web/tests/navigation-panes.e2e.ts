@@ -402,13 +402,28 @@ describe('web e2e: navigation & panes over a rich seeded session', () => {
     // details either — the expanded terminal card is read in place.
     await page.locator('[data-sample="bash"] ~ div [data-terminal] [class*="_copyButton_"]').first().click()
     await expect.poll(() => frame.getAttribute('data-details-collapsed'), { timeout: 5_000 }).toBe('true')
-    // Read summaries are host-open file links; they also must not open details.
-    const fileLink = page.locator('[data-variant="read"] button').first()
+    // Read rows expose disclosure and open-file as peer controls: no nested
+    // button semantics, and either keyboard action leaves Details alone.
+    const readRow = page.locator('[data-variant="read"]').first()
+    const readHeader = readRow.locator('[data-disclosure-row]')
+    const disclosure = readRow.locator('button[aria-expanded]').first()
+    const fileLink = readRow.getByRole('button', { name: /^Open file / }).first()
     await fileLink.waitFor({ timeout: 10_000 })
+    expect(await readHeader.getAttribute('role')).toBeNull()
+    expect(await readHeader.getAttribute('tabindex')).toBeNull()
+    expect(await readRow.locator('[role="button"] button').count()).toBe(0)
+    expect(await disclosure.getAttribute('aria-label')).toContain('Read ')
+    if (await disclosure.getAttribute('aria-expanded') === 'true') await disclosure.click()
+    await disclosure.focus()
+    await page.keyboard.press('Enter')
+    await expect.poll(() => disclosure.getAttribute('aria-expanded')).toBe('true')
+    await page.keyboard.press('Space')
+    await expect.poll(() => disclosure.getAttribute('aria-expanded')).toBe('false')
     const openPath = vi.spyOn(scaffold.ctx.sessionController, 'openWorkspacePath')
       .mockResolvedValue({ opened: true })
     try {
       await fileLink.click()
+      expect(await disclosure.getAttribute('aria-expanded')).toBe('false')
       await expect.poll(() => frame.getAttribute('data-details-collapsed'), { timeout: 5_000 }).toBe('true')
     } finally {
       openPath.mockRestore()

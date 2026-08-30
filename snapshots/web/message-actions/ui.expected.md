@@ -40,13 +40,13 @@
       - button "Read a.txt":
         - img
         - img
-        - text: Read
-        - button "a.txt"
+      - text: Read
+      - button "Open file a.txt": a.txt
       - button "Read b.txt":
         - img
         - img
-        - text: Read
-        - button "b.txt"
+      - text: Read
+      - button "Open file b.txt": b.txt
       - article "Assistant response":
         - button "Think Both files have been read. a.txt contains \"alpha\" and b.txt contains \"beta\". I'll now reply with DONE as instructed.":
           - img

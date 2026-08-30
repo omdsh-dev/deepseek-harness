@@ -2,9 +2,9 @@
 
 import type { Browser, Locator, Page } from 'playwright'
 import { chromium, firefox, webkit } from 'playwright'
-import { afterAll, beforeAll, describe, expect, it, onTestFailed } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it, onTestFailed, vi } from 'vitest'
 import { launchWebScaffold, seedSession, watchConsole, type WebScaffold } from './scaffold.ts'
-import { saveFailureShot, writeComposerDraft } from './support.ts'
+import { expandOwningTurnProcess, saveFailureShot, writeComposerDraft } from './support.ts'
 
 const browserTypes = { chromium, firefox, webkit }
 type BrowserName = keyof typeof browserTypes
@@ -41,16 +41,41 @@ function seedLog(): string {
         message: {
           id: '00000000-0000-4000-8000-000000000001',
           role: 'assistant',
-          content: [{ type: 'text', text: 'Accessibility response.' }],
+          content: [
+            { type: 'text', text: 'Accessibility response.' },
+            {
+              type: 'tool-call', id: 'accessibility-read', name: 'read',
+              arguments: '{"file_path":"README.md"}',
+            },
+          ],
           source: { kind: 'model', provider: 'snapshot', model: 'snapshot-replier' },
         },
       },
       sourceEventSeqs: [],
       surfaceOp: 'append',
     }),
-    at(4, { type: 'step/end', data: { turn: 1, step: 1 } }),
-    at(5, { type: 'session/title', data: { title: 'Accessibility seed', messageSeqs: [1], source: { kind: 'fallback' } } }),
-    at(6, { type: 'turn/end', data: { turn: 1, reason: { kind: 'completed' } } }),
+    at(4, {
+      type: 'tool/call',
+      data: {
+        turn: 1, step: 1, callId: 'accessibility-read', name: 'read',
+        arguments: '{"file_path":"README.md"}',
+      },
+    }),
+    at(5, {
+      type: 'tool/result',
+      data: {
+        turn: 1, step: 1, callId: 'accessibility-read', isError: false,
+        content: [{
+          type: 'text',
+          text: '<path>{{cwd}}/README.md</path>\n<type>file</type>\n<content>\n1: DSH\n</content>',
+        }],
+      },
+      sourceEventSeqs: [],
+      surfaceOp: 'append',
+    }),
+    at(6, { type: 'step/end', data: { turn: 1, step: 1 } }),
+    at(7, { type: 'session/title', data: { title: 'Accessibility seed', messageSeqs: [1], source: { kind: 'fallback' } } }),
+    at(8, { type: 'turn/end', data: { turn: 1, reason: { kind: 'completed' } } }),
   ].join('\n')
 }
 
@@ -239,6 +264,49 @@ describe(`web accessibility modes: ${browserName}`, () => {
     expect(await transcriptPage.getByText('Assistant response finished', { exact: true }).count()).toBe(0)
     expect(transcriptTripwire.pageErrors).toEqual([])
     await transcriptPage.close()
+  })
+
+  it('separates file disclosure and open-file keyboard actions', async () => {
+    onTestFailed(() => saveFailureShot(page, `web-accessibility-${browserName}-file-actions`))
+    await page.setViewportSize({ width: 1280, height: 900 })
+    const tree = page.getByRole('tree', { name: 'Sessions' })
+    const workspaceRow = tree.locator('[role="treeitem"][aria-level="1"][aria-expanded]').first()
+    await workspaceRow.waitFor()
+    if (await workspaceRow.getAttribute('aria-expanded') === 'false') {
+      await workspaceRow.focus()
+      await page.keyboard.press('ArrowRight')
+      await expect.poll(() => workspaceRow.getAttribute('aria-expanded')).toBe('true')
+    }
+    await tree.locator('[role="treeitem"][aria-level="2"]').first().click()
+
+    const readRow = page.locator('[data-variant="read"]').first()
+    await expandOwningTurnProcess(page, readRow)
+    await readRow.waitFor({ timeout: 15_000 })
+    const header = readRow.locator('[data-disclosure-row]')
+    const disclosure = readRow.getByRole('button', { name: 'Read README.md', exact: true })
+    const openFile = readRow.getByRole('button', { name: 'Open file README.md', exact: true })
+    expect(await header.getAttribute('role')).toBeNull()
+    expect(await header.getAttribute('tabindex')).toBeNull()
+    expect(await readRow.locator('[role="button"] button').count()).toBe(0)
+    expect(await disclosure.getAttribute('aria-expanded')).toBe('false')
+
+    await disclosure.focus()
+    await page.keyboard.press('Enter')
+    await expect.poll(() => disclosure.getAttribute('aria-expanded')).toBe('true')
+    await page.keyboard.press('Space')
+    await expect.poll(() => disclosure.getAttribute('aria-expanded')).toBe('false')
+
+    const openPath = vi.spyOn(scaffold.ctx.sessionController, 'openWorkspacePath')
+      .mockResolvedValue({ opened: true })
+    try {
+      await openFile.focus()
+      await page.keyboard.press('Enter')
+      await expect.poll(() => openPath.mock.calls.length).toBe(1)
+      expect(await disclosure.getAttribute('aria-expanded')).toBe('false')
+    } finally {
+      openPath.mockRestore()
+    }
+    expect(tripwire.pageErrors).toEqual([])
   })
 
   it('keeps keyboard focus visible and unobscured in the narrow shell and Settings modal', async () => {
