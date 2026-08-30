@@ -16,7 +16,12 @@ const FOCUSABLE_SELECTOR = [
   '[tabindex]:not([tabindex="-1"])',
 ].join(',')
 
-const dialogStack: HTMLElement[] = []
+interface ActiveDialog {
+  element: HTMLElement
+  previousInert: boolean
+}
+
+const dialogStack: ActiveDialog[] = []
 let inertRoot: { element: HTMLElement; previous: boolean } | null = null
 
 function focusableElements(dialog: HTMLElement): HTMLElement[] {
@@ -24,6 +29,15 @@ function focusableElements(dialog: HTMLElement): HTMLElement[] {
     !element.hidden
     && element.getAttribute('aria-hidden') !== 'true'
     && element.closest('[inert]') === null)
+}
+
+function topDialog(): HTMLElement | undefined {
+  return dialogStack.at(-1)?.element
+}
+
+function syncDialogInertness(): void {
+  const top = dialogStack.at(-1)
+  for (const entry of dialogStack) entry.element.inert = entry === top ? entry.previousInert : true
 }
 
 function activateDialog(dialog: HTMLElement): () => void {
@@ -34,11 +48,15 @@ function activateDialog(dialog: HTMLElement): () => void {
       appRoot.inert = true
     }
   }
-  dialogStack.push(dialog)
+  const entry = { element: dialog, previousInert: dialog.inert }
+  dialogStack.push(entry)
+  syncDialogInertness()
   return () => {
-    const index = dialogStack.lastIndexOf(dialog)
+    const index = dialogStack.lastIndexOf(entry)
     /* v8 ignore else -- every cleanup closes the dialog registered by this activation. */
     if (index >= 0) dialogStack.splice(index, 1)
+    dialog.inert = entry.previousInert
+    syncDialogInertness()
     if (dialogStack.length !== 0 || inertRoot === null) return
     inertRoot.element.inert = inertRoot.previous
     inertRoot = null
@@ -114,7 +132,7 @@ export function Modal({
       ?? dialog
     initial.focus()
     const onKeyDown = (e: KeyboardEvent) => {
-      if (dialogStack.at(-1) !== dialog) return
+      if (topDialog() !== dialog) return
       if (e.key === 'Escape') {
         e.preventDefault()
         onCloseRef.current()
@@ -158,7 +176,7 @@ export function Modal({
         aria-hidden="true"
         onClick={() => {
           const dialog = dialogRef.current
-          if (dialog !== null && dialogStack.at(-1) === dialog) onClose()
+          if (dialog !== null && topDialog() === dialog) onClose()
         }}
       />
       <div

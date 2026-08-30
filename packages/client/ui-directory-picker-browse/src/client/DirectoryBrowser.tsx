@@ -711,8 +711,9 @@ export function DirectoryBrowser({ open, listDirectory, createDirectory, onOpen,
     if (row !== null && childPath !== undefined) row.scrollLeft = row.scrollWidth
   }, [childPath])
   // Every editor exit that would drop focus to body re-parks it after
-  // commit, so keyboard traversal stays inside the dialog (the Modal has no
-  // focus trap): a pick lands on the selection's row — aria-current in the
+  // commit, so focus preserves the operator's editing context instead of
+  // falling back to the Modal containment boundary: a pick lands on the
+  // selection's row — aria-current in the
   // freshly rendered left pane, which survives even a right-pane advance
   // replacing the picked button's column — while Enter and an input-focused
   // Escape land on the crumb edit zone that replaces the input.
@@ -750,9 +751,10 @@ export function DirectoryBrowser({ open, listDirectory, createDirectory, onOpen,
 
   if (!open) return null
   const twoPane = selected !== null
-  // The nested create dialog owns the interaction while open: Modal has no
-  // focus trap, so every parent control goes inert (Shift-Tab or AT must not
-  // close, adopt, or retarget underneath the child).
+  // The nested create dialog owns the interaction while open: shared Modal
+  // makes the parent card inert, while these explicit disabled states also
+  // fence pointer and programmatic actions from adopting or retargeting under
+  // the child.
   const parentInert = busy || folderDraft !== null
   // An uncommitted path draft makes targetPath stale relative to the header:
   // committing actions must not act on the previous selection/listing while

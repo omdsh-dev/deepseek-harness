@@ -12,7 +12,7 @@ Status: implemented
 
 **由同一个既有 client Cordis 插件持有两个已发布步骤。** `ui-settings-models` 在 `settings.onboarding` 中以顺序 `-100` 注册 `welcome-notice`，以顺序 `0` 注册 `deepseek-official`。外壳仍然只挂载第一个未完成条目，因此两个弹窗不会堆叠。不新增 client 包或插件配置行。
 
-**两个步骤共用同一个弹窗组件与交互所有者。** `OnboardingModal` 包装既有 ui-primitives `Modal`，提供统一的标题和内容布局。共享 Modal 在可见期间独立持有 `#root` inert、初始焦点、Tab 焦点约束、嵌套弹窗关闭规则，以及对仍连接的触发控件恢复焦点。欢迎步骤把可见标题作为显式初始焦点；凭据步骤保留表单自动聚焦。Escape 和遮罩点击不会静默完成强制引导；每个步骤只暴露自己的明确操作。步骤仍在加载私有事实时返回 `null`，因此不会绘制或阻塞界面。
+**两个步骤共用同一个弹窗组件与交互所有者。** `OnboardingModal` 包装既有 ui-primitives `Modal`，提供统一的标题和内容布局。共享 Modal 在可见期间独立持有 `#root` inert、被覆盖弹窗的 inert 状态、初始焦点、Tab 焦点约束、嵌套弹窗关闭规则，以及对仍连接的触发控件恢复焦点。嵌套弹窗会把所有被覆盖的 dialog 排除出键盘与辅助技术交互，关闭时再恢复下一层 dialog 及其仍连接的触发控件。欢迎步骤把可见标题作为显式初始焦点；凭据步骤保留表单自动聚焦。Escape 和遮罩点击不会静默完成强制引导；每个步骤只暴露自己的明确操作。步骤仍在加载私有事实时返回 `null`，因此不会绘制或阻塞界面。
 
 **欢迎声明复用既有持久化字段。** 完整文案与版本由 `onboarding-copy.ts` 持有。回环客户端通过既有 settings API 比较和写入 `ui-onboarding.welcomeNoticeVersion`，且只有点击「继续」才确认当前版本。非 loopback 页面继续使用既有的进程内回退，因为 Client 在那里禁用 Host settings 持久化。不改变 Host schema、API Proxy 允许列表或持久化实现。
 

@@ -689,6 +689,37 @@ describe('Modal', () => {
     fireEvent.click(masks[1]!)
     expect(closeInner).toHaveBeenCalledTimes(2)
   })
+
+  it('makes a covered dialog inert and restores it when the nested dialog closes', () => {
+    function NestedDialogs() {
+      const [innerOpen, setInnerOpen] = useState(false)
+      return (
+        <Modal open onClose={() => {}} title="Outer flow" headless>
+          <button type="button" onClick={() => { setInnerOpen(true) }}>Open inner</button>
+          <Modal open={innerOpen} onClose={() => { setInnerOpen(false) }} title="Inner flow" headless>
+            <button type="button" autoFocus>Inner action</button>
+          </Modal>
+        </Modal>
+      )
+    }
+
+    render(<NestedDialogs />)
+    const opener = screen.getByRole('button', { name: 'Open inner' })
+    const outer = screen.getByRole('dialog', { name: 'Outer flow' })
+    expect(outer.inert).not.toBe(true)
+    fireEvent.click(opener)
+
+    const inner = screen.getByRole('dialog', { name: 'Inner flow' })
+    expect(screen.getByRole('dialog', { name: 'Outer flow', hidden: true })).toBe(outer)
+    expect(outer.inert).toBe(true)
+    expect(inner.inert).not.toBe(true)
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Inner action' }))
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(screen.queryByRole('dialog', { name: 'Inner flow' })).toBeNull()
+    expect(outer.inert).not.toBe(true)
+    expect(document.activeElement).toBe(opener)
+  })
 })
 
 describe('ConnectionBanner', () => {

@@ -1479,18 +1479,22 @@ describe('DirectoryBrowser', () => {
     expect(b.onClose).not.toHaveBeenCalled()
   })
 
-  it('makes every parent control inert while the nested create dialog is open', async () => {
+  it('makes the parent dialog and every parent control inert while nested create is open', async () => {
     mount()
     await waitFor(() => { expect(screen.getByRole('listitem')).toBeTruthy() })
     fireEvent.click(screen.getByRole('button', { name: 'browser.newFolder' }))
-    // Modal traps no focus: Shift-Tab/AT reach the parent, so closing,
-    // adopting, and retargeting must all disable underneath the child. Both
-    // dialogs carry a cancel: the parent's disables, the child's stays live.
-    const cancels = screen.getAllByRole<HTMLButtonElement>('button', { name: 'browser.cancel' })
+    const parentDialog = screen.getByRole('dialog', { name: 'browser.title', hidden: true })
+    const childDialog = screen.getByRole('dialog', { name: 'browser.newFolder' })
+    expect(parentDialog.inert).toBe(true)
+    expect(childDialog.inert).not.toBe(true)
+    // The semantic parent is inert, and its controls remain explicitly
+    // disabled to fence pointer and programmatic actions underneath the child.
+    // Both dialogs carry a cancel: the parent's disables, the child's stays live.
+    const cancels = screen.getAllByRole<HTMLButtonElement>('button', { name: 'browser.cancel', hidden: true })
     expect(cancels.map(button => button.disabled).sort()).toEqual([false, true])
-    expect(screen.getByRole<HTMLButtonElement>('button', { name: 'browser.open' }).disabled).toBe(true)
-    expect(screen.getByRole<HTMLButtonElement>('button', { name: 'browser.editPath' }).disabled).toBe(true)
-    for (const row of screen.getAllByRole('listitem')) {
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: 'browser.open', hidden: true }).disabled).toBe(true)
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: 'browser.editPath', hidden: true }).disabled).toBe(true)
+    for (const row of screen.getAllByRole('listitem', { hidden: true })) {
       expect(rowButton(row).disabled).toBe(true)
     }
   })
