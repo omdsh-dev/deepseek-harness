@@ -22,6 +22,8 @@ Expected browser output is regenerated from alpha.2 only after the owning behavi
 
 The public evidence fork remains executable without upstream private infrastructure. Pull requests outside the upstream owner select standard GitHub-hosted Linux and Windows runners with four-core workload budgets; upstream-only Cloudflare deployment and Project mutation are explicit neutral skips, while read-only policy follows the current repository identity. This keeps public verification reproducible without requesting or billing upstream larger runners.
 
+PowerShell evidence counts only when the job resolves a real `pwsh` binary; a skip on a host without PowerShell is a recorded capability limitation, not passing evidence. Persistent-shell readiness accepts prompt-observed `stdin_read` and the quiescent `inferred_idle` fallback because either leaves the shell ready for another send, while the following send still proves state persistence and secret scrubbing. The PowerShell-owned session, system-prompt, and tool-schema snapshots are refreshed together from the current alpha.2 profile and replayed on a PowerShell-capable host.
+
 ## Alternatives considered
 
 **Merge the complete alpha.1 candidate into alpha.2.** Rejected because the histories share only the official alpha.1 release base and the semantic overlap crosses redesigned source, generated expectations, and deleted files. A text merge cannot decide which interaction contract remains valid.
@@ -37,6 +39,7 @@ The public evidence fork remains executable without upstream private infrastruct
 - Disabled developers validate that the supported core tasks can be completed independently, effectively, and safely, with failures and workarounds retained in the public ledger.
 - Release metadata identifies the exact DSH compatibility range and evidence status; no tag, package, or documentation claims complete accessibility while required task or assistive-technology evidence is missing.
 - Generated snapshots, coverage ownership, and CI workflow changes are derived from alpha.2 and pass without erasing failed run history or rerunning failures into invisibility.
+- PowerShell evidence records the resolved runtime version, replays both PowerShell header-owner snapshots with real PowerShell, and proves a second send after either supported readiness tier without weakening state-persistence or secret-scrubbing assertions.
 - Fork pull-request jobs resolve to standard hosted runners, retain full required scenarios at bounded concurrency, and leave upstream-only integrations neutral rather than queued or falsely failing.
 
 ## Risks
