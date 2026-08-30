@@ -16,7 +16,7 @@ Linux PR 的 `node 24 / snapshots and artifacts` 必须运行完整 Web 浏览�
 
 本地 `pnpm run test:web` 仍先构建，再串行运行完整浏览器套件；`test:web:built` 是已有构建产物的串行执行入口。开发者只在确认用户可见输出有意变化后显式运行 `DSH_SNAPSHOT=refresh pnpm run test:web`，评审每一处预期输出 diff，再以 replay 模式复验不再写文件。
 
-CI 的 `scripts/run-web-snapshots.ts` 先用相互独立的 Vitest 调用串行运行 `hmr-live.e2e.ts` 与 `cordis-tool-round.e2e.ts`。HMR 场景会修改已构建工作区状态；Cordis 场景则拥有一条对生命周期时序敏感的批准与 steering（中途引导）序列，它通过在批准前等待初始轮次结束来确定轮次分组。两者通过后，其余全部文件进入同一个 6-worker Vitest 池。所有子进程都继承 stdio，外围门禁再通过 `run-gates` 流式传递输出。
+CI 的 `scripts/run-web-snapshots.ts` 先用相互独立的 Vitest 调用串行运行 `hmr-live.e2e.ts`、`cordis-tool-round.e2e.ts`、`workflow-run.e2e.ts` 与 `workspace-management.e2e.ts`。HMR 场景会修改已构建工作区状态；其余三个场景则拥有长生命周期、有状态的浏览器／宿主序列：Cordis 批准与 steering（中途引导）、真实 workflow worker 与本地子会话导航，以及在同一 Workspace 管理页面内连续执行的指针、菜单、归档、重载和目录操作。新进程使这些责任方脱离资源竞争的文件池，同时不修改其等待、断言或 golden。四者全部通过后，其余文件进入同一个有界 Vitest 池。远程 authority 场景显式把浏览器主机名映射到 loopback，并让 scaffold 的令牌交换通过 loopback 连接、携带相同的 HTTP Host 头，从而在不依赖操作系统通配 `.localhost` 解析器的情况下继续覆盖 Host 信任语义。所有子进程都继承 stdio，外围门禁再通过 `run-gates` 流式传递输出。
 
 对 PR 而言，门禁仅在 Linux 消费方 job 中运行：这些场景面向 POSIX，其他 PR job 不安装 Chromium。自托管的默认分支 Linux 串行热备也包含该比较，而 macOS 和 Windows 串行 job 仍不使用浏览器（不存在托管的 Linux 串行聚合）。PR 的 `all checks passed` 已依赖消费方 job，因此浏览器比较失败会阻止合并，无需新增 branch-protection check 名称。
 
@@ -30,10 +30,10 @@ CI 的 `scripts/run-web-snapshots.ts` 先用相互独立的 Vitest 调用串行�
 
 **新建独立 browser job 并重新构建全仓。** 已否决：它会重复依赖安装和发布构建。现有 Linux 消费方 job 已负责该构建，并已被统一的 required verdict 聚合。
 
-**把 HMR 与 Cordis 也放进并行池。** 不予采用，因为 HMR 会修改共享的已构建状态，Cordis 批准 continuation 则需要串行预检。其余全部文件共用一个有界池；专用长文件进程会增加调度代码，并在这些文件结束后让缩减后的部分 worker 预算闲置。
+**把全部浏览器文件都放进并行池。** 不予采用，因为 HMR 会修改共享的已构建状态，而 Cordis、workflow-run 与 Workspace 管理会跨多步场景保留生命周期状态。有界池仍适合相互独立的文件；四个明确责任方使用新进程，避免池竞争使其有状态序列失效。
 
 **用 jsdom 快照代替真实 Chromium。** 已否决：jsdom 不覆盖浏览器、HTTP/SSE 承载及真实客户端插件包的组合；它仍可用于快速的下层反馈，但不能替代组装后的浏览器链路。
 
 ## 后果
 
-每个 PR 都在合并前证明当前 Web 组装与所有已提交的浏览器预期输出一致；漏刷会在改变该组装的同一个 PR 中失败。成本是消费方 job 需要安装 Chromium、串行运行 2 个场景并执行 1 个有界 6-worker 池；消费方独立构建与浏览器缓存避免重跑时重复构建和下载。并行文件的失败会立即流式显示，但 worker 预算的任何变化仍需要完整端到端测量，而不能依据运行中耗时猜测。门禁不声称跨平台浏览器一致性，Playwright/Chromium 升级若改变 ARIA 格式，升级 PR 必须显式 refresh 并评审 churn。
+每个 PR 都在合并前证明当前 Web 组装与所有已提交的浏览器预期输出一致；漏刷会在改变该组装的同一个 PR 中失败。成本是消费方 job 需要安装 Chromium、串行运行 4 个文件并执行 1 个有界池；消费方独立构建与浏览器缓存避免重复构建和下载。并行文件的失败会立即流式显示，但 worker 预算或责任边界的任何变化仍需要完整端到端证据，而不能依据运行中耗时猜测。门禁不声称跨平台浏览器一致性，Playwright/Chromium 升级若改变 ARIA 格式，升级 PR 必须显式 refresh 并评审 churn。
