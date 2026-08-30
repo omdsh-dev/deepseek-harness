@@ -107,7 +107,7 @@ function mount(
     renderPicker(items),
   )
   return {
-    view, onPick, onClose, createWorkspace, probe, occupancy,
+    view, onPick, onClose, createWorkspace, probe, occupancy, anchorRef,
     rerenderItems: (nextItems: readonly WorkspaceView[]) => { view.rerender(renderPicker(nextItems)) },
   }
 }
@@ -162,15 +162,21 @@ describe('WorkspacePicker', () => {
 
   it('reports a non-Error adoption failure in the folder-error surface', async () => {
     const b = mount([workspace('alpha', 'Alpha')], vi.fn(async () => { throw 'permission denied' }))
+    document.body.append(b.anchorRef.current)
     chooseAdd()
     await act(async () => { b.probe.owner!.onPicked('/one/project') })
     await waitFor(() => {
       expect(screen.getByRole('dialog', { name: '无法打开文件夹' })).toBeTruthy()
     })
-    expect(screen.getByRole('alert').textContent).toBe('permission denied')
+    const dialog = screen.getByRole('dialog', { name: '无法打开文件夹' })
+    const alert = screen.getByRole('alert')
+    expect(alert.textContent).toBe('permission denied')
+    expect(dialog.getAttribute('aria-describedby')).toBe(alert.id)
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: '取消' }))
     expect(b.probe.owner!.open).toBe(false)
     fireEvent.click(screen.getByRole('button', { name: '重新选择' }))
     expect(b.probe.owner!.open).toBe(true)
+    expect(document.activeElement).toBe(b.anchorRef.current)
     expect(b.onPick).not.toHaveBeenCalled()
   })
 
@@ -203,10 +209,12 @@ describe('WorkspacePicker', () => {
 
   it('closes the folder-error surface when the user cancels', () => {
     const b = mount([workspace('alpha', 'Alpha')])
+    document.body.append(b.anchorRef.current)
     chooseAdd()
     act(() => { b.probe.owner!.onError('no chooser installed') })
     fireEvent.click(screen.getByRole('button', { name: '取消' }))
     expect(screen.queryByRole('dialog')).toBeNull()
+    expect(document.activeElement).toBe(b.anchorRef.current)
   })
 
   it('waits to show its menu until an optional anchor is available', () => {

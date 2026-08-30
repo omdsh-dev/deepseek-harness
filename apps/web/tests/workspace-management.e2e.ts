@@ -11,7 +11,7 @@
 // are host RPCs with no model involvement, and the one session row the
 // flat/hover/menu/archive scenarios need comes from a seeded fixture (the
 // seeded-history seed reused verbatim — no new recording).
-import { mkdir, readFile, stat, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { join, sep } from 'node:path'
 import type { Browser, Locator, Page } from 'playwright'
@@ -146,6 +146,41 @@ describe('web e2e: workspace management (create / rename / flat view / hover aff
     // each titled after the folder the dialog made.
     const titles = scaffold.ctx.workspaceRegistry.list().map(workspace => workspace.title)
     expect(titles.slice(0, 2)).toEqual(['beta-ws', 'alpha-ws'])
+    expect(tripwire.pageErrors).toEqual([])
+  }, 90_000)
+
+  it('describes an adoption failure and restores the durable Add workspace trigger', async () => {
+    onTestFailed(() => saveFailureShot(page, 'web-e2e-ws-adoption-error'))
+    const workspaceIdsBefore = scaffold.ctx.workspaceRegistry.list().map(workspace => workspace.id)
+    const disappearing = join(scaffold.workspaceCwd, 'disappearing-before-adoption')
+    await mkdir(disappearing, { recursive: true })
+    const picker = await browseTo(disappearing)
+    // The browse flow has accepted and rendered the directory, but the Host
+    // must still canonicalize it when Workspace adoption starts. Removing this
+    // task-owned fixture creates a real wire refusal without mocking the flow.
+    await rm(disappearing, { recursive: true, force: true })
+    await picker.getByRole('button', { name: 'Open', exact: true }).click()
+
+    const errorDialog = page.getByRole('dialog', { name: 'Couldn’t open folder' })
+    await errorDialog.waitFor({ timeout: 10_000 })
+    const alert = errorDialog.getByRole('alert')
+    const alertId = await alert.getAttribute('id')
+    expect(alertId).not.toBeNull()
+    expect(await errorDialog.getAttribute('aria-describedby')).toBe(alertId)
+    const cancel = errorDialog.getByRole('button', { name: 'Cancel' })
+    const activeName = await page.locator(':focus').evaluate(element =>
+      element.getAttribute('aria-label') ?? element.textContent?.trim() ?? '')
+    expect(activeName).toBe('Cancel')
+
+    await cancel.click()
+    await expect.poll(() => page.evaluate(() => {
+      const active = document.activeElement
+      return active?.getAttribute('aria-label') ?? active?.textContent?.trim() ?? ''
+    }), { timeout: 5_000 }).toBe('Add workspace')
+    // A missing path makes resolveByPath reject during its documented
+    // canonicalization step, so compare the durable registry identity set
+    // instead of trying to canonicalize this intentionally absent fixture.
+    expect(scaffold.ctx.workspaceRegistry.list().map(workspace => workspace.id)).toEqual(workspaceIdsBefore)
     expect(tripwire.pageErrors).toEqual([])
   }, 90_000)
 
