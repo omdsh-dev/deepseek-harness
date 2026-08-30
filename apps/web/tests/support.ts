@@ -50,7 +50,8 @@ export async function expandTurnProcesses(page: Page): Promise<void> {
 /**
  * Expand the Turn-process group containing one possibly hidden descendant.
  * @param page - page containing the Chat view.
- * @param target - descendant whose owning Turn process should open.
+ * @param target - DOM locator that can match the descendant while its owning
+ * Turn process is hidden. Role locators exclude hidden descendants by default.
  */
 export async function expandOwningTurnProcess(page: Page, target: Locator): Promise<void> {
   // `hidden="until-found"` keeps a layout box, so WebKit can report this member
