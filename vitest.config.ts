@@ -1,11 +1,10 @@
-import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import tsconfigPaths from 'vite-tsconfig-paths'
-import { resolvePwshPath } from './packages/shell/pwsh-local/src/resolve.ts'
 import { defineConfig } from 'vitest/config'
 import { standardDecoratorPlugin, vitestExecArgv } from './vitest.shared.ts'
 import { COVERAGE_EXEMPT_ENV, coverageExemptHeavySuites } from './scripts/coverage-exempt.ts'
 import { COVERAGE_PARTITION_MODE_ENV } from './scripts/coverage-partitions.ts'
+import { pinPwshTestAvailability } from './scripts/pwsh-test-availability.ts'
 
 // Prints exact `path:line:col` records for every uncovered statement, branch
 // path, and function when a file misses the per-file 100% gate — the built-in
@@ -98,11 +97,10 @@ const windowsRunnerCoverageExclusions = process.platform === 'win32'
 // pwsh-local's run/start/lifecycle suites self-skip without a real pwsh
 // (executor.spec.ts hasPwsh), leaving this file
 // far below per-file 100% on pwsh-less hosts; the exemption keeps those hosts
-// green while CI runners ship pwsh and still enforce the full bar. The probe
-// runs the suites' own resolution (the dependency-free resolve.ts module),
-// so the exemption is active exactly when the suites skip — a mismatched
-// narrower probe could exempt the file on hosts whose suites actually run.
-const pwshCoverageExclusions = spawnSync(resolvePwshPath(), ['-NoLogo', '-NoProfile', '-NonInteractive', '-Command', '$true'], { encoding: 'utf8' }).status === 0
+// green while CI runners ship pwsh and still enforce the full bar. The
+// partition launcher pins one probe before any child starts, so shards and the
+// later merge cannot disagree if executable startup availability changes.
+const pwshCoverageExclusions = pinPwshTestAvailability()
   ? []
   : [
       'packages/shell/pwsh-local/src/index.ts',

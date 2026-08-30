@@ -12,23 +12,18 @@
  * sibling. Nothing under the user profile is touched.
  */
 
-import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { AclSandbox } from '../src/index.ts'
+import { pinPwshTestAvailability } from '../../../../scripts/pwsh-test-availability.ts'
 
 const isWin32 = process.platform === 'win32'
 
 function pwshAvailable(): boolean {
-  try {
-    execFileSync('where.exe', ['pwsh'], { stdio: 'ignore' })
-    return true
-  } catch {
-    return false
-  }
+  return pinPwshTestAvailability()
 }
 
 describe.skipIf(!isWin32 || !pwshAvailable())('AclSandbox write restriction', () => {

@@ -3,6 +3,7 @@ import { spawn } from 'node:child_process'
 import { lstat, mkdir, readdir, rm, unlink } from 'node:fs/promises'
 import { join, relative, sep } from 'node:path'
 import { pnpmInvocation } from './pnpm-invocation.ts'
+import { PWSH_TEST_AVAILABLE_ENV, pinPwshTestAvailability } from './pwsh-test-availability.ts'
 
 /** Environment variable selecting the number of instrumented coverage processes. */
 export const COVERAGE_PARTITIONS_ENV = 'DSH_COVERAGE_PARTITIONS'
@@ -54,6 +55,8 @@ export interface CoveragePartitionCoordinatorOptions {
   pnpmEntrypoint: string
   /** Additional arguments shared by every partition. */
   vitestArgs?: string[]
+  /** Run-wide PowerShell probe result, injectable for scheduler tests. */
+  pwshAvailable?: boolean
   /** Child executor, injectable for scheduler tests. */
   runCommand?: CoverageCommandRunner
 }
@@ -90,6 +93,7 @@ export class CoveragePartitionCoordinator {
   private readonly pnpmEntrypoint: string
   private readonly vitestArgs: string[]
   private readonly runCommand: CoverageCommandRunner
+  private readonly pwshAvailable: boolean
   private readonly temporaryRoot: string
   private readonly blobsRoot: string
 
@@ -102,6 +106,7 @@ export class CoveragePartitionCoordinator {
     this.partitions = options.partitions
     this.pnpmEntrypoint = options.pnpmEntrypoint
     this.vitestArgs = options.vitestArgs ?? []
+    this.pwshAvailable = options.pwshAvailable ?? pinPwshTestAvailability()
     this.runCommand = options.runCommand ?? runCoverageCommand
     this.temporaryRoot = join(this.root, 'coverage', '.partitioned')
     this.blobsRoot = join(this.temporaryRoot, 'blobs')
@@ -165,6 +170,7 @@ export class CoveragePartitionCoordinator {
       env: {
         [COVERAGE_PARTITIONS_ENV]: undefined,
         [COVERAGE_PARTITION_MODE_ENV]: '1',
+        [PWSH_TEST_AVAILABLE_ENV]: this.pwshAvailable ? '1' : '0',
       },
       cwd: this.root,
       blobPath,
@@ -184,6 +190,7 @@ export class CoveragePartitionCoordinator {
       env: {
         [COVERAGE_PARTITIONS_ENV]: undefined,
         [COVERAGE_PARTITION_MODE_ENV]: undefined,
+        [PWSH_TEST_AVAILABLE_ENV]: this.pwshAvailable ? '1' : '0',
       },
       cwd: this.root,
     }

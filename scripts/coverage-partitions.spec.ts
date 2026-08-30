@@ -13,6 +13,7 @@ import {
   type CoverageCommand,
   type CoverageCommandResult,
 } from './coverage-partitions.ts'
+import { PWSH_TEST_AVAILABLE_ENV } from './pwsh-test-availability.ts'
 
 const passed: CoverageCommandResult = { exitCode: 0, signalCode: null }
 
@@ -91,6 +92,7 @@ describe('coverage partition coordinator', () => {
       partitions: 3,
       pnpmEntrypoint: '/pnpm.cjs',
       vitestArgs: ['--testTimeout=30000'],
+      pwshAvailable: false,
       runCommand,
     })
 
@@ -117,6 +119,7 @@ describe('coverage partition coordinator', () => {
       expect(command.env).toEqual({
         [COVERAGE_PARTITIONS_ENV]: undefined,
         [COVERAGE_PARTITION_MODE_ENV]: '1',
+        [PWSH_TEST_AVAILABLE_ENV]: '0',
       })
     }
     const mergeCommand = commands[3]
@@ -126,6 +129,7 @@ describe('coverage partition coordinator', () => {
     expect(mergeCommand.env).toEqual({
       [COVERAGE_PARTITIONS_ENV]: undefined,
       [COVERAGE_PARTITION_MODE_ENV]: undefined,
+      [PWSH_TEST_AVAILABLE_ENV]: '0',
     })
   })
 
