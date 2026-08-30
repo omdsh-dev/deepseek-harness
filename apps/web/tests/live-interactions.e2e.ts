@@ -151,9 +151,13 @@ describe('web e2e: live-turn interactions (cancel / error / retry)', () => {
     })
     onTestFailed(() => saveFailureShot(page, 'web-e2e-cancel'))
     const { settled } = await sendPrompt()
-    // The marker IS the synchronization: the stream is provably parked in the
-    // hang (prefix chunks delivered to the loop) before the stop click.
+    // The marker proves the Host loop is parked after emitting the prefix. The
+    // SSE frame crosses a second boundary, so observe both its text and the
+    // running status before snapshotting or clicking stop.
     await expect.poll(() => existsSync(marker), { timeout: 15_000 }).toBe(true)
+    await page.getByRole('article', { name: 'Assistant response' })
+      .getByText('partial', { exact: true })
+      .waitFor({ timeout: 10_000 })
     await expect.poll(
       () => page.getByRole('status').filter({ hasText: 'Deep diving...' }).isVisible(),
       { timeout: 10_000 },
