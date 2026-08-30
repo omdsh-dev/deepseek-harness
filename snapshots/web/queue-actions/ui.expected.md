@@ -1,4 +1,4 @@
-- banner:
+- main:
   - navigation "Session hierarchy":
     - button "Reply with a one-sentence description" [disabled]
   - img
@@ -6,37 +6,38 @@
   - button "Session log":
     - text: Session log
     - img
-  - tablist:
+  - tablist "Session views":
     - tab "Chat" [selected]
     - tab "Trajectory"
-- button "System prompt":
-  - img
-  - img
-  - text: System prompt
-- text: Reply with a one-sentence description of event sourcing, then stop. {{clock}}
-- button "Copy":
-  - img
-- button "Context injection @deepseek-ai/dsh-system-prompt":
-  - img
-  - img
-  - text: Context injection @deepseek-ai/dsh-system-prompt
-- paragraph: partial
-- status: Deep diving...
-- list:
-  - listitem:
-    - text: Edited queue item
-    - button "Edit queued message":
+  - tabpanel "Chat":
+    - button "System prompt":
       - img
-    - tooltip "Edit queued message"
-    - button "Remove queued message":
       - img
-    - button "Steer queued message":
+      - text: System prompt
+    - text: Reply with a one-sentence description of event sourcing, then stop. {{clock}}
+    - button "Copy":
       - img
-- textbox "Cmd/Ctrl+Enter steers all queued messages"
-- button "Commands":
-  - img
-- 'button "Access mode, current: Workspace Write"': Workspace Write
-- button "Select model, current DeepSeek-V4-Flash":
-  - text: DeepSeek-V4-Flash
-  - img
-- button "Stop generating"
+    - button "Context injection @deepseek-ai/dsh-system-prompt":
+      - img
+      - img
+      - text: Context injection @deepseek-ai/dsh-system-prompt
+    - paragraph: partial
+    - status: Deep diving...
+  - list:
+    - listitem:
+      - text: Edited queue item
+      - button "Edit queued message":
+        - img
+      - tooltip "Edit queued message"
+      - button "Remove queued message":
+        - img
+      - button "Steer queued message":
+        - img
+  - textbox "Cmd/Ctrl+Enter steers all queued messages"
+  - button "Commands":
+    - img
+  - 'button "Access mode, current: Workspace Write"': Workspace Write
+  - button "Select model, current DeepSeek-V4-Flash":
+    - text: DeepSeek-V4-Flash
+    - img
+  - button "Stop generating"

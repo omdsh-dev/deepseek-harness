@@ -1,42 +1,42 @@
-- button "New session"
-- button "Collapse sidebar":
-  - img
-- button "New session":
-  - img
-  - text: New Session
-- text: Workspaces
-- button "Search sessions":
-  - img
-- button "View options":
-  - img
-- button "Add workspace":
-  - img
-- tree "Sessions":
-  - treeitem "workspace" [expanded] [level=1]:
+- navigation "Sidebar":
+  - button "New session"
+  - button "Collapse sidebar":
+    - img
+  - button "New session":
+    - img
+    - text: New Session
+  - text: Workspaces
+  - button "Search sessions":
+    - img
+  - button "View options":
+    - img
+  - button "Add workspace":
+    - img
+  - tree "Sessions":
+    - treeitem "workspace" [expanded] [level=1]:
+      - img
+      - text: workspace
+    - treeitem "New Session" [level=2] [selected]
+  - button "Settings":
+    - img
+    - text: Settings
+- main:
+  - text: Into the Unknown Preview
+  - button "Choose workspace":
     - img
     - text: workspace
-  - treeitem "New Session" [level=2] [selected]
-- button "Settings":
-  - img
-  - text: Settings
-- text: Into the Unknown Preview
-- button "Choose workspace":
-  - img
-  - text: workspace
-  - img
-- button "Standard mode":
-  - img
-  - text: Standard mode
-  - img
-- textbox "Describe what you want to build... / commands, @ files or sessions":
-  - paragraph
-- button "Commands":
-  - img
-- 'button "Access mode, current: Workspace Write"': Workspace Write
-- button "Select model, current DeepSeek-V4-Flash":
-  - text: DeepSeek-V4-Flash
-  - img
-- button "Send message" [disabled]
-- text: Details
-- button "Close details"
-- text: Click a tool row in the message flow to view its details
+    - img
+  - button "Standard mode":
+    - img
+    - text: Standard mode
+    - img
+  - textbox "Describe what you want to build... / commands, @ files or sessions":
+    - paragraph
+  - button "Commands":
+    - img
+  - 'button "Access mode, current: Workspace Write"': Workspace Write
+  - button "Select model, current DeepSeek-V4-Flash":
+    - text: DeepSeek-V4-Flash
+    - img
+  - button "Send message" [disabled]
+- separator "Sidebar"

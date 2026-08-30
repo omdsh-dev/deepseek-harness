@@ -194,6 +194,37 @@ describe(`assembled core accessibility: ${browserName}`, () => {
     expect(tripwire.pageErrors).toEqual([])
   }, 60_000)
 
+  it('operates the named Session views as one keyboard tab stop', async () => {
+    onTestFailed(() => saveFailureShot(page, `core-accessibility-${browserName}-session-views`))
+    const tablist = page.getByRole('tablist', { name: 'Session views' })
+    await tablist.waitFor({ timeout: 15_000 })
+    const chat = tablist.getByRole('tab', { name: 'Chat' })
+    const trajectory = tablist.getByRole('tab', { name: 'Trajectory' })
+    const panel = page.getByRole('tabpanel', { name: 'Chat' })
+
+    expect(await tablist.locator('[role="tab"][tabindex="0"]').count()).toBe(1)
+    expect(await chat.getAttribute('aria-controls')).toBe(await panel.getAttribute('id'))
+    expect(await panel.getAttribute('aria-labelledby')).toBe(await chat.getAttribute('id'))
+    await tabTo(page, chat)
+    await expectFocused(chat)
+
+    await page.keyboard.press('ArrowRight')
+    await expectFocused(trajectory)
+    await expect.poll(() => trajectory.getAttribute('aria-selected')).toBe('true')
+    await expect.poll(() => page.getByRole('tabpanel', { name: 'Trajectory' }).count()).toBe(1)
+    expect(await tablist.locator('[role="tab"][tabindex="0"]').count()).toBe(1)
+
+    await page.keyboard.press('Home')
+    await expectFocused(chat)
+    await expect.poll(() => chat.getAttribute('aria-selected')).toBe('true')
+    await page.keyboard.press('End')
+    await expectFocused(trajectory)
+    await page.keyboard.press('ArrowRight')
+    await expectFocused(chat)
+    await expect.poll(() => chat.getAttribute('aria-selected')).toBe('true')
+    expect(tripwire.pageErrors).toEqual([])
+  }, 60_000)
+
   it('contains Settings focus, inerts the app, and restores the trigger', async () => {
     onTestFailed(() => saveFailureShot(page, `core-accessibility-${browserName}-settings-modal`))
     const trigger = page.getByRole('button', { name: 'Settings', exact: true })

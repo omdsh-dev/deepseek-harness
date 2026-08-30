@@ -547,6 +547,48 @@ describe('ConversationRoot resident composer', () => {
     expect(b.view.getByRole('tab', { name: 'New view' }).getAttribute('aria-selected')).toBe('false')
   })
 
+  it('names the view tabs and panel, then switches them with composite keyboard navigation', () => {
+    const b = mount(sessionSnapshotOf())
+    const tablist = b.view.getByRole('tablist', { name: '会话视图' })
+    const chat = b.view.getByRole('tab', { name: 'Chat' })
+    const trajectory = b.view.getByRole('tab', { name: 'Trajectory' })
+    const panel = b.view.getByRole('tabpanel', { name: 'Chat' })
+
+    expect(tablist.contains(chat)).toBe(true)
+    expect(chat.tabIndex).toBe(0)
+    expect(trajectory.tabIndex).toBe(-1)
+    expect(chat.getAttribute('aria-controls')).toBe(panel.id)
+    expect(panel.getAttribute('aria-labelledby')).toBe(chat.id)
+
+    chat.focus()
+    fireEvent.keyDown(chat, { key: 'ArrowRight' })
+    expect(document.activeElement).toBe(trajectory)
+    expect(trajectory.getAttribute('aria-selected')).toBe('true')
+    expect(trajectory.tabIndex).toBe(0)
+    expect(chat.tabIndex).toBe(-1)
+    expect(b.view.getByRole('tabpanel', { name: 'Trajectory' }).getAttribute('aria-labelledby'))
+      .toBe(trajectory.id)
+    expect(b.view.getByTestId('view-trajectory')).toBeTruthy()
+
+    fireEvent.keyDown(trajectory, { key: 'ArrowRight' })
+    expect(document.activeElement).toBe(chat)
+    expect(chat.getAttribute('aria-selected')).toBe('true')
+    fireEvent.keyDown(chat, { key: 'End' })
+    expect(document.activeElement).toBe(trajectory)
+    expect(trajectory.getAttribute('aria-selected')).toBe('true')
+    fireEvent.keyDown(trajectory, { key: 'Home' })
+    expect(document.activeElement).toBe(chat)
+    expect(chat.getAttribute('aria-selected')).toBe('true')
+  })
+
+  it('labels a single view panel without exposing a one-item tablist', () => {
+    const b = mount(sessionSnapshotOf(), undefined, undefined, {
+      viewTabs: [{ id: 'chat', label: 'Chat' }],
+    })
+    expect(b.view.queryByRole('tablist')).toBeNull()
+    expect(b.view.getByRole('region', { name: 'Chat' })).toBeTruthy()
+  })
+
   it('rolls the pending workspace label back when switching fails', async () => {
     const selectWorkspace = vi.fn(async () => { throw new Error('connect failed') })
     const b = mount(

@@ -9,7 +9,7 @@
 
 ---
 
-- banner:
+- main:
   - navigation "Session hierarchy":
     - button "Review deepseek-harness/deepseek-harness#314" [disabled]
   - img
@@ -17,43 +17,44 @@
   - button "Session log":
     - text: Session log
     - img
-  - tablist:
+  - tablist "Session views":
     - tab "Chat" [selected]
     - tab "Trajectory"
-- button "System prompt":
-  - img
-  - img
-  - text: System prompt
-- button "Thought for a while" [expanded]:
-  - text: Thought for a while
-  - img
-- button "Context injection webhook github webhook handled by review-pr-when-ready":
-  - img
-  - img
-  - text: Context injection webhook github webhook handled by review-pr-when-ready
-- button "Context injection @deepseek-ai/dsh-system-prompt":
-  - img
-  - img
-  - text: Context injection @deepseek-ai/dsh-system-prompt
-- paragraph: "Review complete: no actionable findings."
-- button "Copy":
-  - img
-- button "Good response":
-  - img
-- button "Bad response":
-  - img
-- button "Branch into a new conversation":
-  - img
-- button "Ran for {{duration}}":
-  - img
-  - text: Ran for {{duration}}
-- text: {{clock}}
-- textbox "Message or run a task... / commands, @ files or sessions"
-- button "Commands":
-  - img
-- 'button "Access mode, current: Read Only"': Read Only
-- button "Select model, current github-webhook-review-test/reply":
-  - text: github-webhook-review-test/reply
-  - img
-- button "Send message" [disabled]
-- text: 1 turns · 1 steps LLM {{duration}}
+  - tabpanel "Chat":
+    - button "System prompt":
+      - img
+      - img
+      - text: System prompt
+    - button "Thought for a while" [expanded]:
+      - text: Thought for a while
+      - img
+    - button "Context injection webhook github webhook handled by review-pr-when-ready":
+      - img
+      - img
+      - text: Context injection webhook github webhook handled by review-pr-when-ready
+    - button "Context injection @deepseek-ai/dsh-system-prompt":
+      - img
+      - img
+      - text: Context injection @deepseek-ai/dsh-system-prompt
+    - paragraph: "Review complete: no actionable findings."
+    - button "Copy":
+      - img
+    - button "Good response":
+      - img
+    - button "Bad response":
+      - img
+    - button "Branch into a new conversation":
+      - img
+    - button "Ran for {{duration}}":
+      - img
+      - text: Ran for {{duration}}
+    - text: {{clock}}
+  - textbox "Message or run a task... / commands, @ files or sessions"
+  - button "Commands":
+    - img
+  - 'button "Access mode, current: Read Only"': Read Only
+  - button "Select model, current github-webhook-review-test/reply":
+    - text: github-webhook-review-test/reply
+    - img
+  - button "Send message" [disabled]
+  - text: 1 turns · 1 steps LLM {{duration}}
