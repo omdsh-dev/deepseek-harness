@@ -63,15 +63,6 @@ export function DisclosureRow({
     event.stopPropagation()
     onToggle()
   }
-  const toggleLeadingFromKeyboard = (event: KeyboardEvent<HTMLButtonElement>) => {
-    if (event.key !== 'Enter' && event.key !== ' ') return
-    // Embedded WebKit does not consistently synthesize the native button click
-    // for programmatic keyboard activation. Handle the two native activation
-    // keys explicitly so the disclosure remains operable in every DSH host.
-    event.preventDefault()
-    event.stopPropagation()
-    onToggle()
-  }
   const toggleFromKeyboard = (event: KeyboardEvent<HTMLDivElement>) => {
     if (!rowOwnsDisclosure || (event.key !== 'Enter' && event.key !== ' ')) return
     event.preventDefault()
@@ -109,7 +100,6 @@ export function DisclosureRow({
             aria-label={accessibleLabel ?? title}
             aria-expanded={open}
             onClick={toggleFromLeading}
-            onKeyDown={toggleLeadingFromKeyboard}
           >
             {leading}
           </button>
