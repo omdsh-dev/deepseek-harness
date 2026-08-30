@@ -1,15 +1,18 @@
-import { access, mkdir, mkdtemp, symlink, writeFile } from 'node:fs/promises'
+import { access, mkdir, mkdtemp, readFile, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   COVERAGE_PARTITION_MODE_ENV,
+  COVERAGE_PARTITION_ROLE_ENV,
   COVERAGE_PARTITIONS_ENV,
   COVERAGE_TEST_TIMEOUT_ENV,
   CoveragePartitionCoordinator,
+  WORKFLOW_WORKER_COVERAGE_FILE,
   coverageTestTimeoutArgs,
   forwardedCoverageArgs,
   parseCoveragePartitionCount,
+  workflowWorkerCoverageSuites,
   type CoverageCommand,
   type CoverageCommandResult,
 } from './coverage-partitions.ts'
@@ -83,6 +86,13 @@ describe('coverage forwarded arguments', () => {
 })
 
 describe('coverage partition coordinator', () => {
+  it('enumerates every workflow-worker top-level suite exactly once', async () => {
+    const source = await readFile(WORKFLOW_WORKER_COVERAGE_FILE, 'utf8')
+    const topLevelSuites = [...source.matchAll(/^  describe\('([^']+)'/gm)]
+      .map(match => match[1])
+    expect(workflowWorkerCoverageSuites).toEqual(topLevelSuites)
+  })
+
   it('runs every single-worker partition before one merged threshold check', async () => {
     const root = await temporaryRoot()
     const commands: CoverageCommand[] = []
@@ -102,6 +112,10 @@ describe('coverage partition coordinator', () => {
       'partition 1/3',
       'partition 2/3',
       'partition 3/3',
+      'workflow worker suite 1/4',
+      'workflow worker suite 2/4',
+      'workflow worker suite 3/4',
+      'workflow worker suite 4/4',
       'merged coverage report',
     ])
     for (const [index, command] of commands.slice(0, 3).entries()) {
@@ -119,16 +133,37 @@ describe('coverage partition coordinator', () => {
       expect(command.env).toEqual({
         [COVERAGE_PARTITIONS_ENV]: undefined,
         [COVERAGE_PARTITION_MODE_ENV]: '1',
+        [COVERAGE_PARTITION_ROLE_ENV]: 'main',
         [PWSH_TEST_AVAILABLE_ENV]: '0',
       })
     }
-    const mergeCommand = commands[3]
+    for (const [index, command] of commands.slice(3, 7).entries()) {
+      expect(command.args).toEqual(expect.arrayContaining([
+        '--coverage',
+        '--coverage.reportOnFailure',
+        '--maxWorkers=1',
+        '--no-file-parallelism',
+        `--testNamePattern=${workflowWorkerCoverageSuites[index]}`,
+        '--reporter=default',
+        '--reporter=blob',
+        '--testTimeout=30000',
+        WORKFLOW_WORKER_COVERAGE_FILE,
+      ]))
+      expect(command.env).toEqual({
+        [COVERAGE_PARTITIONS_ENV]: undefined,
+        [COVERAGE_PARTITION_MODE_ENV]: '1',
+        [COVERAGE_PARTITION_ROLE_ENV]: 'isolated',
+        [PWSH_TEST_AVAILABLE_ENV]: '0',
+      })
+    }
+    const mergeCommand = commands[7]
     if (mergeCommand === undefined) throw new Error('coverage merge command was not observed')
     expect(mergeCommand.args).toContain('--coverage')
     expect(mergeCommand.args.some(argument => argument.startsWith('--merge-reports='))).toBe(true)
     expect(mergeCommand.env).toEqual({
       [COVERAGE_PARTITIONS_ENV]: undefined,
       [COVERAGE_PARTITION_MODE_ENV]: undefined,
+      [COVERAGE_PARTITION_ROLE_ENV]: undefined,
       [PWSH_TEST_AVAILABLE_ENV]: '0',
     })
   })
@@ -145,7 +180,7 @@ describe('coverage partition coordinator', () => {
     })
 
     await expect(coordinator.run()).resolves.toBe(0)
-    expect(commands).toHaveLength(3)
+    expect(commands).toHaveLength(7)
     for (const command of commands) {
       expect(command.command).toBe('/tools/pnpm')
       expect(command.args[0]).toBe('exec')
@@ -173,7 +208,7 @@ describe('coverage partition coordinator', () => {
     expect(reported).toHaveBeenCalledWith(
       'coverage-partitions: output tail for partition 2/2:\nspecific Vitest failure',
     )
-    expect(runCommand).toHaveBeenCalledTimes(3)
+    expect(runCommand).toHaveBeenCalledTimes(7)
   })
 
   it('rejects a missing partition blob before merge', async () => {
@@ -190,7 +225,7 @@ describe('coverage partition coordinator', () => {
     })
 
     await expect(coordinator.run()).rejects.toThrow('coverage partitions produced')
-    expect(runCommand).toHaveBeenCalledTimes(2)
+    expect(runCommand).toHaveBeenCalledTimes(6)
   })
 
   it('reports signal termination before missing-blob validation', async () => {
@@ -235,7 +270,7 @@ describe('coverage partition coordinator', () => {
     await expect(coordinator.run()).resolves.toBe(1)
     expect(reported).toHaveBeenCalledWith('coverage-partitions: FAIL partition 1/2 (spawn unavailable)')
     expect(secondFinished).toBe(true)
-    expect(runCommand).toHaveBeenCalledTimes(3)
+    expect(runCommand).toHaveBeenCalledTimes(7)
   })
 
   it('unlinks a link-shaped coverage path without touching its target', async () => {

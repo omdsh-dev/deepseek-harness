@@ -11,8 +11,22 @@ export const COVERAGE_PARTITIONS_ENV = 'DSH_COVERAGE_PARTITIONS'
 /** Internal marker that suppresses reports and thresholds inside a partition process. */
 export const COVERAGE_PARTITION_MODE_ENV = 'DSH_COVERAGE_PARTITION_MODE'
 
+/** Internal role selecting the ordinary shard inventory or one isolated suite. */
+export const COVERAGE_PARTITION_ROLE_ENV = 'DSH_COVERAGE_PARTITION_ROLE'
+
 /** Environment variable overriding instrumented test and polling timeouts. */
 export const COVERAGE_TEST_TIMEOUT_ENV = 'DSH_COVERAGE_TEST_TIMEOUT_MS'
+
+/** Worker-heavy coverage owner that must not share one long-lived fork on Windows. */
+export const WORKFLOW_WORKER_COVERAGE_FILE = 'packages/workflow/workflow-worker-thread/tests/workflow-worker-thread.spec.ts'
+
+/** Exact top-level suites collected in fresh instrumented processes. */
+export const workflowWorkerCoverageSuites = [
+  'script execution over a real worker thread',
+  'lifecycle: parse errors, cancellation, termination, disposal',
+  'worker death',
+  'service API',
+] as const
 
 /** One child command owned by the coverage coordinator. */
 export interface CoverageCommand {
@@ -121,11 +135,11 @@ export class CoveragePartitionCoordinator {
     await mkdir(this.blobsRoot, { recursive: true })
 
     try {
-      const commands = Array.from(
+      const partitionCommands = Array.from(
         { length: this.partitions },
         (_, index) => this.partitionCommand(index + 1),
       )
-      const results = await Promise.all(commands.map(async (command) => {
+      const partitionResults = await Promise.all(partitionCommands.map(async (command) => {
         console.log(`coverage-partitions: start ${command.label}`)
         const result = await this.runCommand(command)
         if (commandFailed(result)) {
@@ -136,12 +150,27 @@ export class CoveragePartitionCoordinator {
         }
         return result
       }))
-      await this.assertCompleteBlobSet(commands)
+      const isolatedCommands = workflowWorkerCoverageSuites.map((suite, index) => (
+        this.workflowWorkerCommand(index + 1, suite)
+      ))
+      const isolatedResults: CoverageCommandResult[] = []
+      for (const command of isolatedCommands) {
+        console.log(`coverage-partitions: start ${command.label}`)
+        const result = await this.runCommand(command)
+        if (commandFailed(result)) {
+          console.error(`coverage-partitions: FAIL ${command.label} (${commandFailureReason(result)})`)
+          if (result.outputTail !== undefined && result.outputTail !== '') {
+            console.error(`coverage-partitions: output tail for ${command.label}:\n${result.outputTail}`)
+          }
+        }
+        isolatedResults.push(result)
+      }
+      await this.assertCompleteBlobSet([...partitionCommands, ...isolatedCommands])
 
       const mergeCommand = this.mergeCommand()
       console.log(`coverage-partitions: start ${mergeCommand.label}`)
       const mergeResult = await this.runCommand(mergeCommand)
-      return results.some(commandFailed) || commandFailed(mergeResult) ? 1 : 0
+      return [...partitionResults, ...isolatedResults].some(commandFailed) || commandFailed(mergeResult) ? 1 : 0
     } finally {
       await removeOwnedTree(this.temporaryRoot)
     }
@@ -170,6 +199,40 @@ export class CoveragePartitionCoordinator {
       env: {
         [COVERAGE_PARTITIONS_ENV]: undefined,
         [COVERAGE_PARTITION_MODE_ENV]: '1',
+        [COVERAGE_PARTITION_ROLE_ENV]: 'main',
+        [PWSH_TEST_AVAILABLE_ENV]: this.pwshAvailable ? '1' : '0',
+      },
+      cwd: this.root,
+      blobPath,
+    }
+  }
+
+  private workflowWorkerCommand(index: number, suite: string): CoverageCommand {
+    const blobPath = join(this.blobsRoot, `workflow-worker-${index}.json`)
+    const reportsDirectory = join(this.temporaryRoot, `coverage-workflow-worker-${index}`)
+    const invocation = pnpmInvocation([
+      'exec',
+      'vitest',
+      'run',
+      '--coverage',
+      '--coverage.reportOnFailure',
+      '--maxWorkers=1',
+      '--no-file-parallelism',
+      `--testNamePattern=${suite}`,
+      '--reporter=default',
+      '--reporter=blob',
+      `--outputFile.blob=${this.relativePath(blobPath)}`,
+      `--coverage.reportsDirectory=${this.relativePath(reportsDirectory)}`,
+      ...this.vitestArgs,
+      WORKFLOW_WORKER_COVERAGE_FILE,
+    ], { npm_execpath: this.pnpmEntrypoint })
+    return {
+      label: `workflow worker suite ${index}/${workflowWorkerCoverageSuites.length}`,
+      ...invocation,
+      env: {
+        [COVERAGE_PARTITIONS_ENV]: undefined,
+        [COVERAGE_PARTITION_MODE_ENV]: '1',
+        [COVERAGE_PARTITION_ROLE_ENV]: 'isolated',
         [PWSH_TEST_AVAILABLE_ENV]: this.pwshAvailable ? '1' : '0',
       },
       cwd: this.root,
@@ -190,6 +253,7 @@ export class CoveragePartitionCoordinator {
       env: {
         [COVERAGE_PARTITIONS_ENV]: undefined,
         [COVERAGE_PARTITION_MODE_ENV]: undefined,
+        [COVERAGE_PARTITION_ROLE_ENV]: undefined,
         [PWSH_TEST_AVAILABLE_ENV]: this.pwshAvailable ? '1' : '0',
       },
       cwd: this.root,

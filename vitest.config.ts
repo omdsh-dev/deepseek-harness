@@ -3,7 +3,11 @@ import tsconfigPaths from 'vite-tsconfig-paths'
 import { defineConfig } from 'vitest/config'
 import { standardDecoratorPlugin, vitestExecArgv } from './vitest.shared.ts'
 import { COVERAGE_EXEMPT_ENV, coverageExemptHeavySuites } from './scripts/coverage-exempt.ts'
-import { COVERAGE_PARTITION_MODE_ENV } from './scripts/coverage-partitions.ts'
+import {
+  COVERAGE_PARTITION_MODE_ENV,
+  COVERAGE_PARTITION_ROLE_ENV,
+  WORKFLOW_WORKER_COVERAGE_FILE,
+} from './scripts/coverage-partitions.ts'
 import { pinPwshTestAvailability } from './scripts/pwsh-test-availability.ts'
 
 // Prints exact `path:line:col` records for every uncovered statement, branch
@@ -130,6 +134,19 @@ if (coveragePartitionRaw !== undefined && coveragePartitionRaw !== '' && coverag
 }
 const coveragePartitionMode = coveragePartitionRaw === '1'
 
+const coveragePartitionRoleRaw = process.env[COVERAGE_PARTITION_ROLE_ENV]
+if (
+  coveragePartitionRoleRaw !== undefined
+  && coveragePartitionRoleRaw !== ''
+  && coveragePartitionRoleRaw !== 'main'
+  && coveragePartitionRoleRaw !== 'isolated'
+) {
+  throw new Error(`vitest config: ${COVERAGE_PARTITION_ROLE_ENV} must be 'main', 'isolated', or unset, got ${JSON.stringify(coveragePartitionRoleRaw)}.`)
+}
+const coveragePartitionExcludes = coveragePartitionRoleRaw === 'main'
+  ? [WORKFLOW_WORKER_COVERAGE_FILE]
+  : []
+
 // These suites exercise process-global state, process APIs, or timing-sensitive process I/O
 // that worker threads cannot isolate reliably under aggregate gate contention.
 // Keep the narrow exception in forks while the rest of the inventory avoids per-file processes.
@@ -169,6 +186,7 @@ export default defineConfig({
             ...platformUnsupportedTests,
             ...processBoundTests,
             ...coverageExemptExcludes,
+            ...coveragePartitionExcludes,
           ],
         },
       },
@@ -183,6 +201,7 @@ export default defineConfig({
           exclude: [
             ...platformUnsupportedTests,
             ...coverageExemptExcludes,
+            ...coveragePartitionExcludes,
           ],
         },
       },
