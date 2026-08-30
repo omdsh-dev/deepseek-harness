@@ -235,6 +235,12 @@ describe(`web accessibility modes: ${browserName}`, () => {
     expect(await log.getByRole('article', { name: 'Assistant response' }).textContent()).toContain('Accessibility response.')
     expect(await page.getByText('Assistant response finished', { exact: true }).count()).toBe(0)
     expect(tripwire.pageErrors).toEqual([])
+
+    // This suite deliberately shares one assembled page so every engine pays
+    // the production boot cost once. Restore the blank Session surface after
+    // inspecting history so later mode checks do not inherit this selection.
+    await page.getByRole('button', { name: 'New session', exact: true }).last().click()
+    await page.getByRole('textbox', { name: 'Choose workspace' }).waitFor({ timeout: 10_000 })
   })
 
   it('keeps keyboard focus visible and unobscured in the narrow shell and Settings modal', async () => {
