@@ -155,11 +155,16 @@ describe('web e2e: workspace management (create / rename / flat view / hover aff
     const disappearing = join(scaffold.workspaceCwd, 'disappearing-before-adoption')
     await mkdir(disappearing, { recursive: true })
     const picker = await browseTo(disappearing)
+    const open = picker.getByRole('button', { name: 'Open', exact: true })
+    // Enter submits the path before directory selection has necessarily
+    // reached the rendered picker. Prove the selection is accepted before
+    // deleting the fixture that adoption must then reject host-side.
+    await expect.poll(() => open.isEnabled(), { timeout: 10_000 }).toBe(true)
     // The browse flow has accepted and rendered the directory, but the Host
     // must still canonicalize it when Workspace adoption starts. Removing this
     // task-owned fixture creates a real wire refusal without mocking the flow.
     await rm(disappearing, { recursive: true, force: true })
-    await picker.getByRole('button', { name: 'Open', exact: true }).click()
+    await open.click()
 
     const errorDialog = page.getByRole('dialog', { name: 'Couldn’t open folder' })
     await errorDialog.waitFor({ timeout: 10_000 })
