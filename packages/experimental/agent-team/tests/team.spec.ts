@@ -1245,6 +1245,14 @@ describe('Team mailbox and waiting', () => {
     const betaStarted = await spawn(ctx, lead, 'beta')
     await waitNoAgent(ctx, betaStarted.member.id)
 
+    const acknowledged = Promise.withResolvers<undefined>()
+    const delivered = new Set<TeamMessageId>()
+    ctx.on('session/event', (session, event) => {
+      if (session.id !== lead.id || event.type !== 'team/message/delivered') return
+      delivered.add(event.data.messageId)
+      if (delivered.size === 2) acknowledged.resolve(undefined)
+    })
+
     const quiet = await ctx.agentTeams.sendMessage(alpha, {
       target: 'beta', content: content('quiet info'), delivery: 'quiet', signal: SIGNAL,
     })
@@ -1255,7 +1263,9 @@ describe('Team mailbox and waiting', () => {
     })
     expect(waking.status).toBe('accepted')
     await waitNoAgent(ctx, betaStarted.member.id)
-    await vi.waitFor(() => { expect(durable(lead).pendingMessages).toEqual([]) })
+    await acknowledged.promise
+    expect(delivered).toEqual(new Set([quiet.messageId, waking.messageId]))
+    expect(durable(lead).pendingMessages).toEqual([])
 
     const stored = await ctx.sessionPersistence.inspect(betaStarted.member.id)
     const peerMessages = stored.events.filter(event => event.type === 'user/message'
