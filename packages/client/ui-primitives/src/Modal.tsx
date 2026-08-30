@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import type { ReactNode } from 'react'
+import type { ReactNode, RefObject } from 'react'
 import { createPortal } from 'react-dom'
 import clsx from 'clsx'
 import { IconCloseOutline16 } from './icons/index.tsx'
@@ -50,6 +50,7 @@ interface ModalBaseProps {
   onClose: () => void
   title: string
   labelledBy?: string
+  initialFocusRef?: RefObject<HTMLElement | null> | undefined
   description?: string
   children?: ReactNode
   footer?: ReactNode
@@ -68,6 +69,7 @@ type ModalProps = ModalBaseProps & (
  * @param props.onClose - Escape or mask click.
  * @param props.title - dialog heading (aria-label in every mode).
  * @param props.labelledBy - optional id of a visible heading that replaces the aria-label.
+ * @param props.initialFocusRef - optional contained target focused when the dialog opens.
  * @param props.closeLabel - localized accessible close-button label.
  * @param props.description - optional supporting sentence under the title.
  * @param props.children - body (inputs, etc.).
@@ -78,7 +80,8 @@ type ModalProps = ModalBaseProps & (
  * @returns null when closed; otherwise the overlay tree.
  */
 export function Modal({
-  open, onClose, title, labelledBy, closeLabel, description, children, footer, className, contentClassName, headless = false,
+  open, onClose, title, labelledBy, initialFocusRef, closeLabel, description, children, footer, className,
+  contentClassName, headless = false,
 }: ModalProps) {
   const dialogRef = useRef<HTMLDivElement | null>(null)
   const onCloseRef = useRef(onClose)
@@ -97,10 +100,15 @@ export function Modal({
     if (dialog === null) return
     const opener = openingInvokerRef.current
     const deactivate = activateDialog(dialog)
+    const requestedInitial = initialFocusRef?.current ?? null
+    const explicitInitial = requestedInitial !== null && dialog.contains(requestedInitial)
+      ? requestedInitial
+      : null
     const current = document.activeElement instanceof HTMLElement && dialog.contains(document.activeElement)
       ? document.activeElement
       : null
-    const initial = current
+    const initial = explicitInitial
+      ?? current
       ?? dialog.querySelector<HTMLElement>('[autofocus]')
       ?? focusableElements(dialog)[0]
       ?? dialog
@@ -122,7 +130,13 @@ export function Modal({
         return
       }
       const active = document.activeElement
-      if (e.shiftKey ? active === first || !dialog.contains(active) : active === last || !dialog.contains(active)) {
+      const activeIndex = items.findIndex(item => item === active)
+      if (activeIndex < 0) {
+        e.preventDefault()
+        ;(e.shiftKey ? last : first).focus()
+        return
+      }
+      if (e.shiftKey ? activeIndex === 0 : activeIndex === items.length - 1) {
         e.preventDefault()
         ;(e.shiftKey ? last : first).focus()
       }
@@ -133,7 +147,7 @@ export function Modal({
       deactivate()
       if (opener?.isConnected === true) opener.focus()
     }
-  }, [open])
+  }, [initialFocusRef, open])
 
   if (!open) return null
 

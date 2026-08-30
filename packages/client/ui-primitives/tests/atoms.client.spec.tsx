@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { useState } from 'react'
+import { createRef, useState } from 'react'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
@@ -600,6 +600,39 @@ describe('Modal', () => {
     expect(appRoot.inert).not.toBe(true)
     expect(document.activeElement).toBe(opener)
     appRoot.remove()
+  })
+
+  it('honors only a contained initial-focus target and routes Tab from a non-tabbable target', () => {
+    const titleRef = createRef<HTMLHeadingElement>()
+    const outside = document.createElement('button')
+    document.body.append(outside)
+    const { rerender } = render(
+      <Modal open onClose={() => {}} title="Guided dialog" headless initialFocusRef={titleRef}>
+        <h2 ref={titleRef} tabIndex={-1}>Guided dialog</h2>
+        <input autoFocus aria-label="First field" />
+        <button type="button">Last action</button>
+      </Modal>,
+    )
+    const title = screen.getByRole('heading', { name: 'Guided dialog' })
+    const first = screen.getByRole('textbox', { name: 'First field' })
+    const last = screen.getByRole('button', { name: 'Last action' })
+    expect(document.activeElement).toBe(title)
+
+    fireEvent.keyDown(document, { key: 'Tab' })
+    expect(document.activeElement).toBe(first)
+    title.focus()
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true })
+    expect(document.activeElement).toBe(last)
+
+    rerender(<Modal open={false} onClose={() => {}} title="Guided dialog" headless />)
+    outside.focus()
+    rerender(
+      <Modal open onClose={() => {}} title="Bounded dialog" headless initialFocusRef={{ current: outside }}>
+        <input autoFocus aria-label="Inside field" />
+      </Modal>,
+    )
+    expect(document.activeElement).toBe(screen.getByRole('textbox', { name: 'Inside field' }))
+    outside.remove()
   })
 
   it('does not try to restore a removed opening control', () => {
