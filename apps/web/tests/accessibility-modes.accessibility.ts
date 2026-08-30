@@ -215,32 +215,30 @@ describe(`web accessibility modes: ${browserName}`, () => {
   })
 
   it('exposes a quiet named transcript with navigable message articles', async () => {
-    onTestFailed(() => saveFailureShot(page, `web-accessibility-${browserName}-transcript-semantics`))
-    await page.setViewportSize({ width: 1280, height: 900 })
-    const tree = page.getByRole('tree', { name: 'Sessions' })
+    const transcriptPage = await browser.newPage({ viewport: { width: 1280, height: 900 }, locale: 'en-US' })
+    const transcriptTripwire = watchConsole(transcriptPage)
+    onTestFailed(() => saveFailureShot(transcriptPage, `web-accessibility-${browserName}-transcript-semantics`))
+    await transcriptPage.goto(scaffold.authenticatedUrl, { waitUntil: 'load' })
+    await transcriptPage.getByRole('heading', { level: 1, name: 'DSH application' }).waitFor({ timeout: 30_000 })
+    const tree = transcriptPage.getByRole('tree', { name: 'Sessions' })
     const workspaceRow = tree.locator('[role="treeitem"][aria-level="1"][aria-expanded]').first()
     await workspaceRow.waitFor()
     if (await workspaceRow.getAttribute('aria-expanded') === 'false') {
       await workspaceRow.focus()
-      await page.keyboard.press('ArrowRight')
+      await transcriptPage.keyboard.press('ArrowRight')
       await expect.poll(() => workspaceRow.getAttribute('aria-expanded')).toBe('true')
     }
     await tree.locator('[role="treeitem"][aria-level="2"]').first().click()
 
-    const log = page.getByRole('log', { name: 'Conversation transcript' })
+    const log = transcriptPage.getByRole('log', { name: 'Conversation transcript' })
     await log.waitFor()
     expect(await log.getAttribute('aria-live')).toBe('off')
     expect(await log.getAttribute('aria-busy')).toBe('false')
     expect(await log.getByRole('article', { name: 'User message' }).textContent()).toContain('Accessibility seed.')
     expect(await log.getByRole('article', { name: 'Assistant response' }).textContent()).toContain('Accessibility response.')
-    expect(await page.getByText('Assistant response finished', { exact: true }).count()).toBe(0)
-    expect(tripwire.pageErrors).toEqual([])
-
-    // This suite deliberately shares one assembled page so every engine pays
-    // the production boot cost once. Restore the blank Session surface after
-    // inspecting history so later mode checks do not inherit this selection.
-    await page.getByRole('button', { name: 'New session', exact: true }).last().click()
-    await page.getByRole('textbox', { name: 'Choose workspace' }).waitFor({ timeout: 10_000 })
+    expect(await transcriptPage.getByText('Assistant response finished', { exact: true }).count()).toBe(0)
+    expect(transcriptTripwire.pageErrors).toEqual([])
+    await transcriptPage.close()
   })
 
   it('keeps keyboard focus visible and unobscured in the narrow shell and Settings modal', async () => {
