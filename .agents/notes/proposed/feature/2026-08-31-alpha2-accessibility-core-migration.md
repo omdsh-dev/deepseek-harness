@@ -20,6 +20,8 @@ The first vertical slice restores the shared dialog contract and the Workspace a
 
 Expected browser output is regenerated from alpha.2 only after the owning behavior passes focused source tests. Evidence records the exact product commit, browser and operating-system capability, assistive technology and version, task, result, limitation, and reviewer. Automated DOM, accessibility-tree, browser, contrast, reflow, motion, and packaging checks remain necessary but never substitute for task-level assistive-technology sessions and disabled-developer evidence.
 
+The public evidence fork remains executable without upstream private infrastructure. Pull requests outside the upstream owner select standard GitHub-hosted Linux and Windows runners with four-core workload budgets; upstream-only Cloudflare deployment and Project mutation are explicit neutral skips, while read-only policy follows the current repository identity. This keeps public verification reproducible without requesting or billing upstream larger runners.
+
 ## Alternatives considered
 
 **Merge the complete alpha.1 candidate into alpha.2.** Rejected because the histories share only the official alpha.1 release base and the semantic overlap crosses redesigned source, generated expectations, and deleted files. A text merge cannot decide which interaction contract remains valid.
@@ -35,6 +37,7 @@ Expected browser output is regenerated from alpha.2 only after the owning behavi
 - Disabled developers validate that the supported core tasks can be completed independently, effectively, and safely, with failures and workarounds retained in the public ledger.
 - Release metadata identifies the exact DSH compatibility range and evidence status; no tag, package, or documentation claims complete accessibility while required task or assistive-technology evidence is missing.
 - Generated snapshots, coverage ownership, and CI workflow changes are derived from alpha.2 and pass without erasing failed run history or rerunning failures into invisibility.
+- Fork pull-request jobs resolve to standard hosted runners, retain full required scenarios at bounded concurrency, and leave upstream-only integrations neutral rather than queued or falsely failing.
 
 ## Risks
 
