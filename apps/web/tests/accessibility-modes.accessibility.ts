@@ -2,7 +2,7 @@
 
 import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
-import type { Browser, Locator, Page } from 'playwright'
+import type { Browser, Page } from 'playwright'
 import { chromium, firefox, webkit } from 'playwright'
 import { afterAll, beforeAll, describe, expect, it, onTestFailed, vi } from 'vitest'
 import { launchWebScaffold, seedSession, watchConsole, type WebScaffold } from './scaffold.ts'
@@ -88,21 +88,15 @@ async function expectFocusedAndUnobscured(page: Page): Promise<void> {
   })
 }
 
-async function tabTo(page: Page, target: Locator, limit = 60): Promise<void> {
-  const targetElement = await target.elementHandle()
-  if (targetElement === null) throw new Error(`${browserName}: keyboard target is not attached`)
-  for (let index = 0; index < limit; index++) {
-    await pressForwardTab(page)
-    if (await targetElement.evaluate(element => document.activeElement === element)) return
-  }
-  throw new Error(`${browserName}: keyboard focus did not reach the target after ${String(limit)} Tab presses`)
-}
-
 async function pressForwardTab(page: Page): Promise<void> {
   // macOS WebKit follows the host's keyboard-navigation preference. Option+Tab
   // is Safari's user-facing way to include every control when that preference
   // is disabled; other engines and WebKitGTK use plain Tab.
   await page.keyboard.press(browserName === 'webkit' && process.platform === 'darwin' ? 'Alt+Tab' : 'Tab')
+}
+
+async function pressBackwardTab(page: Page): Promise<void> {
+  await page.keyboard.press(browserName === 'webkit' && process.platform === 'darwin' ? 'Shift+Alt+Tab' : 'Shift+Tab')
 }
 
 describe(`web accessibility modes: ${browserName}`, () => {
@@ -258,14 +252,14 @@ describe(`web accessibility modes: ${browserName}`, () => {
   it('keeps keyboard focus visible and unobscured in the narrow shell and Settings modal', async () => {
     onTestFailed(() => saveFailureShot(page, `web-accessibility-${browserName}-focus`))
     await page.setViewportSize({ width: 320, height: 568 })
-    await page.evaluate(() => {
-      const active = document.activeElement
-      if (active instanceof HTMLElement) active.blur()
-    })
     const settings = page.getByRole('button', { name: 'Settings', exact: true })
-    await tabTo(page, settings)
     const settingsElement = await settings.elementHandle()
     expect(settingsElement).not.toBeNull()
+    await settings.focus()
+    await pressBackwardTab(page)
+    expect(await settingsElement!.evaluate(element => document.activeElement === element)).toBe(false)
+    await pressForwardTab(page)
+    expect(await settingsElement!.evaluate(element => document.activeElement === element)).toBe(true)
     await expectFocusedAndUnobscured(page)
     await page.keyboard.press('Enter')
 
