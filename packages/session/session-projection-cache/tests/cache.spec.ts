@@ -431,7 +431,7 @@ describe('SessionProjectionCache cold-read seeding', () => {
     await seedRecord(root, 'cold-snap', {
       'cache-test/count': { ver: 1, seq: 2, val: 3 },
     }, { createdAt: 9 })
-    const { cache, ctx } = await harness({ root })
+    const { cache, ctx, fiber } = await harness({ root })
     const apply = vi.fn((_state: number, _event: SessionEvent) => 1)
     ctx.sessionProjections.register({
       key: 'cache-test/count',
@@ -449,20 +449,21 @@ describe('SessionProjectionCache cold-read seeding', () => {
     expect(apply).toHaveBeenCalledTimes(2)
     expect(apply.mock.calls.map(call => call[1].seq)).toEqual([3, 4])
     expect(snapshot.asOfSeq).toBe(4)
-    // Host-only unit: folded but not served; the refreshed row is written
-    // back (fail-soft, fire-and-forget) once the write lands.
+    // Host-only unit: folded but not served; the refreshed row is queued for
+    // fail-soft write-back.
     expect(Object.keys(snapshot.values)).not.toContain('cache-test/count')
-    await waitForStoredRows(root, meta.id, (rows) => {
-      expect(rows?.['cache-test/count']?.seq).toBe(4)
-    })
     // No cached row yet: the first cold read folds from init over the full
     // log and creates the cache row (the `?? {}` seed path).
     const fresh = headerOf(SessionId('cold-fresh'), 10)
     cache.coldSnapshot(fresh, events)
     expect(apply).toHaveBeenCalledTimes(7) // 2 tail + 5 full
-    await waitForStoredRows(root, fresh.id, (rows) => {
-      expect(rows?.['cache-test/count']?.seq).toBe(4)
-    })
+    // Disposing the plugin drains the storage domain's ordered write chain.
+    // This is a deterministic durability barrier even on a loaded coverage
+    // runner; a filesystem poll window can observe the seeded seq 2 row and
+    // fail before the already-queued replacement lands.
+    await fiber.dispose()
+    expect((await storedRows(root, meta.id))?.['cache-test/count']?.seq).toBe(4)
+    expect((await storedRows(root, fresh.id))?.['cache-test/count']?.seq).toBe(4)
   })
 
   it('coldSnapshot write-back is fail-soft: a failed durable write logs and never throws', async () => {
