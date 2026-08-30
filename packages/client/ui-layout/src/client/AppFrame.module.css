@@ -65,6 +65,17 @@
   transition: left var(--ds-transition-duration-slow) var(--ds-ease-in-out);
 }
 
+.handle:focus-visible {
+  outline: 2px solid var(--dsw-alias-state-business-primary);
+  outline-offset: -2px;
+}
+
+/* A collapsed splitter remains in sequential focus order so Enter or the
+   growing Arrow can restore the pane, but it is not a pointer drag target. */
+.handle[data-collapsed] {
+  pointer-events: none;
+}
+
 .frame[data-dragging] .handle {
   transition: none;
 }
@@ -93,6 +104,10 @@
   transition:
     opacity var(--ds-transition-duration-slow) var(--ds-ease-in-out),
     background var(--ds-transition-duration-slow) var(--ds-ease-in-out);
+}
+
+.handle[data-side='details'][data-collapsed]::after {
+  display: none;
 }
 
 .detailsCol:hover ~ .handle[data-side='details']::after,

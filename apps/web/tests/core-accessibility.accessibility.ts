@@ -79,6 +79,65 @@ describe(`assembled core accessibility: ${browserName}`, () => {
     await scaffold?.close()
   })
 
+  it('publishes named shell landmarks and operates both window splitters without a pointer', async () => {
+    onTestFailed(() => saveFailureShot(page, `core-accessibility-${browserName}-shell`))
+    expect(await page.getByRole('navigation', { name: 'Sidebar' }).count()).toBe(1)
+    expect(await page.getByRole('main').count()).toBe(1)
+
+    const detailsPane = page.locator('#dsh-details-pane')
+    expect(await detailsPane.getAttribute('aria-hidden')).toBe('true')
+    expect(await detailsPane.evaluate(element => (element as HTMLElement).inert)).toBe(true)
+    expect(await page.getByRole('complementary', { name: 'Details' }).count()).toBe(0)
+
+    const sidebar = page.getByRole('separator', { name: 'Sidebar' })
+    expect(await sidebar.getAttribute('aria-controls')).toBe('dsh-sidebar-pane')
+    expect(await sidebar.getAttribute('aria-orientation')).toBe('vertical')
+    const sidebarWidth = Number(await sidebar.getAttribute('aria-valuenow'))
+    await tabTo(page, sidebar)
+    await expectFocused(sidebar)
+    await page.keyboard.press('ArrowRight')
+    await expect.poll(async () => Number(await sidebar.getAttribute('aria-valuenow'))).toBe(sidebarWidth + 10)
+    await page.keyboard.press('ArrowLeft')
+    await expect.poll(async () => Number(await sidebar.getAttribute('aria-valuenow'))).toBe(sidebarWidth)
+
+    // The details splitter is intentionally unavailable until a real,
+    // non-blank Session owns the complementary pane. Enter one through the
+    // same Workspace tree keyboard contract a screen-reader user receives.
+    const tree = page.getByRole('tree', { name: 'Sessions' })
+    await tree.waitFor({ timeout: 30_000 })
+    const currentTreeEntry = tree.locator('[role="treeitem"][tabindex="0"]')
+    await tabTo(page, currentTreeEntry)
+    await page.keyboard.press('Home')
+    const group = tree.getByRole('treeitem').first()
+    if (await group.getAttribute('aria-expanded') === 'false') {
+      await page.keyboard.press('ArrowRight')
+    }
+    await page.keyboard.press('ArrowRight')
+    const firstSession = tree.getByRole('treeitem').nth(1)
+    await expectFocused(firstSession)
+    await page.keyboard.press('Enter')
+    await expect.poll(() => firstSession.getAttribute('aria-selected'), { timeout: 15_000 }).toBe('true')
+
+    const details = page.getByRole('separator', { name: 'Details' })
+    await details.waitFor({ timeout: 15_000 })
+    expect(await details.getAttribute('aria-controls')).toBe('dsh-details-pane')
+    expect(await details.getAttribute('aria-valuenow')).toBe('0')
+    await tabTo(page, details)
+    await expectFocused(details)
+    await page.keyboard.press('Enter')
+    await expect.poll(() => details.getAttribute('aria-valuenow')).toBe('360')
+    expect(await detailsPane.getAttribute('aria-hidden')).toBeNull()
+    expect(await detailsPane.evaluate(element => (element as HTMLElement).inert)).toBe(false)
+    expect(await page.getByRole('complementary', { name: 'Details' }).count()).toBe(1)
+    await expectFocused(details)
+    await page.keyboard.press('Enter')
+    await expect.poll(() => details.getAttribute('aria-valuenow')).toBe('0')
+    expect(await detailsPane.getAttribute('aria-hidden')).toBe('true')
+    expect(await detailsPane.evaluate(element => (element as HTMLElement).inert)).toBe(true)
+    await expectFocused(details)
+    expect(tripwire.pageErrors).toEqual([])
+  }, 60_000)
+
   it('operates the Workspace tree and search without a pointer', async () => {
     onTestFailed(() => saveFailureShot(page, `core-accessibility-${browserName}-workspace-tree`))
     const tree = page.getByRole('tree', { name: 'Sessions' })

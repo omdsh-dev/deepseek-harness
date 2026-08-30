@@ -15,7 +15,10 @@ import type { ReactNode } from 'react'
 import type {
   PropsLocale, PropsRenderSlots, PropsRuntime, PropsStore,
 } from '@deepseek-ai/dsh-client-ui-slots'
-import { computeColumns, SIDEBAR_AUTO_COLLAPSE, SIDEBAR_DEFAULT } from './columns.ts'
+import {
+  CENTER_MIN, computeColumns, DETAILS_MAX, DETAILS_MIN,
+  SIDEBAR_AUTO_COLLAPSE, SIDEBAR_COLLAPSED, SIDEBAR_DEFAULT, SIDEBAR_MAX, SIDEBAR_MIN,
+} from './columns.ts'
 import { DocumentTitle } from './DocumentTitle.tsx'
 import type { createLayoutStore } from './stores.ts'
 import css from './AppFrame.module.css'
@@ -27,21 +30,65 @@ export type AppFrameProps =
   & PropsStore<ReturnType<typeof createLayoutStore>>
   & PropsLocale<'common'>
 
-/** Center column grid item (session-body building block). */
-function CenterColumn(props: { children?: ReactNode }) {
-  return <div className={css.centerCol}>{props.children}</div>
+const SIDEBAR_PANE_ID = 'dsh-sidebar-pane'
+const DETAILS_PANE_ID = 'dsh-details-pane'
+const RESIZE_STEP = 10
+
+/** Sidebar navigation landmark and grid item. */
+function SidebarColumn(props: { label: string; children?: ReactNode }) {
+  return <nav id={SIDEBAR_PANE_ID} className={css.sidebarCol} aria-label={props.label}>{props.children}</nav>
 }
 
-/** Details column grid item; width 0 keeps the subtree mounted (never unmount on close). */
-function DetailsColumn(props: { children?: ReactNode }) {
-  return <div className={css.detailsCol}>{props.children}</div>
+/** Center-column main landmark (session-body building block). */
+function CenterColumn(props: { children?: ReactNode }) {
+  return <main className={css.centerCol}>{props.children}</main>
+}
+
+/** Details complementary landmark; a zero-width mounted subtree is inert and absent from the accessibility tree. */
+function DetailsColumn(props: { label: string; collapsed: boolean; children?: ReactNode }) {
+  const paneRef = useRef<HTMLElement | null>(null)
+  useLayoutEffect(() => {
+    const pane = paneRef.current
+    /* v8 ignore next -- the aside is rendered unconditionally with this ref. */
+    if (pane === null) return
+    pane.inert = props.collapsed
+  }, [props.collapsed])
+  return (
+    <aside
+      ref={paneRef}
+      id={DETAILS_PANE_ID}
+      className={css.detailsCol}
+      aria-label={props.label}
+      aria-hidden={props.collapsed || undefined}
+    >
+      {props.children}
+    </aside>
+  )
 }
 
 /**
- * One drag handle: pointer capture, rAF-throttled dx reports against the drag-start origin.
- * `side` keys the hover-reveal CSS to the owning column.
+ * One focusable window splitter: pointer capture with rAF-throttled deltas,
+ * plus Arrow, Home, End, and Enter operation over the primary pane's width.
+ * `side` keys both the visual direction and which horizontal Arrow grows it.
  */
-function DragHandle(props: { side: 'sidebar' | 'details'; left: number; onStart: () => void; onDrag: (dx: number) => void; onEnd: () => void }) {
+function DragHandle(props: {
+  side: 'sidebar' | 'details'
+  left: number
+  value: number
+  min: number
+  resizeMin: number
+  max: number
+  collapsed: boolean
+  disabled?: boolean
+  label: string
+  valueText: string
+  controls: string
+  onStart: () => void
+  onDrag: (dx: number) => void
+  onEnd: () => void
+  onSet: (value: number) => void
+  onToggle: () => void
+}) {
   const [dragging, setDragging] = useState(false)
   const origin = useRef(0)
   const latest = useRef(0)
@@ -50,13 +97,14 @@ function DragHandle(props: { side: 'sidebar' | 'details'; left: number; onStart:
   callbacks.current = { onStart: props.onStart, onDrag: props.onDrag, onEnd: props.onEnd }
 
   const onPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0 || props.collapsed || props.disabled === true) return
     e.preventDefault()
     e.currentTarget.setPointerCapture(e.pointerId)
     origin.current = e.clientX
     latest.current = e.clientX
     callbacks.current.onStart()
     setDragging(true)
-  }, [])
+  }, [props.collapsed, props.disabled])
   const onPointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     if (!e.currentTarget.hasPointerCapture(e.pointerId)) return
     latest.current = e.clientX
@@ -74,15 +122,57 @@ function DragHandle(props: { side: 'sidebar' | 'details'; left: number; onStart:
     callbacks.current.onEnd()
   }, [])
 
+  const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>): void => {
+    if (props.disabled === true) return
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      props.onToggle()
+      return
+    }
+    if (event.key === 'Home') {
+      event.preventDefault()
+      if (!props.collapsed) props.onToggle()
+      return
+    }
+    if (event.key === 'End') {
+      event.preventDefault()
+      props.onSet(props.max)
+      return
+    }
+    const grows = props.side === 'sidebar' ? event.key === 'ArrowRight' : event.key === 'ArrowLeft'
+    const shrinks = props.side === 'sidebar' ? event.key === 'ArrowLeft' : event.key === 'ArrowRight'
+    if (!grows && !shrinks) return
+    event.preventDefault()
+    if (props.collapsed) {
+      if (grows) props.onSet(props.resizeMin)
+      return
+    }
+    const delta = grows ? RESIZE_STEP : -RESIZE_STEP
+    props.onSet(Math.min(props.max, Math.max(props.resizeMin, props.value + delta)))
+  }
+
   return (
     <div
       className={css.handle}
       style={{ left: props.left }}
+      role="separator"
+      aria-label={props.label}
+      aria-controls={props.controls}
+      aria-orientation="vertical"
+      aria-valuemin={props.min}
+      aria-valuemax={props.max}
+      aria-valuenow={props.value}
+      aria-valuetext={props.valueText}
+      aria-disabled={props.disabled || undefined}
+      aria-hidden={props.disabled || undefined}
+      tabIndex={props.disabled === true ? -1 : 0}
       data-side={props.side}
+      data-collapsed={props.collapsed || undefined}
       data-dragging={dragging || undefined}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
+      onKeyDown={onKeyDown}
     />
   )
 }
@@ -171,6 +261,22 @@ export function AppFrame({
     actions.setDetails(detailsBase.current - dx)
   }, [actions])
   const productTitle = process.env.DSH_CLIENT_TITLE ?? t('brand.localBuild')
+  const detailsCapacity = viewport - cols.sidebar - CENTER_MIN
+  const detailsMaximum = detailsCapacity < DETAILS_MIN ? 0 : Math.min(DETAILS_MAX, detailsCapacity)
+  const detailsCollapsed = cols.details === 0
+  const setSidebarFromSplitter = useCallback((width: number) => {
+    if (sidebarCollapsed) actions.toggleSidebar()
+    actions.setSidebar(width)
+  }, [actions, sidebarCollapsed])
+  const setDetailsFromSplitter = useCallback((width: number) => {
+    actions.setDetails(width)
+  }, [actions])
+  const toggleDetailsFromSplitter = useCallback(() => {
+    if (colsRef.current.details === 0) actions.openDetails()
+    else actions.closeDetails()
+  }, [actions])
+  const sidebarLabel = t('layout.sidebar')
+  const detailsLabel = t('layout.details')
 
   return (
     <div
@@ -185,7 +291,7 @@ export function AppFrame({
         productTitle={productTitle}
         {...documentTitle === undefined ? {} : { title: documentTitle }}
       />
-      <div className={css.sidebarCol}>
+      <SidebarColumn label={sidebarLabel}>
         {/* Render-site slot call with live concession output: a closed
             sidebar keeps the mounted slot at the compact-rail width, and the
             component sees its rendered state as owner params decided here
@@ -195,7 +301,7 @@ export function AppFrame({
           collapsed: sidebarCollapsed,
           width: cols.sidebar,
         })}
-      </div>
+      </SidebarColumn>
       <>
         {/* Both column occupants stay at fixed tree positions from first
             paint — no loading gate: a bare status line reads worse than
@@ -203,16 +309,48 @@ export function AppFrame({
             is session-maybe; SessionProvider withholds the strict details
             entry while no session is current. */}
         <CenterColumn>{renderSlot('conversation', {})}</CenterColumn>
-        <DetailsColumn>
+        <DetailsColumn label={detailsLabel} collapsed={detailsCollapsed}>
           <SessionProvider>{renderSlot('details', {})}</SessionProvider>
         </DetailsColumn>
       </>
       <div className={css.overlayLayer} data-shell-overlay>
         {renderSlot('shell.overlay', {})}
       </div>
-      {/* The collapsed rail is fixed-width: no resize handle while closed. */}
-      {!sidebarCollapsed && <DragHandle side="sidebar" left={cols.sidebar} onStart={onSidebarStart} onDrag={onSidebarDrag} onEnd={onDragEnd} />}
-      {cols.details > 0 && <DragHandle side="details" left={viewport - cols.details} onStart={onDetailsStart} onDrag={onDetailsDrag} onEnd={onDragEnd} />}
+      <DragHandle
+        side="sidebar"
+        left={cols.sidebar}
+        value={cols.sidebar}
+        min={SIDEBAR_COLLAPSED}
+        resizeMin={SIDEBAR_MIN}
+        max={SIDEBAR_MAX}
+        collapsed={sidebarCollapsed}
+        label={sidebarLabel}
+        valueText={sidebarCollapsed ? t('layout.collapsed') : t('layout.widthPixels', { value: cols.sidebar })}
+        controls={SIDEBAR_PANE_ID}
+        onStart={onSidebarStart}
+        onDrag={onSidebarDrag}
+        onEnd={onDragEnd}
+        onSet={setSidebarFromSplitter}
+        onToggle={() => { actions.toggleSidebar() }}
+      />
+      <DragHandle
+        side="details"
+        left={viewport - cols.details}
+        value={cols.details}
+        min={0}
+        resizeMin={DETAILS_MIN}
+        max={detailsMaximum}
+        collapsed={detailsCollapsed}
+        disabled={detailsSession === undefined || detailsMaximum === 0}
+        label={detailsLabel}
+        valueText={detailsCollapsed ? t('layout.collapsed') : t('layout.widthPixels', { value: cols.details })}
+        controls={DETAILS_PANE_ID}
+        onStart={onDetailsStart}
+        onDrag={onDetailsDrag}
+        onEnd={onDragEnd}
+        onSet={setDetailsFromSplitter}
+        onToggle={toggleDetailsFromSplitter}
+      />
     </div>
   )
 }
