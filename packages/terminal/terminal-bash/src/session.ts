@@ -184,6 +184,7 @@ export class LocalPtySession implements TerminalBackendSession {
   private polling = false
   private promptSeen = false
   private promptTextSeen = false
+  private controlledPromptSeen = false
   private promptTail = ''
   private shellPgid: number | undefined
   private initializing = false
@@ -384,6 +385,14 @@ export class LocalPtySession implements TerminalBackendSession {
     return this.statusValue
   }
 
+  /**
+   * Whether the sanitizer has observed the owned prompt marker.
+   * @returns `true` after the marker has been observed.
+   */
+  hasSeenControlledPrompt(): boolean {
+    return this.controlledPromptSeen
+  }
+
   close(reason: string): Promise<void> {
     this.closing = true
     if (this.closePromise !== undefined) return this.closePromise
@@ -426,6 +435,7 @@ export class LocalPtySession implements TerminalBackendSession {
       // to the foreground process group. Retain the marker; polling below is
       // the authority that accepts it only after bash owns the foreground.
       this.promptSeen = true
+      this.controlledPromptSeen = true
       this.promptTail = ''
       this.lastOutputAt = Date.now()
     }

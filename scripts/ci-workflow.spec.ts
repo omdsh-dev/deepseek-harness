@@ -140,8 +140,23 @@ describe('CI workflow', () => {
       isRecord(step) && typeof step.run === 'string'
     ))
     const nativeTestCommand = nativeTestCommands.map(step => step.run).join('\n')
-    expect(nativeTestCommand).toContain('--no-file-parallelism')
-    expect(nativeTestCommand).toContain('--testTimeout 90000')
+    const workerLifecycleCommands = nativeTestCommands
+      .filter(step => step.run.includes('workflow-worker-thread.spec.ts'))
+      .map(step => step.run)
+    const remainingNativeCommand = nativeTestCommands.find(step => step.run.includes('tool-pwsh/tests/loader.spec.ts'))?.run
+    expect(workerLifecycleCommands).toHaveLength(4)
+    expect(workerLifecycleCommands.every(command => command.includes('--no-file-parallelism'))).toBe(true)
+    expect(workerLifecycleCommands.every(command => command.includes('--testTimeout 90000'))).toBe(true)
+    expect(workerLifecycleCommands.every(command => !command.includes('tool-pwsh/tests/loader.spec.ts'))).toBe(true)
+    expect(workerLifecycleCommands).toEqual(expect.arrayContaining([
+      expect.stringContaining('--testNamePattern "script execution over a real worker thread"'),
+      expect.stringContaining('--testNamePattern "lifecycle: parse errors, cancellation, termination, disposal"'),
+      expect.stringContaining('--testNamePattern "worker death"'),
+      expect.stringContaining('--testNamePattern "service API"'),
+    ]))
+    expect(remainingNativeCommand).toContain('--no-file-parallelism')
+    expect(remainingNativeCommand).toContain('--testTimeout 90000')
+    expect(remainingNativeCommand).not.toContain('workflow-worker-thread.spec.ts')
     expect(nativeTestCommand).toContain('tool-pwsh/tests/loader.spec.ts')
     expect(nativeTestCommand).toContain('workflow-worker-thread.spec.ts')
 

@@ -22,7 +22,7 @@ Alpha.2 还保留了一些虽然暴露无障碍语义、却没有持有相应交
 
 公开证据 fork 无需依赖上游私有基础设施也能执行。非上游 owner 中的 Pull Request 选择 GitHub 标准托管的 Linux 与 Windows runner，并使用适合 4 核主机的工作负载预算；仅属于上游的 Cloudflare 部署与 Project 写入会明确中性跳过，只读策略则跟随当前仓库身份。这样既能保持公开验证可复现，也不会请求或计费使用上游 larger runner。
 
-只有任务解析到真实 `pwsh` 二进制文件时，PowerShell 结果才计入证据；主机缺少 PowerShell 时的跳过属于已记录的能力限制，而不是通过证据。持久 shell 就绪状态同时接受通过提示符观察到的 `stdin_read` 与静默期得到的 `inferred_idle` 回退，因为两者都会让 shell 可以继续接收下一次发送；随后的发送仍须证明状态持久化与机密清理。PowerShell 所有的 session、system prompt 与 tool schema 快照必须一起从当前 alpha.2 profile 刷新，并在具备 PowerShell 能力的主机上 replay。
+只有任务解析到真实 `pwsh` 二进制文件时，PowerShell 结果才计入证据；主机缺少 PowerShell 时的跳过属于已记录的能力限制，而不是通过证据。启动过程会先通过无输入初始化观察 PowerShell 原生启动输出，再且仅再提交一次受控提示符 bootstrap，并等待后端 `stdin_read` 与自有标记相互印证，即使标记输出恰好落在两个启动 operation 之间也一样。返回内容只有简洁的受控提示符，不会暴露回显的初始化源码，从而为辅助技术保留有用且无噪声的终端反馈。后续持久 shell 发送同时接受通过提示符观察到的 `stdin_read` 与静默期得到的 `inferred_idle` 回退，因为两者都会让 shell 可以继续接收下一次发送；随后的发送仍须证明状态持久化与机密清理。PowerShell 所有的 session、system prompt 与 tool schema 快照必须一起从当前 alpha.2 profile 刷新、规范化为 canonical packed layout，并在具备 PowerShell 能力的主机上 replay。
 
 ## Alternatives considered
 
@@ -39,7 +39,7 @@ Alpha.2 还保留了一些虽然暴露无障碍语义、却没有持有相应交
 - 残障开发者验证受支持核心任务可以独立、有效且安全地完成；失败与规避方式保留在公开台账中。
 - 发布元数据标明精确的 DSH 兼容范围与证据状态；只要仍缺少必需任务或辅助技术证据，任何 tag、包或文档都不得宣称完整无障碍。
 - 生成的快照、覆盖率职责与 CI 工作流变更均以 alpha.2 为基线，并且通过检查时不会擦除失败运行历史，也不会通过重跑让失败不可见。
-- PowerShell 证据记录解析到的运行时版本，使用真实 PowerShell replay 两个 PowerShell header owner 快照，并证明在任一受支持就绪层级之后仍能完成第二次发送，同时不削弱状态持久化与机密清理断言。
+- PowerShell 证据记录解析到的运行时版本，在一次 bootstrap 前无输入观察原生启动输出，即使发生 operation 边界竞态也只返回受控启动提示符，使用真实 PowerShell replay 两个采用 canonical packed layout 的 PowerShell header owner 快照，并证明在任一受支持的后续发送就绪层级之后仍能完成第二次发送，同时不削弱状态持久化与机密清理断言。
 - fork 的 Pull Request 任务会解析为标准托管 runner，在受限并发下保留全部必需场景，并让上游专属集成保持中性，而不是无限排队或误报失败。
 
 ## Risks
