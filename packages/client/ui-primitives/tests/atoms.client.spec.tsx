@@ -34,8 +34,10 @@ describe('horizontal tab focus', () => {
 describe('Button', () => {
   it('renders children, icon, and forwards clicks', () => {
     const onClick = vi.fn()
-    render(<Button variant="primary" icon={<svg data-testid="ic" />} onClick={onClick}>Go</Button>)
+    const ref = createRef<HTMLButtonElement>()
+    render(<Button ref={ref} variant="primary" icon={<svg data-testid="ic" />} onClick={onClick}>Go</Button>)
     const button = screen.getByRole('button', { name: 'Go' })
+    expect(ref.current).toBe(button)
     expect(screen.getByTestId('ic')).toBeDefined()
     fireEvent.click(button)
     expect(onClick).toHaveBeenCalledTimes(1)
@@ -651,6 +653,37 @@ describe('Modal', () => {
       rerender(<Modal open={false} onClose={() => {}} title="Detached opener" closeLabel="Close" />)
     }).not.toThrow()
     expect(document.activeElement).not.toBe(opener)
+  })
+
+  it('prefers a connected explicit focus-restoration target and falls back to the opener', () => {
+    const opener = document.createElement('button')
+    const durableTarget = document.createElement('button')
+    document.body.append(opener, durableTarget)
+    const restoreFocusRef = { current: durableTarget as HTMLButtonElement | null }
+    opener.focus()
+    const { rerender } = render(
+      <Modal open onClose={() => {}} title="Explicit restore" closeLabel="Close" restoreFocusRef={restoreFocusRef}>
+        <button type="button">Action</button>
+      </Modal>,
+    )
+
+    rerender(
+      <Modal open={false} onClose={() => {}} title="Explicit restore" closeLabel="Close" restoreFocusRef={restoreFocusRef} />,
+    )
+    expect(document.activeElement).toBe(durableTarget)
+
+    opener.focus()
+    rerender(
+      <Modal open onClose={() => {}} title="Fallback restore" closeLabel="Close" restoreFocusRef={restoreFocusRef}>
+        <button type="button">Action</button>
+      </Modal>,
+    )
+    durableTarget.remove()
+    rerender(
+      <Modal open={false} onClose={() => {}} title="Fallback restore" closeLabel="Close" restoreFocusRef={restoreFocusRef} />,
+    )
+    expect(document.activeElement).toBe(opener)
+    opener.remove()
   })
 
   it('keeps focus on the dialog when it has no tabbable descendants', () => {

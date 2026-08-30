@@ -9,7 +9,7 @@
  * occupant's own create-folder affordance already covers creating one.
  */
 import type { ReactNode, RefObject } from 'react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import {
   Button, IconFolderClose16, IconPlusOutline16, Menu, Modal, type MenuEntry,
 } from '@deepseek-ai/dsh-client-ui-primitives'
@@ -79,6 +79,8 @@ export function WorkspacePickFlow({
   const [modalError, setModalError] = useState<string | null>(null)
   const [flowOpen, setFlowOpen] = useState(false)
   const [pickingFolder, setPickingFolder] = useState(false)
+  const folderErrorId = useId()
+  const folderErrorCancelRef = useRef<HTMLButtonElement | null>(null)
   // One picking interaction at a time: while the flow is open (native chooser
   // pending, browse dialog up) or its pick is being adopted, every other
   // menu action stays disabled — a late outcome must not race a concurrent
@@ -122,15 +124,24 @@ export function WorkspacePickFlow({
     setModalError(null)
   }
 
+  // The flow can be portaled, native, or supplied by another package. Hand
+  // focus to the durable picker trigger before that transient owner leaves;
+  // the error Modal also receives the same explicit restoration target.
+  const showFolderError = useCallback((message: string): void => {
+    const anchor = anchorRef?.current
+    if (anchor?.isConnected === true) anchor.focus()
+    setFlowOpen(false)
+    setModalError(message)
+    setErrorOpen(true)
+  }, [anchorRef])
+
   /** Adopt a picked directory; failures land in the folder-error dialog (Choose again reopens the flow). */
   const adoptDirectory = (path: string): Promise<void> =>
     createWorkspace({ path }).then((workspace) => {
       setFlowOpen(false)
       onPick(workspace.workspaceId)
     }).catch((reason: unknown) => {
-      setModalError(reason instanceof Error ? reason.message : String(reason))
-      setFlowOpen(false)
-      setErrorOpen(true)
+      showFolderError(reason instanceof Error ? reason.message : String(reason))
     })
 
   const openDirectoryFlow = useCallback((): void => {
@@ -165,11 +176,7 @@ export function WorkspacePickFlow({
       void adoptDirectory(path).finally(() => { setPickingFolder(false) })
     },
     onCancel: () => { setFlowOpen(false) },
-    onError: (message) => {
-      setFlowOpen(false)
-      setModalError(message)
-      setErrorOpen(true)
-    },
+    onError: showFolderError,
   }
 
   const handleSelect = (id: string): void => {
@@ -201,16 +208,19 @@ export function WorkspacePickFlow({
         onClose={closeModal}
         closeLabel={t('close')}
         title={t('folderError.title')}
+        describedBy={folderErrorId}
+        initialFocusRef={folderErrorCancelRef}
+        restoreFocusRef={anchorRef}
         footer={(
           <>
-            <Button variant="outline" className={css.modalAction} onClick={closeModal}>{t('cancel')}</Button>
+            <Button ref={folderErrorCancelRef} variant="outline" className={css.modalAction} onClick={closeModal}>{t('cancel')}</Button>
             {/* Retrying needs an occupant to serve the flow; without one the
               * button would open a flow nobody can answer or cancel. */}
             <Button variant="primary" className={css.modalAction} disabled={!flowAvailable} onClick={openDirectoryFlow}>{t('folderError.retry')}</Button>
           </>
         )}
       >
-        <div className={css.modalError} role="alert">{modalError}</div>
+        <div id={folderErrorId} className={css.modalError} role="alert">{modalError}</div>
       </Modal>
     </>
   )

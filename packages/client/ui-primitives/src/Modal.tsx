@@ -70,6 +70,7 @@ interface ModalBaseProps {
   labelledBy?: string
   describedBy?: string
   initialFocusRef?: RefObject<HTMLElement | null> | undefined
+  restoreFocusRef?: RefObject<HTMLElement | null> | undefined
   description?: string
   children?: ReactNode
   footer?: ReactNode
@@ -91,6 +92,8 @@ type ModalProps = ModalBaseProps & (
  * @param props.describedBy - optional id of visible supporting content; the
  * built-in description receives a generated id when this is omitted.
  * @param props.initialFocusRef - optional contained target focused when the dialog opens.
+ * @param props.restoreFocusRef - optional durable target focused when the dialog closes;
+ * falls back to the connected opening control when absent or disconnected.
  * @param props.closeLabel - localized accessible close-button label.
  * @param props.description - optional supporting sentence under the title.
  * @param props.children - body (inputs, etc.).
@@ -101,8 +104,8 @@ type ModalProps = ModalBaseProps & (
  * @returns null when closed; otherwise the overlay tree.
  */
 export function Modal({
-  open, onClose, title, labelledBy, describedBy, initialFocusRef, closeLabel, description, children, footer, className,
-  contentClassName, headless = false,
+  open, onClose, title, labelledBy, describedBy, initialFocusRef, restoreFocusRef, closeLabel, description, children,
+  footer, className, contentClassName, headless = false,
 }: ModalProps) {
   const generatedDescriptionId = useId()
   const descriptionId = describedBy
@@ -169,9 +172,11 @@ export function Modal({
     return () => {
       document.removeEventListener('keydown', onKeyDown)
       deactivate()
-      if (opener?.isConnected === true) opener.focus()
+      const explicitRestore = restoreFocusRef?.current ?? null
+      if (explicitRestore?.isConnected === true) explicitRestore.focus()
+      else if (opener?.isConnected === true) opener.focus()
     }
-  }, [initialFocusRef, open])
+  }, [initialFocusRef, open, restoreFocusRef])
 
   if (!open) return null
 
