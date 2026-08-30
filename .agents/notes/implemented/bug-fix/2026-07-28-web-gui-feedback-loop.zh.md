@@ -22,7 +22,7 @@ Web agent（智能体）既无法识别承载当前会话的 GUI，也不知道�
 
 ## 验证
 
-无密钥的 fresh-round-trip 浏览器场景会启动已交付的 Web 组合，驱动真实的回放会话，对包含 URL 的系统提示词前缀生成快照，并调用组装后的 bash 工具，证明 `$DSH_WEB_URL` 与实际绑定的运行时一致。真实 CLI 冒烟测试会启动 `dsh web` 并捕获模型提供方请求，从而固定完整的双命令开发约定。`dev:web` watcher 测试会在源码发生变化后重新构建隔离的客户端 bundle；浏览器 HMR 场景会启动 `dsh web`，修改初始 roster 中的 bundle，并在页面 identity 不变的情况下观察新 DOM。真实 Vite 子进程测试要求服务模式在给出改用完整宿主的纠正信息后自然退出，并通过插桩 `Server.listen()` 证明它从未被调用。真实 loader Web 服务器测试会在进程完成绑定后改写静态资源，并证明同一端口返回新的字节。这些断言检查提示词状态、进程退出状态、shell 输出、DOM identity 和 HTTP 字节，而不是 agent 的成功声明。
+无密钥的 fresh-round-trip 浏览器场景会启动已交付的 Web 组合，驱动真实的回放会话，对包含 URL 的系统提示词前缀生成快照，并调用组装后的 bash 工具，证明 `$DSH_WEB_URL` 与实际绑定的运行时一致。真实 CLI 冒烟测试会启动 `dsh web` 并捕获模型提供方请求，从而固定完整的双命令开发约定。`dev:web` watcher 测试会在源码发生变化后重新构建隔离的客户端 bundle；其程序化 tsdown 调用固定使用 `unrun` config loader，使每条受支持的 Node 版本线都能避开 24.11.1 之前的原生 no-cache hook 缺陷，同时递归转换 Workspace 子配置。共享客户端 preset 从 Workspace 根目录而非自身 module URL 解析仓库持有的 manifest，因为编译型 config loader 会先把该 preset 计算到缓存目录，再执行它。浏览器 HMR 场景会启动 `dsh web`，修改初始 roster 中的 bundle，并在页面 identity 不变的情况下观察新 DOM；停止 watcher 后，它会恢复完整的动态 bundle 与 shell dist 产物集，再次校验已记录的产物 digest，使该变更无法污染后续浏览器文件或第二次 replay。真实 Vite 子进程测试要求服务模式在给出改用完整宿主的纠正信息后自然退出，并通过插桩 `Server.listen()` 证明它从未被调用。真实 loader Web 服务器测试会在进程完成绑定后改写静态资源，并证明同一端口返回新的字节。这些断言检查提示词状态、进程退出状态、shell 输出、DOM identity、产物 digest 和 HTTP 字节，而不是 agent 的成功声明。
 
 ## 考虑过的替代方案
 
