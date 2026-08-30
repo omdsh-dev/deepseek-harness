@@ -1332,7 +1332,8 @@ describe('command launcher chrome and control seats', () => {
   })
 
   it('requires explicit risk acknowledgement before submitting Full access', async () => {
-    const command = vi.fn(() => Promise.resolve(true))
+    const admission = Promise.withResolvers<boolean>()
+    const command = vi.fn(() => admission.promise)
     const permissions = {
       options: [
         { value: 'workspace-write', name: 'workspace-write' },
@@ -1340,12 +1341,14 @@ describe('command launcher chrome and control seats', () => {
       ],
       currentValue: 'workspace-write',
     }
-    const { view } = bench({ permissions, command })
-    fireEvent.click(view.getByLabelText(/^访问模式/))
+    const { view, session } = bench({ permissions, command })
+    const trigger = view.getByLabelText(/^访问模式/) as HTMLButtonElement
+    fireEvent.click(trigger)
     fireEvent.click(view.getByRole('menuitem', { name: 'Full access' }))
 
     expect(command).not.toHaveBeenCalled()
     expect(view.getByRole('dialog', { name: '确认启用 Full access？' })).toBeTruthy()
+    expect(document.activeElement).toBe(view.getByRole('checkbox', { name: '我已了解风险，并愿意继续' }))
     const enable = view.getByRole('button', { name: '启用 Full access' }) as HTMLButtonElement
     expect(enable.disabled).toBe(true)
 
@@ -1357,7 +1360,14 @@ describe('command launcher chrome and control seats', () => {
     expect(command).toHaveBeenCalledWith('/permission danger-full-access')
     expect(view.queryByRole('dialog')).toBeNull()
     expect((view.getByLabelText(/^访问模式/) as HTMLButtonElement).textContent).toBe('Full access')
+    // The real command path can settle before the surrounding input lock is
+    // released. Focus restoration must remain pending across that ordering.
+    act(() => { session.set(snapshotOf({ removed: true })) })
+    await act(async () => { admission.resolve(true); await admission.promise })
+    expect(document.activeElement).not.toBe(trigger)
+    act(() => { session.set(snapshotOf()) })
     await act(async () => {})
+    expect(document.activeElement).toBe(trigger)
   })
 
   it('cancels a Full access selection without changing permission and resets acknowledgement', () => {
@@ -1379,7 +1389,9 @@ describe('command launcher chrome and control seats', () => {
     fireEvent.click(view.getByRole('checkbox'))
     fireEvent.click(view.getByRole('button', { name: '取消' }))
     expect(command).not.toHaveBeenCalled()
-    expect((view.getByLabelText(/^访问模式/) as HTMLButtonElement).textContent).toBe('Workspace Write')
+    const trigger = view.getByLabelText(/^访问模式/) as HTMLButtonElement
+    expect(trigger.textContent).toBe('Workspace Write')
+    expect(document.activeElement).toBe(trigger)
 
     openConfirmation()
     expect((view.getByRole('checkbox') as HTMLInputElement).checked).toBe(false)

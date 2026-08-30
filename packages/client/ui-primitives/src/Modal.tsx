@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useId, useRef } from 'react'
 import type { ReactNode, RefObject } from 'react'
 import { createPortal } from 'react-dom'
 import clsx from 'clsx'
@@ -68,6 +68,7 @@ interface ModalBaseProps {
   onClose: () => void
   title: string
   labelledBy?: string
+  describedBy?: string
   initialFocusRef?: RefObject<HTMLElement | null> | undefined
   description?: string
   children?: ReactNode
@@ -87,6 +88,8 @@ type ModalProps = ModalBaseProps & (
  * @param props.onClose - Escape or mask click.
  * @param props.title - dialog heading (aria-label in every mode).
  * @param props.labelledBy - optional id of a visible heading that replaces the aria-label.
+ * @param props.describedBy - optional id of visible supporting content; the
+ * built-in description receives a generated id when this is omitted.
  * @param props.initialFocusRef - optional contained target focused when the dialog opens.
  * @param props.closeLabel - localized accessible close-button label.
  * @param props.description - optional supporting sentence under the title.
@@ -98,9 +101,12 @@ type ModalProps = ModalBaseProps & (
  * @returns null when closed; otherwise the overlay tree.
  */
 export function Modal({
-  open, onClose, title, labelledBy, initialFocusRef, closeLabel, description, children, footer, className,
+  open, onClose, title, labelledBy, describedBy, initialFocusRef, closeLabel, description, children, footer, className,
   contentClassName, headless = false,
 }: ModalProps) {
+  const generatedDescriptionId = useId()
+  const descriptionId = describedBy
+    ?? (description !== undefined && description !== '' ? generatedDescriptionId : undefined)
   const dialogRef = useRef<HTMLDivElement | null>(null)
   const onCloseRef = useRef(onClose)
   onCloseRef.current = onClose
@@ -186,6 +192,7 @@ export function Modal({
         aria-modal="true"
         aria-label={labelledBy === undefined ? title : undefined}
         aria-labelledby={labelledBy}
+        aria-describedby={descriptionId}
         tabIndex={-1}
       >
         {headless
@@ -200,7 +207,7 @@ export function Modal({
                   </button>
                 </div>
                 {description !== undefined && description !== '' && (
-                  <p className={css.description}>{description}</p>
+                  <p id={generatedDescriptionId} className={css.description}>{description}</p>
                 )}
                 {children !== undefined && <div className={css.body}>{children}</div>}
               </div>

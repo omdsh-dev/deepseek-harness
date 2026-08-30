@@ -193,13 +193,17 @@ describe('PopupSelectView', () => {
 
   it('renders a gated option as an in-page modal and requires the checkbox before onSelect', async () => {
     const onSelect = vi.fn()
-    const { popup, consume } = await mountOpen({
+    const { popup, consume, focusComposer } = await mountOpen({
       options: () => Promise.resolve([GATED]),
       onSelect,
     })
     await act(async () => { fireEvent.click(screen.getByRole('option', { name: 'Full access' })) })
     expect(screen.queryByLabelText('/theme 选项')).toBeNull()
-    expect(screen.getByRole('dialog', { name: 'Enable Full access?' })).toBeTruthy()
+    const dialog = screen.getByRole('dialog', { name: 'Enable Full access?' })
+    expect(dialog).toBeTruthy()
+    const risk = screen.getByText('Sensitive operations.')
+    expect(dialog.getAttribute('aria-describedby')).toBe(risk.id)
+    expect(document.activeElement).toBe(screen.getByRole('checkbox', { name: 'I understand the risks' }))
     const enable = screen.getByRole('button', { name: 'Enable Full access' }) as HTMLButtonElement
     expect(enable.disabled).toBe(true)
     expect(onSelect).not.toHaveBeenCalled()
@@ -210,6 +214,7 @@ describe('PopupSelectView', () => {
     expect(onSelect).toHaveBeenCalledExactlyOnceWith(GATED, 'ctx-A')
     expect(consume).toHaveBeenCalledExactlyOnceWith(SEGMENT)
     expect(popup.state.getSnapshot().open).toBe(false)
+    expect(focusComposer).toHaveBeenCalledTimes(1)
   })
 
   it('canceling a gated option returns to the picker with acknowledgement reset', async () => {
@@ -218,6 +223,7 @@ describe('PopupSelectView', () => {
     fireEvent.click(screen.getByRole('checkbox'))
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
     expect(screen.getByLabelText('/theme 选项')).toBeTruthy()
+    expect(document.activeElement).toBe(screen.getByRole('combobox', { name: '筛选选项' }))
     await act(async () => { fireEvent.click(screen.getByRole('option', { name: 'Full access' })) })
     expect(screen.getByRole<HTMLInputElement>('checkbox').checked).toBe(false)
   })

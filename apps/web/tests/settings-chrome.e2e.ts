@@ -195,7 +195,12 @@ describe('web e2e: settings modal and General preferences', () => {
     expect(await enable.isDisabled()).toBe(true)
     await confirmation.getByRole('checkbox').click()
     await enable.click()
-    await dialog.getByRole('button', { name: 'Full access' }).waitFor({ timeout: 10_000 })
+    const fullAccess = dialog.getByRole('button', { name: 'Full access' })
+    await fullAccess.waitFor({ timeout: 10_000 })
+    await expect.poll(
+      () => fullAccess.evaluate(node => node.ownerDocument.activeElement === node),
+      { timeout: 5_000 },
+    ).toBe(true)
     const confirmedDocument = await readFile(join(scaffold.harnessHome, 'settings.yaml'), 'utf8')
     expect(confirmedDocument).toContain('defaultPreset: danger-full-access')
     const confirmed = scaffold.ctx.sessions.create(SessionId('settings-permission-confirmed'))
