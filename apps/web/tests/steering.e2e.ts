@@ -124,6 +124,8 @@ describe('web e2e: mid-turn steering lands durably and visibly', () => {
     // A timeout while the Queue row remains means strict steer lost to a
     // closing window (`steer-unavailable`); inspect replay pacing first.
     await pendingSteering.waitFor({ timeout: 10_000 })
+    expect(await pendingSteering.getAttribute('role')).toBe('article')
+    expect(await pendingSteering.getAttribute('aria-label')).toBe('User message')
 
     // The blocked composer keeps steering pending long enough to observe the
     // Host-authoritative mirror before the loop admits it durably.
@@ -252,6 +254,8 @@ describe('web e2e: composer shortcut steers directly', () => {
     await composer.waitFor({ timeout: 30_000 })
     const pendingSteering = page.locator('[data-pending-steering]').filter({ hasText: STEER })
     await pendingSteering.waitFor({ timeout: 10_000 })
+    expect(await pendingSteering.getAttribute('role')).toBe('article')
+    expect(await pendingSteering.getAttribute('aria-label')).toBe('User message')
     await composer.getByRole('radio', { name: 'Yes' }).click()
     await composer.getByRole('radio', { name: 'Yes' }).press('Enter')
     await settled

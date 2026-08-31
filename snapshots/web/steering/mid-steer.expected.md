@@ -30,9 +30,11 @@
         - img
         - img
         - text: Ask question waiting
-      - text: "Deep diving... Interjection: include the word BANANA in your final reply."
-      - button "Copy":
-        - img
+      - text: Deep diving...
+      - article "User message":
+        - text: "Interjection: include the word BANANA in your final reply."
+        - button "Copy":
+          - img
   - region "Ready to continue?":
     - text: Checkpoint
     - heading "Ready to continue?" [level=2]

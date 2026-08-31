@@ -825,6 +825,8 @@ describe('ChatView', () => {
     expect(view.queryByText('later')).toBeNull()
     const pendingBubble = view.getByText('interrupt now').closest('[data-pending-steering]')
     expect(pendingBubble).not.toBeNull()
+    expect(pendingBubble?.getAttribute('role')).toBe('article')
+    expect(pendingBubble?.getAttribute('aria-label')).toBe('用户消息')
     fireEvent.click(within(pendingBubble as HTMLElement).getByRole('button', { name: '复制' }))
     expect(writeText).toHaveBeenCalledWith('interrupt now')
     expect(within(pendingBubble as HTMLElement).queryByRole('button', { name: '在新对话中分支' })).toBeNull()
@@ -897,7 +899,10 @@ describe('ChatView', () => {
       },
     )
     const view = render(<h.ChatView {...h.props} />)
-    expect(view.getByText('即发即显').closest('[data-submission-echo]')).not.toBeNull()
+    const echo = view.getByText('即发即显').closest('[data-submission-echo]')
+    expect(echo).not.toBeNull()
+    expect(echo?.getAttribute('role')).toBe('article')
+    expect(echo?.getAttribute('aria-label')).toBe('用户消息')
 
     // The durable node arrives while the echo is STILL in the session
     // snapshot: the render-time rpcId dedupe keeps exactly one bubble.

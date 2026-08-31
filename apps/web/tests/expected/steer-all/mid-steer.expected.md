@@ -30,12 +30,15 @@
           - img
           - img
           - text: Think The user wants me to ask them a checkpoint question first, then continue with whatever they interject. Let me do exactly that.
-      - text: "Deep diving... Interjection: include the word BANANA in your final reply."
-      - button "Copy":
-        - img
-      - text: "Interjection: include the word ORANGE in your final reply."
-      - button "Copy":
-        - img
+      - text: Deep diving...
+      - article "User message":
+        - text: "Interjection: include the word BANANA in your final reply."
+        - button "Copy":
+          - img
+      - article "User message":
+        - text: "Interjection: include the word ORANGE in your final reply."
+        - button "Copy":
+          - img
   - textbox "Message or run a task... / commands, @ files or sessions"
   - button "Commands":
     - img
