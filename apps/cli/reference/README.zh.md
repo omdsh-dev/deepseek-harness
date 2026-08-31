@@ -25,12 +25,12 @@
 | Profile | 参数 |
 |---|---|
 | `web` | `--host`、`--port`、可重复的 `--trusted-host`、`--no-open` |
-| `headless` | 任务文本，作为位置参数 |
+| `headless` | 任务文本位置参数、`--accessibility` 与 `--output-format <text|json>` |
 | `sdk` | 无选项；stdio 携带 JSON-RPC 协议 |
 | `sdk-minimal` | 无选项；stdio 携带相同的 JSON-RPC 协议 |
 | `acp` | 无选项；stdio 携带 Agent Client Protocol |
 
-一次性任务（`dsh --profile headless "run the tests"`）通过核心注册表创建一个全新的持久化 Agent（智能体），提交任务、等待完全停稳并对会话执行 flush，再从其持久化事件区间中推导最后一个非空 assistant 文本与最终 `turn/end` 原因。它在 `dsh: reasoning:` 标题下将非空的提供方推理分片流式写入 stderr，只在 stdout 打印最终文本，并在原因为 `completed` 时以 0 退出，否则以 1 退出；没有推理内容的成功响应会保持 stderr 为空。没有任务的调用是该应用的用法错误。随附 headless profile 不挂载浏览器 Connection、HTTP 服务器、Web 运行时或浏览器客户端，也不会打开监听端口。
+一次性任务（`dsh --profile headless "run the tests"`）通过核心注册表创建一个全新的持久化 Agent（智能体），提交任务、等待完全停稳并对 Session 执行 flush，再从其持久化事件区间中推导最后一个非空 assistant 文本与最终 `turn/end` 原因。默认文本模式在 `dsh: reasoning:` 标题下将非空的提供方推理增量流式写入 stderr，并把最终文本写入 stdout。`--accessibility` 抑制这些增量、移除最终文本中的终端控制，并发出稳定的开始行与终态行；`--output-format json` 抑制推理，并在 flush 后写入一个 `1.0.0` 结果对象。进程只在 `completed` 时以 0 退出；缺少任务或格式不受支持属于该应用的用法错误。随附 headless profile 不挂载浏览器 Connection、HTTP 服务器、Web 运行时或浏览器客户端，也不会打开监听端口。
 
 可在不启动的情况下检查组合出的配置树：
 

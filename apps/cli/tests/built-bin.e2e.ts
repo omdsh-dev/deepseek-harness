@@ -372,6 +372,8 @@ describe.skipIf(!existsSync(dshBin))('dsh BUILT bin (node lib/bin.js, no tsx)', 
       expect(headlessHelp.code).toBe(0)
       expect(headlessHelp.stderr).toBe('')
       expect(headlessHelp.stdout).toContain('Usage: dsh --profile headless')
+      expect(headlessHelp.stdout).toContain('--accessibility')
+      expect(headlessHelp.stdout).toContain('--output-format <format>')
 
       const sdkHelp = await runBuiltBin(['--profile', 'sdk', '--help'], {
         DSH_HOME: home,
@@ -567,6 +569,7 @@ describe.skipIf(!existsSync(dshBin))('dsh BUILT bin (node lib/bin.js, no tsx)', 
     const apiKey = 'built-dsh-headless-key'
     const server = await startMockLlmServer({
       sequence: ['reasoning_success'],
+      repeatLast: true,
       apiKey,
       reasoningText: 'Inspecting the published entry.',
       successText: 'published headless profile reached the mock',
@@ -582,6 +585,36 @@ describe.skipIf(!existsSync(dshBin))('dsh BUILT bin (node lib/bin.js, no tsx)', 
       expect(result.code, result.stderr).toBe(0)
       expect(result.stdout).toBe('published headless profile reached the mock')
       expect(result.stderr).toBe('dsh: reasoning:\nInspecting the published entry.')
+
+      const accessible = await runBuiltBin([
+        '--profile', 'headless', '--accessibility', 'answer', 'without', 'dynamic', 'terminal', 'updates',
+      ], {
+        DSH_HOME: home,
+        DSH_TELEMETRY_DISABLED: '1',
+        DEEPSEEK_API_KEY: apiKey,
+        DEEPSEEK_BASE_URL: server.baseURL,
+      })
+      expect(accessible.code, accessible.stderr).toBe(0)
+      expect(accessible.stdout).toBe('published headless profile reached the mock')
+      expect(accessible.stderr).toBe('dsh: task started\ndsh: task completed')
+
+      const json = await runBuiltBin([
+        '--profile', 'headless', '--output-format', 'json', 'answer', 'as', 'structured', 'output',
+      ], {
+        DSH_HOME: home,
+        DSH_TELEMETRY_DISABLED: '1',
+        DEEPSEEK_API_KEY: apiKey,
+        DEEPSEEK_BASE_URL: server.baseURL,
+      })
+      expect(json.code, json.stderr).toBe(0)
+      expect(json.stderr).toBe('')
+      expect(JSON.parse(json.stdout) as unknown).toEqual({
+        type: 'dsh-headless-result',
+        schemaVersion: '1.0.0',
+        status: 'completed',
+        text: 'published headless profile reached the mock',
+        reason: { kind: 'completed' },
+      })
       expect(server.requests.length).toBeGreaterThan(0)
       expect(server.requests.every(request => request.path === '/chat/completions')).toBe(true)
       expect(JSON.stringify(server.requests.map(request => request.body))).toContain('answer from the published entry')

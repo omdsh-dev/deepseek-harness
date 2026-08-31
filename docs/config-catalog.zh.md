@@ -800,14 +800,21 @@ export interface Config {
 需要：`agentDefaultModel` · `agents` · `sessions`
 
 ```ts config-catalog
-/** Plugin config: the task resolved from this app's injected provider service. */
+/** Plugin config resolved from this app's injected command-line provider. */
 export interface Config {
   /** The prompt text for the single run. */
   task: string
+  /** Use stable line-oriented text status and suppress reasoning deltas. */
+  accessibility: boolean
+  /** Render stdout as final text or one versioned JSON result. */
+  outputFormat: HeadlessOutputFormat
 }
+
+/** One final-answer presentation selected by the invocation. */
+export type HeadlessOutputFormat = typeof HEADLESS_OUTPUT_FORMATS[number]
 ```
 
-来源：[`packages/bundle/headless/src/index.ts:33`](../packages/bundle/headless/src/index.ts)
+来源：[`packages/bundle/headless/src/index.ts:40`](../packages/bundle/headless/src/index.ts)
 
 <a id="deepseek-aidsh-hooks-claude-code"></a>
 

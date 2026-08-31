@@ -10,7 +10,7 @@ The `dsh` command is the sole supported Node application launcher: profiles are 
 |---|---|
 | `dsh --profile <name>` | Boot the named profile under `$DSH_HOME/profiles/<name>`. |
 | `dsh --profile acp` | Serve automation clients over ACP stdio until disconnect. |
-| `dsh --profile headless "job"` | Run one fresh persisted session, print the final answer, and exit. |
+| `dsh --profile headless "job"` | Run one fresh persisted session, print the final answer, and exit; `--accessibility` selects stable screen-reader output. |
 | `dsh --profile sdk` | Serve SDK clients over JSON-RPC stdio until shutdown or disconnect. |
 | `dsh --profile sdk-minimal` | Serve SDK clients with the standalone minimal agent tree. |
 | `dsh web` | Alias of `--profile web`. |
@@ -26,6 +26,8 @@ The launcher parses only its own flags and hands everything after them to the bo
 dsh --profile web --port 8080       # --port belongs to the web app
 dsh --profile tui --resume <id>     # example, assuming the tui profile is installed; --resume belongs to the terminal app
 dsh --profile headless "run the tests"
+dsh --profile headless --accessibility "run the tests"
+dsh --profile headless --output-format json "run the tests"
 dsh --profile web --help            # the web app's flags, not the launcher's
 dsh --help                          # the launcher's own help
 ```
