@@ -49,6 +49,8 @@
     "test:web:ci": "tsx scripts/run-web-snapshots.ts",
     "test:web:accessibility": "pnpm run build && pnpm run test:web:accessibility:built",
     "test:web:accessibility:built": "tsx scripts/run-web-accessibility.ts",
+    "test:web:accessibility:evidence": "pnpm run build && pnpm run test:web:accessibility:evidence:built",
+    "test:web:accessibility:evidence:built": "tsx scripts/web-accessibility-evidence.ts",
     "test:web:perf": "npm run build && npm run test:web:perf:built",
     "test:web:perf:built": "DSH_SNAPSHOT=replay vitest run --config vitest.web.perf.config.ts",
     "test:web:stress": "npm run build && vitest run --config vitest.web-stress.config.ts",

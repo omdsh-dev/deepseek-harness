@@ -15,7 +15,7 @@
  * scrollbar indirection away while it is elsewhere, so a list the user is not
  * pointing at carries no bar.
  */
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import clsx from 'clsx'
 import {
   FishLogo, IconNewChatOutline16, IconPanelLeftOutline16, Tooltip,
@@ -60,8 +60,14 @@ export function SidebarRoot({
   // Wide content stays mounted while the collapse animates (fading via
   // .collapsed .wide), unmounts at settle, and remounts right away on expand.
   const [settled, setSettled] = useState(collapsed)
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!collapsed) { setSettled(false); return }
+    if (window.innerWidth <= 600
+      || (typeof window.matchMedia === 'function'
+        && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) {
+      setSettled(true)
+      return
+    }
     const timer = window.setTimeout(() => { setSettled(true) }, COLLAPSE_SETTLE_MS)
     return () => { window.clearTimeout(timer) }
   }, [collapsed])

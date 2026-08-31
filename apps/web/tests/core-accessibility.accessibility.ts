@@ -325,6 +325,30 @@ describe(`assembled core accessibility: ${browserName}`, () => {
     expect(tripwire.pageErrors).toEqual([])
   }, 60_000)
 
+  it('edits and clears a composer draft without submitting it', async () => {
+    onTestFailed(() => saveFailureShot(page, `core-accessibility-${browserName}-composer-draft`))
+    const chat = page.getByRole('tab', { name: 'Chat' })
+    if (await chat.getAttribute('aria-selected') !== 'true') await chat.click()
+    const input = page.locator('[data-composer-input][contenteditable="true"]').first()
+    await input.waitFor({ timeout: 15_000 })
+    const messageCount = await page.getByRole('log', { name: 'Conversation transcript' })
+      .getByRole('article').count()
+
+    await tabTo(page, input)
+    await expectFocused(input)
+    await page.keyboard.press('ControlOrMeta+A')
+    await page.keyboard.press('Backspace')
+    await page.keyboard.type('Draft retained for keyboard review')
+    await expect.poll(() => input.textContent()).toBe('Draft retained for keyboard review')
+    await page.keyboard.press('ControlOrMeta+A')
+    await page.keyboard.press('Backspace')
+    await expect.poll(() => input.textContent()).toBe('')
+    await expectFocused(input)
+    expect(await page.getByRole('log', { name: 'Conversation transcript' })
+      .getByRole('article').count()).toBe(messageCount)
+    expect(tripwire.pageErrors).toEqual([])
+  }, 60_000)
+
   it('operates the assembled model menu and command combobox with one current item', async () => {
     onTestFailed(() => saveFailureShot(page, `core-accessibility-${browserName}-model-command`))
     await page.setViewportSize({ width: 1280, height: 900 })

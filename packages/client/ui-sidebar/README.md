@@ -33,7 +33,7 @@ The expanded brand row renders `sidebar.brand.mark` and `sidebar.brand.name` as 
 
 ### Collapse behavior
 
-During a live collapse, the expanded content fades out at its current width, the upper controls share one fade and leftward translation into the 56px rail, and the layout's column slide ends the motion. A page that starts collapsed renders the rail statically, and reduced-motion mode disables both transitions. The bottom-pinned `sidebar.settings` control shares the fade timing but has no horizontal translation.
+During a live collapse above 600px, the expanded content fades out at its current width, the upper controls share one fade and leftward translation into the 56px rail, and the layout's column slide ends the motion. At 600px or narrower, and whenever reduced motion is requested, the rail settles before paint so the focused toggle cannot remain clipped at its former wide position. A page that starts collapsed renders the rail statically. The bottom-pinned `sidebar.settings` control shares the animated fade timing but has no horizontal translation.
 
 ### Scrollbars
 

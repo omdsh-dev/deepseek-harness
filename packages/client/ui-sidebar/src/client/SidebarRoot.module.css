@@ -362,3 +362,17 @@
     animation: none;
   }
 }
+
+/* Narrow layouts snap the AppFrame track directly to the 56px rail. Keep the
+   newly focused rail controls on that visible track from the first frame
+   instead of replaying the desktop rail's 49px entry translation underneath
+   the conversation column. */
+@media (max-width: 600px) {
+  .railIn .iconButton,
+  .railIn .newSession,
+  .railIn .footArea,
+  .railIn .regionArea {
+    transition: none;
+    animation: none;
+  }
+}
