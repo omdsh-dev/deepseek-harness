@@ -4,11 +4,13 @@ import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import type { Browser, Locator, Page } from 'playwright'
 import { chromium, firefox, webkit } from 'playwright'
-import { afterAll, beforeAll, describe, expect, it, onTestFailed } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it, onTestFailed, vi } from 'vitest'
 import {
   launchWebScaffold, seedSession, watchConsole, type WebScaffold,
 } from './scaffold.ts'
-import { newEnglishPage, saveFailureShot, writeComposerDraft } from './support.ts'
+import {
+  expandOwningTurnProcess, newEnglishPage, saveFailureShot, writeComposerDraft,
+} from './support.ts'
 
 const SEED = fileURLToPath(new URL('../../../snapshots/web/seeded-history/session.jsonl', import.meta.url))
 const browserTypes = { chromium, firefox, webkit }
@@ -345,6 +347,50 @@ describe(`assembled core accessibility: ${browserName}`, () => {
     await page.keyboard.press('Escape')
     await expect.poll(() => combobox.count()).toBe(0)
     await expect.poll(() => input.evaluate(element => document.activeElement === element)).toBe(true)
+    expect(tripwire.pageErrors).toEqual([])
+  }, 60_000)
+
+  it('separates file disclosure and open-file keyboard actions', async () => {
+    onTestFailed(() => saveFailureShot(page, `core-accessibility-${browserName}-file-actions`))
+    await page.setViewportSize({ width: 1280, height: 900 })
+    const chatTab = page.getByRole('tab', { name: 'Chat' })
+    if (await chatTab.getAttribute('aria-selected') !== 'true') await chatTab.click()
+
+    const readRow = page.locator('[data-variant="read"]').first()
+    await expandOwningTurnProcess(page, readRow)
+    await readRow.waitFor({ timeout: 15_000 })
+    const header = readRow.locator('[data-disclosure-row]')
+    const disclosure = readRow.getByRole('button', { name: /^Read .*a\.txt$/ })
+    const openFile = readRow.getByRole('button', { name: 'Open file a.txt', exact: true })
+    const panelId = await disclosure.getAttribute('aria-controls')
+    expect(panelId).not.toBeNull()
+    const panel = page.locator(`[id="${panelId as string}"]`)
+    expect(await header.getAttribute('role')).toBeNull()
+    expect(await header.getAttribute('tabindex')).toBeNull()
+    expect(await header.getAttribute('aria-expanded')).toBeNull()
+    expect(await readRow.locator('[role="button"] button').count()).toBe(0)
+    expect(await disclosure.getAttribute('aria-expanded')).toBe('false')
+    expect(await panel.getAttribute('hidden')).toBe('')
+
+    await tabTo(page, disclosure)
+    await expectFocused(disclosure)
+    await page.keyboard.press('Enter')
+    await expect.poll(() => disclosure.getAttribute('aria-expanded')).toBe('true')
+    expect(await panel.getAttribute('hidden')).toBeNull()
+    await page.keyboard.press('Space')
+    await expect.poll(() => disclosure.getAttribute('aria-expanded')).toBe('false')
+
+    const openPath = vi.spyOn(scaffold.ctx.sessionController, 'openWorkspacePath')
+      .mockResolvedValue({ opened: true })
+    try {
+      await pressForwardTab(page)
+      await expectFocused(openFile)
+      await page.keyboard.press('Enter')
+      await expect.poll(() => openPath.mock.calls.length).toBe(1)
+      expect(await disclosure.getAttribute('aria-expanded')).toBe('false')
+    } finally {
+      openPath.mockRestore()
+    }
     expect(tripwire.pageErrors).toEqual([])
   }, 60_000)
 

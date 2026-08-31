@@ -409,11 +409,12 @@ describe('web e2e: seeded history renders through cold resume', () => {
 
   it.skipIf(MODE === 'record')('file-path tool rows rebuilt from the cold log stay details-inert', async () => {
     onTestFailed(() => saveFailureShot(page, 'web-e2e-seeded-toolrow'))
-    // Interaction over cold-resumed history: read summaries are host-open
-    // file links (not expand-in-place / not details). Runs after the golden
-    // capture; still zero model calls.
-    const fileLink = page.locator('[data-variant="read"] button').first()
-    await expandOwningTurnProcess(page, fileLink)
+    // Interaction over cold-resumed history: a read row exposes distinct
+    // disclosure and host-open file actions, and neither opens Details.
+    // Runs after the golden capture; still zero model calls.
+    const readRow = page.locator('[data-variant="read"]').first()
+    await expandOwningTurnProcess(page, readRow)
+    const fileLink = readRow.getByRole('button', { name: /^Open file / })
     await fileLink.waitFor({ timeout: 10_000 })
     const frame = page.locator('[style*="grid-template-columns"]').first()
     expect(await frame.getAttribute('data-details-collapsed')).toBe('true')
@@ -431,7 +432,9 @@ describe('web e2e: seeded history renders through cold resume', () => {
 
   it.skipIf(MODE === 'record')('a Host open refusal keeps the reason and retries the same path', async () => {
     onTestFailed(() => saveFailureShot(page, 'web-e2e-seeded-file-open-failure'))
-    const fileLink = page.locator('[data-variant="read"] button').first()
+    const readRow = page.locator('[data-variant="read"]').first()
+    await expandOwningTurnProcess(page, readRow)
+    const fileLink = readRow.getByRole('button', { name: /^Open file / })
     await fileLink.waitFor({ timeout: 10_000 })
     const openPath = vi.spyOn(scaffold.ctx.sessionController, 'openWorkspacePath')
       .mockRejectedValue(new Error('xdg-open is not available'))
@@ -492,6 +495,7 @@ describe('web e2e: seeded history renders through cold resume', () => {
     await expect.poll(() => row.count(), { timeout: 10_000 }).toBe(1)
     expect(await row.getByText('permission', { exact: true }).count()).toBe(1)
     expect(await row.getByText('/permission read-only', { exact: true }).count()).toBe(0)
+    await expandOwningTurnProcess(page, page.locator('[data-variant="read"]').first())
     const snapshot = (await captureStableAria(page, '[class*="centerCol"]', scaffold.workspaceCwd))
       .split(SEED_ID).join('{{seededId}}')
     await compareOrRefreshGolden(COMMAND_ROW_EXPECTED, snapshot, MODE)
@@ -525,6 +529,7 @@ describe('web e2e: seeded history renders through cold resume', () => {
       const userId = userLine?.match(/^Anonymous user: ([0-9a-f-]+)/i)?.[1]
       if (userId === undefined) throw new Error('feedback command omitted the user id')
 
+      await expandOwningTurnProcess(page, page.locator('[data-variant="read"]').first())
       const snapshot = (await captureStableAria(page, '[class*="centerCol"]', scaffold.workspaceCwd))
         .split(SEED_ID).join('{{seededId}}')
         .split(userId).join('{{userId}}')

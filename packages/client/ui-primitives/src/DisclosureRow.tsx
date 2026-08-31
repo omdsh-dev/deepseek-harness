@@ -7,11 +7,19 @@ import css from './DisclosureRow.module.css'
 export interface DisclosureRowProps {
   icon: ReactNode
   title: string
+  /** Stable accessible name for the disclosure control. Defaults to `title`. */
+  accessibleLabel?: string | undefined
   open: boolean
   expandable: boolean
   onToggle: () => void
   /** Makes the complete title row the disclosure target. */
   expandOnRowClick?: boolean | undefined
+  /**
+   * Declares that `collapsedContent` contains its own interactive control.
+   * The row remains a pointer target, while a separate named leading button
+   * owns the disclosure semantics so controls never nest in `role="button"`.
+   */
+  interactiveCollapsedContent?: boolean | undefined
   /** Replaces the collapsed icon with a chevron while the row is hovered. */
   previewChevron?: boolean | undefined
   /** Keeps `collapsedContent` inline while open. */
@@ -33,10 +41,12 @@ export interface DisclosureRowProps {
 export function DisclosureRow({
   icon,
   title,
+  accessibleLabel,
   open,
   expandable,
   onToggle,
   expandOnRowClick = false,
+  interactiveCollapsedContent = false,
   previewChevron = expandable,
   keepContentWhenOpen = false,
   collapsedContent,
@@ -49,12 +59,13 @@ export function DisclosureRow({
 }: DisclosureRowProps) {
   const contentId = useId()
   const rowExpands = expandable && expandOnRowClick
+  const rowOwnsDisclosure = rowExpands && !interactiveCollapsedContent
   const toggleFromLeading = (event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation()
     onToggle()
   }
   const toggleFromKeyboard = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (!rowExpands || (event.key !== 'Enter' && event.key !== ' ')) return
+    if (!rowOwnsDisclosure || (event.key !== 'Enter' && event.key !== ' ')) return
     event.preventDefault()
     onToggle()
   }
@@ -76,17 +87,19 @@ export function DisclosureRow({
         className={clsx(css.row, rowClassName)}
         data-disclosure-row
         data-expandable={rowExpands || undefined}
-        role={rowExpands ? 'button' : undefined}
-        tabIndex={rowExpands ? 0 : undefined}
-        aria-expanded={rowExpands ? open : undefined}
-        aria-controls={rowExpands ? contentId : undefined}
+        role={rowOwnsDisclosure ? 'button' : undefined}
+        tabIndex={rowOwnsDisclosure ? 0 : undefined}
+        aria-label={rowOwnsDisclosure ? accessibleLabel : undefined}
+        aria-expanded={rowOwnsDisclosure ? open : undefined}
+        aria-controls={rowOwnsDisclosure ? contentId : undefined}
         onClick={rowExpands ? onToggle : undefined}
-        onKeyDown={rowExpands ? toggleFromKeyboard : undefined}
+        onKeyDown={rowOwnsDisclosure ? toggleFromKeyboard : undefined}
       >
-        {expandable && !rowExpands ? (
+        {expandable && !rowOwnsDisclosure ? (
           <button
             type="button"
             className={clsx(css.leading, leadingClassName)}
+            aria-label={accessibleLabel ?? title}
             aria-expanded={open}
             aria-controls={contentId}
             onClick={toggleFromLeading}

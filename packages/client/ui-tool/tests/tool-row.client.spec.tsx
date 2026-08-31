@@ -301,15 +301,30 @@ describe('ToolRow', () => {
     const view = render(
       <ToolRow {...rowProps} variant="read" title="Read" summary="src/a.ts" filePath="src/a.ts" onOpenFile={open} />,
     )
-    const row = view.getByRole('button', { name: /Read/ })
+    const row = view.container.querySelector('[data-disclosure-row]')
+    const disclosure = view.getByRole('button', { name: /Read.*src\/a\.ts/ })
+    const fileButton = view.getByRole('button', { name: '打开文件 src/a.ts' })
+    const panelId = disclosure.getAttribute('aria-controls')
+    expect(row?.getAttribute('role')).toBeNull()
+    expect(row?.getAttribute('tabindex')).toBeNull()
+    expect(row?.getAttribute('aria-expanded')).toBeNull()
+    expect(disclosure.tagName).toBe('BUTTON')
+    expect(document.getElementById(panelId as string)?.hidden).toBe(true)
+    expect(view.container.querySelector('[role="button"] button')).toBeNull()
     // Path click opens the file and leaves the row collapsed.
-    fireEvent.click(view.getByText('src/a.ts'))
+    fireEvent.click(fileButton)
     expect(open).toHaveBeenCalledWith('src/a.ts')
-    expect(row.getAttribute('aria-expanded')).toBe('false')
-    // Row click (outside the link) expands the args body.
-    fireEvent.click(row)
-    expect(row.getAttribute('aria-expanded')).toBe('true')
+    expect(disclosure.getAttribute('aria-expanded')).toBe('false')
+    // The separate native button is the keyboard/AT disclosure target.
+    fireEvent.click(disclosure)
+    expect(disclosure.getAttribute('aria-expanded')).toBe('true')
     expect(view.getByText(/"a": 1/)).toBeTruthy()
+    // The pointer target remains the whole plain row, without exposing a
+    // nested pseudo-button to assistive technology.
+    fireEvent.click(row as HTMLElement)
+    expect(disclosure.getAttribute('aria-expanded')).toBe('false')
+    fireEvent.keyDown(fileButton, { key: 'Enter' })
+    expect(disclosure.getAttribute('aria-expanded')).toBe('false')
   })
 
   it('a file path without onOpenFile renders a plain summary on an expandable row', () => {
