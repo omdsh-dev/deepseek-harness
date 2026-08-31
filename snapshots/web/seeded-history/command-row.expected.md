@@ -25,11 +25,13 @@
       - img
       - img
       - text: Think The user wants me to read a.txt and b.txt, then reply with "DONE". Let me do both reads in parallel.
+    - text: Completed
     - button "Read a.txt":
       - img
       - img
       - text: Read
       - button "a.txt"
+    - text: Completed
     - button "Read b.txt":
       - img
       - img

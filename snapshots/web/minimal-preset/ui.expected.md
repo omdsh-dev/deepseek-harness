@@ -20,9 +20,9 @@
     - button "1 tool call" [expanded]:
       - text: 1 tool call
       - img
-    - button "Bash printf 'MINIMAL_BASH_CARD_OK\\n'" [expanded]:
+    - button "Completed Bash printf 'MINIMAL_BASH_CARD_OK\\n'" [expanded]:
       - img
-      - text: Bash printf 'MINIMAL_BASH_CARD_OK\n'
+      - text: Completed Bash printf 'MINIMAL_BASH_CARD_OK\n'
     - text: "IN { \"command\": \"printf 'MINIMAL_BASH_CARD_OK\\\\n'\" } OUT MINIMAL_BASH_CARD_OK"
     - button "Inspect"
     - paragraph: MINIMAL_PRESET_REQUEST_OK

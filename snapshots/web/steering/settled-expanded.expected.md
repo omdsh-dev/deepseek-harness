@@ -10,6 +10,7 @@
     - tab "Chat" [selected]
     - tab "Trajectory"
   - tabpanel "Chat":
+    - text: Response completed.
     - button "System prompt":
       - img
       - img
@@ -24,6 +25,7 @@
       - img
       - img
       - text: Context injection @deepseek-ai/dsh-system-prompt
+    - text: Completed
     - button "Ask question 1/1 answered":
       - img
       - img

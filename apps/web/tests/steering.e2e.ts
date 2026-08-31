@@ -129,6 +129,9 @@ describe('web e2e: mid-turn steering lands durably and visibly', () => {
     // Host-authoritative mirror before the loop admits it durably.
     const composer = page.locator('[data-question-key]')
     await composer.waitFor({ timeout: MODE === 'record' ? 120_000 : 30_000 })
+    const liveAnnouncements = page.locator('[data-chat-announcer]')
+    await expect.poll(() => liveAnnouncements.textContent(), { timeout: 10_000 })
+      .toContain('A question needs your answer.')
 
     if (MODE !== 'record') {
       expect(await page.getByText(STEER, { exact: true }).count()).toBe(1)
@@ -156,6 +159,8 @@ describe('web e2e: mid-turn steering lands durably and visibly', () => {
     // final model call.
     await yes.press('Enter')
     await settled
+    await expect.poll(() => liveAnnouncements.textContent(), { timeout: 10_000 })
+      .toContain('Response completed.')
 
     if (MODE === 'record') {
       const sessionId = await settled

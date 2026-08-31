@@ -1,4 +1,4 @@
-import { type KeyboardEvent, type MouseEvent, type ReactNode } from 'react'
+import { useId, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react'
 import clsx from 'clsx'
 import { IconChevronDownOutline14 } from './icons/index.tsx'
 import css from './DisclosureRow.module.css'
@@ -47,6 +47,7 @@ export function DisclosureRow({
   chevronClassName,
   titleClassName,
 }: DisclosureRowProps) {
+  const contentId = useId()
   const rowExpands = expandable && expandOnRowClick
   const toggleFromLeading = (event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation()
@@ -78,6 +79,7 @@ export function DisclosureRow({
         role={rowExpands ? 'button' : undefined}
         tabIndex={rowExpands ? 0 : undefined}
         aria-expanded={rowExpands ? open : undefined}
+        aria-controls={rowExpands ? contentId : undefined}
         onClick={rowExpands ? onToggle : undefined}
         onKeyDown={rowExpands ? toggleFromKeyboard : undefined}
       >
@@ -86,6 +88,7 @@ export function DisclosureRow({
             type="button"
             className={clsx(css.leading, leadingClassName)}
             aria-expanded={open}
+            aria-controls={contentId}
             onClick={toggleFromLeading}
           >
             {leading}
@@ -98,7 +101,11 @@ export function DisclosureRow({
         <span className={clsx(css.title, titleClassName)}>{title}</span>
         {(keepContentWhenOpen || !open) && collapsedContent}
       </div>
-      {open && children}
+      {expandable ? (
+        <div id={contentId} className={css.content} hidden={!open}>
+          {open && children}
+        </div>
+      ) : open && children}
     </div>
   )
 }

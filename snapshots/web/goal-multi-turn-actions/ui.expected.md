@@ -10,6 +10,7 @@
     - tab "Chat" [selected]
     - tab "Trajectory"
   - tabpanel "Chat":
+    - text: Response completed.
     - navigation "Turn navigation":
       - button "Jump to turn 1"
       - button "Jump to turn 2"

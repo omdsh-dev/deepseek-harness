@@ -23,6 +23,7 @@
       - img
       - img
       - text: Think The user wants me to use the ask_user_question tool with specific parameters. Let me do exactly that.
+    - text: Completed
     - button "Ask question cancelled" [expanded]:
       - img
       - text: Ask question cancelled

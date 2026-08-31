@@ -10,6 +10,7 @@
     - tab "Chat" [selected]
     - tab "Trajectory"
   - tabpanel "Chat":
+    - text: Response stopped.
     - button "System prompt":
       - img
       - img

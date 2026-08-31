@@ -10,6 +10,7 @@
     - tab "Chat" [selected]
     - tab "Trajectory"
   - tabpanel "Chat":
+    - text: Response completed.
     - img
     - text: plan Plan mode on. Use /plan off to leave.
     - button "System prompt":
@@ -34,6 +35,7 @@
       - text: Since the user has explicitly asked me not to read or write any files and to go straight to planning, I'll proceed with
       - code: exit_plan_mode
       - text: .
+    - text: Completed
     - 'button "Tool call exit_plan_mode · # Add `--greeting` flag to CLI"':
       - img
       - img

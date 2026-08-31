@@ -13,6 +13,16 @@
   min-width: 0;
 }
 
+/* Preserve every caller's existing body layout while keeping a stable panel
+   target in the DOM for aria-controls. Closed bodies stay unmounted. */
+.content {
+  display: contents;
+}
+
+.content[hidden] {
+  display: none;
+}
+
 .row {
   position: relative;
   overflow: hidden;

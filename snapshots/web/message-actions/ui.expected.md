@@ -36,12 +36,13 @@
     - button "Ran for {{duration}}":
       - img
       - text: Ran for {{duration}}
-    - text: 7/25 {{clock}}
+    - text: 7/25 {{clock}} Completed
     - button "Read a.txt":
       - img
       - img
       - text: Read
       - button "a.txt"
+    - text: Completed
     - button "Read b.txt":
       - img
       - img

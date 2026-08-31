@@ -10,6 +10,7 @@
     - tab "Chat" [selected]
     - tab "Trajectory"
   - tabpanel "Chat":
+    - text: Response completed.
     - button "System prompt":
       - img
       - img
@@ -28,10 +29,10 @@
       - img
       - img
       - text: Think The user wants me to run a simple bash command and reply with "DONE".
-    - button "Bash Echo the test string":
+    - button "Completed Bash Echo the test string":
       - img
       - img
-      - text: Bash Echo the test string
+      - text: Completed Bash Echo the test string
     - button "Think The command executed successfully and output \"WEB_E2E_OK\". I just need to reply with \"DONE\".":
       - img
       - img

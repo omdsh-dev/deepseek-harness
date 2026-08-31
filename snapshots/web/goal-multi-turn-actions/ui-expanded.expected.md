@@ -10,6 +10,7 @@
     - tab "Chat" [selected]
     - tab "Trajectory"
   - tabpanel "Chat":
+    - text: Response completed.
     - navigation "Turn navigation":
       - button "Jump to turn 1"
       - button "Jump to turn 2"
@@ -37,10 +38,11 @@
       - img
       - img
       - text: "Think The user's goal is: \"做两个turn，每个turn输出随机一个包的文件结构。注意你做完一个turn之后，直接输出内容，停止，我们的系统会帮你再开一个turn，你看着做一个类似的\" — which translates to: \"Do two turns, each turn output the file structure of a random package. Note that after you finish one turn, directly output the content and stop; our system will help you open another turn, and you just do something similar.\""
-    - button "Bash List package directories deterministically":
+    - button "Completed Bash List package directories deterministically":
       - img
       - img
-      - text: Bash List package directories deterministically
+      - text: Completed Bash List package directories deterministically
+    - text: Completed
     - 'button "Tool call get_goal · {}"':
       - img
       - img
@@ -49,10 +51,10 @@
       - img
       - img
       - text: "Think There's a `packages` directory. Let me look inside to see what packages are available."
-    - button "Bash List packages directory contents":
+    - button "Completed Bash List packages directory contents":
       - img
       - img
-      - text: Bash List packages directory contents
+      - text: Completed Bash List packages directory contents
     - button "Think There are 4 packages:":
       - img
       - img
@@ -64,18 +66,18 @@
       - img
       - img
       - text: "Think shuf is not available on macOS. I'll use a different approach for random selection. Let me use $RANDOM in bash or use `sort -R` or Python."
-    - button "Bash Randomly select one package with Python":
+    - button "Completed Bash Randomly select one package with Python":
       - img
       - img
-      - text: Bash Randomly select one package with Python
+      - text: Completed Bash Randomly select one package with Python
     - 'button "Think The random pick for turn 1 is `packages/context/session-reference`. Now I''ll output its file structure. Let me get the file tree."':
       - img
       - img
       - text: "Think The random pick for turn 1 is `packages/context/session-reference`. Now I'll output its file structure. Let me get the file tree."
-    - button "Bash List all files in session-reference package":
+    - button "Completed Bash List all files in session-reference package":
       - img
       - img
-      - text: Bash List all files in session-reference package
+      - text: Completed Bash List all files in session-reference package
     - 'button "Think Turn 1 is done. Per the objective: \"你做完一个turn之后，直接输出内容，停止\" — after finishing a turn, directly output the content and stop. The system will open another turn."':
       - img
       - img
@@ -117,22 +119,22 @@
       - img
       - img
       - text: "Think This is turn 2 of 2. I need to randomly pick another package and output its file structure. In the first turn I picked `packages/context/session-reference`. Let me pick a different one randomly this time."
-    - button "Bash Randomly select another package with Python":
+    - button "Completed Bash Randomly select another package with Python":
       - img
       - img
-      - text: Bash Randomly select another package with Python
+      - text: Completed Bash Randomly select another package with Python
     - 'button "Think The random pick returned the same package as turn 1. Since turn 1 already covered `session-reference`, it would be better to pick a different one for variety. Let me re-roll, excluding the already-covered package."':
       - img
       - img
       - text: "Think The random pick returned the same package as turn 1. Since turn 1 already covered `session-reference`, it would be better to pick a different one for variety. Let me re-roll, excluding the already-covered package."
-    - button "Bash Re-roll excluding the package from turn 1":
+    - button "Completed Bash Re-roll excluding the package from turn 1":
       - img
       - img
-      - text: Bash Re-roll excluding the package from turn 1
-    - button "Bash List all files in token-meter package":
+      - text: Completed Bash Re-roll excluding the package from turn 1
+    - button "Completed Bash List all files in token-meter package":
       - img
       - img
-      - text: Bash List all files in token-meter package
+      - text: Completed Bash List all files in token-meter package
     - 'button "Think This is turn 2 of 2. I''ve output the file structure for `packages/llm/token-meter`. Both turns are done. I should output the content, stop, and then mark the goal as complete since both turns are finished."':
       - img
       - img
@@ -152,11 +154,13 @@
       - text: ，turn 2：
       - code: token-meter
       - text: ）。这一轮到此结束。
+    - text: Completed
     - 'button "Tool call get_goal · {}"':
       - img
       - img
       - text: "Tool call get_goal · {}"
     - paragraph: 两个 turn 均已完成，目标达成，标记 goal 为完成。
+    - text: Completed
     - button "Tool call update_goal · goal-{{uuid}}":
       - img
       - img

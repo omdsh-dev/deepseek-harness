@@ -10,6 +10,7 @@
     - tab "Chat" [selected]
     - tab "Trajectory"
   - tabpanel "Chat":
+    - text: Response completed.
     - img
     - text: plan Plan mode on. Use /plan off to leave.
     - button "System prompt":

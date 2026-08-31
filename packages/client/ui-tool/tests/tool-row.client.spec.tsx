@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render } from '@testing-library/react'
+import { cleanup, fireEvent, render, within } from '@testing-library/react'
 
 import type { RunningToolCall, ToolResultNode } from '@deepseek-ai/dsh-client-ui-chat/client'
 import { makeTranslate } from '@deepseek-ai/dsh-client-test-runtime'
@@ -241,7 +241,12 @@ describe('ToolRow', () => {
 
   it('row click expands: chevron leading, summary kept inline, body in the scrolling card', () => {
     const view = render(<ToolRow {...rowProps} />)
-    fireEvent.click(view.getByRole('button'))
+    const row = view.getByRole('button')
+    const panelId = row.getAttribute('aria-controls')
+    expect(panelId).not.toBeNull()
+    expect(document.getElementById(panelId as string)?.hidden).toBe(true)
+    fireEvent.click(row)
+    expect(document.getElementById(panelId as string)?.hidden).toBe(false)
     expect(view.queryByTestId('tool-icon')).toBeNull()
     expect(view.container.querySelector('svg')).not.toBeNull()
     expect(view.getByText('List files')).toBeTruthy()
@@ -256,17 +261,27 @@ describe('ToolRow', () => {
     const runningView = render(<ToolRow {...rowProps} state="running" />)
     expect(runningView.queryByTestId('tool-icon')).not.toBeNull()
     expect(runningView.container.querySelector('[data-state="running"]')).not.toBeNull()
+    expect(within(runningView.container).getByText('运行中')).toBeTruthy()
     const errorView = render(<ToolRow {...rowProps} state="error" />)
     expect(errorView.container.querySelector('[data-testid="tool-icon"]')).toBeNull()
     // The dot rides the idle slot, so an expandable error row keeps the
     // icon→chevron hover preview instead of losing it with the icon.
     expect(errorView.container.querySelector('[class*="chevronHover"]')).not.toBeNull()
+    expect(within(errorView.container).getByText('失败')).toBeTruthy()
+  })
+
+  it('exposes completed and stopped lifecycle text to assistive technology', () => {
+    const completed = render(<ToolRow {...rowProps} />)
+    expect(within(completed.container).getByText('已完成')).toBeTruthy()
+    const stopped = render(<ToolRow {...rowProps} state="stopped" />)
+    expect(within(stopped.container).getByText('已停止')).toBeTruthy()
   })
 
   it('non-expandable rows render a passive leading slot and no row button', () => {
     const view = render(<ToolRow {...rowProps} body={null} />)
     expect(view.queryByRole('button')).toBeNull()
     expect(view.container.querySelector('[aria-expanded]')).toBeNull()
+    expect(view.container.querySelector('[aria-controls]')).toBeNull()
     expect(view.queryByTestId('tool-icon')).not.toBeNull()
   })
 

@@ -1,4 +1,4 @@
-import { useState, type KeyboardEvent, type ReactNode } from 'react'
+import { useId, useState, type KeyboardEvent, type ReactNode } from 'react'
 import {
   IconChevronDownOutline14, IconInspectOutline12, IconSkillOutline16, StateDot,
 } from '@deepseek-ai/dsh-client-ui-primitives'
@@ -95,12 +95,12 @@ function disclosureLeading(state: SkillRowState, open: boolean, expandable: bool
 }
 
 /** Visually hidden state copy for the colour-only lifecycle cues. */
-function stateStatus(state: SkillRowState, t: SkillRowProps['t']): string | null {
+function stateStatus(state: SkillRowState, t: SkillRowProps['t']): string {
   switch (state) {
     case 'running': return t('row.running')
+    case 'ok': return t('row.completed')
     case 'error': return t('row.failed')
     case 'stopped': return t('row.stopped')
-    default: return null
   }
 }
 
@@ -115,6 +115,7 @@ export function SkillRow({ block, inspect, t }: SkillRowProps) {
   const expandable = model.output !== null
   const open = expanded && expandable
   const status = stateStatus(model.state, t)
+  const bodyId = useId()
   const summary = model.errorSummary ?? model.name
   const toggleExpand = (): void => {
     setExpanded(value => !value)
@@ -128,6 +129,7 @@ export function SkillRow({ block, inspect, t }: SkillRowProps) {
     role: 'button' as const,
     tabIndex: 0,
     'aria-expanded': open,
+    'aria-controls': bodyId,
     onClick: toggleExpand,
     onKeyDown: toggleFromKeyboard,
   } : {}
@@ -140,20 +142,20 @@ export function SkillRow({ block, inspect, t }: SkillRowProps) {
         {...disclosureProps}
       >
         <span className={css.leading}>{leading}</span>
-        {status !== null ? <span className={css.visuallyHidden}>{status}</span> : null}
+        <span className={css.visuallyHidden}>{status}</span>
         <span className={css.title}>{t('row.title')}</span>
         <span className={css.separator} aria-hidden />
         <span className={model.errorSummary === null ? css.summary : `${css.summary} ${css.errorSummary}`}>
           {summary}
         </span>
       </div>
-      {open ? (
-        <div className={css.bodyWrap}>
-          <section className={css.instructionsCard} aria-label={t('row.instructions')}>
+      {expandable ? (
+        <div id={bodyId} className={css.bodyWrap} hidden={!open}>
+          {open ? <section className={css.instructionsCard} aria-label={t('row.instructions')}>
             <div className={css.instructionsHeader}>{t('row.instructions')}</div>
             <pre className={css.instructions} data-error={model.state === 'error' || undefined}>{model.output}</pre>
-          </section>
-          {inspect !== undefined ? (
+          </section> : null}
+          {open && inspect !== undefined ? (
             <button type="button" className={css.inspectButton} onClick={inspect}>
               <IconInspectOutline12 />
               {t('row.inspect')}

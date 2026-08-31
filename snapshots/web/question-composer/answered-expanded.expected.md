@@ -10,6 +10,7 @@
     - tab "Chat" [selected]
     - tab "Trajectory"
   - tabpanel "Chat":
+    - text: Response completed.
     - button "System prompt":
       - img
       - img
@@ -28,6 +29,7 @@
       - img
       - img
       - text: Think The user wants me to use the ask_user_question tool with specific parameters. Let me do exactly that.
+    - text: Completed
     - button "Ask question 1/1 answered" [expanded]:
       - img
       - text: Ask question 1/1 answered

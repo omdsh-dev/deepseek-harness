@@ -10,6 +10,7 @@
     - tab "Chat" [selected]
     - tab "Trajectory"
   - tabpanel "Chat":
+    - text: Response completed.
     - navigation "Turn navigation":
       - button "Jump to turn 1"
       - button "Jump to turn 2"
@@ -32,6 +33,7 @@
       - img
       - img
       - text: Think I will inspect the current Session's dynamic Cordis Plugins before defining the snapshot Package.
+    - text: Completed
     - 'button "Tool call cordis_inspect_self · {}"':
       - img
       - img

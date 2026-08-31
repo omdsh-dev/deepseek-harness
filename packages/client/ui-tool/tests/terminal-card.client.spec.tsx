@@ -401,13 +401,19 @@ describe('BashRow terminal card', () => {
 
   it('collapses to the summary row; the whole row toggles the command output', () => {
     const view = render(<BashRow {...rowProps(settled())} />)
+    const row = view.container.querySelector('[data-expandable]') as HTMLElement
+    const panelId = row.getAttribute('aria-controls')
     expect(view.getByText('List files')).toBeTruthy()
+    expect(view.getByText('已完成')).toBeTruthy()
+    expect(panelId).not.toBeNull()
+    expect(document.getElementById(panelId as string)?.hidden).toBe(true)
     expect(view.queryByText(/a\.ts/)).toBeNull()
-    fireEvent.click(view.container.querySelector('[data-expandable]')!)
+    fireEvent.click(row)
+    expect(document.getElementById(panelId as string)?.hidden).toBe(false)
     expect(view.getByText('a.ts  b.ts', RAW)).toBeTruthy()
     expect(view.getByText('复制')).toBeTruthy()
     // Collapse back in place: the summary row returns, the card unmounts.
-    fireEvent.click(view.container.querySelector('[data-expandable]')!)
+    fireEvent.click(row)
     expect(view.queryByText(/a\.ts/)).toBeNull()
     expect(view.getByText('List files')).toBeTruthy()
   })

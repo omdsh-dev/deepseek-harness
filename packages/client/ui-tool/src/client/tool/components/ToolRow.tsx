@@ -73,16 +73,15 @@ function leadingFor(state: ToolRowState, icon: ReactNode): ReactNode {
   }
 }
 
-/** Visually hidden run-state label: the StateDot and the CSS sweep are both
+/** Visually hidden lifecycle label: the StateDot and the CSS sweep are both
  *  aria-hidden / colour-only, so assistive technology needs this text to know a
- *  row is running, failed, or interrupted. null in the ok state (the icon and
- *  summary already describe a settled row). */
-function stateStatus(state: ToolRowState, t: TranslateNS<'conversation'>): string | null {
+ *  row is running, completed, failed, or interrupted. */
+function stateStatus(state: ToolRowState, t: TranslateNS<'conversation'>): string {
   switch (state) {
     case 'running': return t('row.running')
+    case 'ok': return t('row.completed')
     case 'error': return t('row.failed')
     case 'stopped': return t('row.stopped')
-    default: return null
   }
 }
 
@@ -159,7 +158,7 @@ export function ToolRow({
   const cardBody = variant === 'code' ? null : body
   return (
     <div className={css.root} data-variant={variant} data-tool={toolName} data-state={state}>
-      {status !== null && <span className={css.visuallyHidden}>{status}</span>}
+      <span className={css.visuallyHidden}>{status}</span>
       <DisclosureRow
         rowClassName={css.row}
         leadingClassName={css.leading}

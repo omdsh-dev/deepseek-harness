@@ -10,6 +10,7 @@
     - tab "Chat" [selected]
     - tab "Trajectory"
   - tabpanel "Chat":
+    - text: Response started.
     - button "System prompt":
       - img
       - img
@@ -25,8 +26,7 @@
       - img
       - img
       - text: Think The user wants me to ask them a checkpoint question first, then continue with whatever they interject. Let me do exactly that.
-    - status: Deep diving...
-    - text: "Interjection: include the word BANANA in your final reply."
+    - text: "Deep diving... Interjection: include the word BANANA in your final reply."
     - button "Copy":
       - img
     - text: "Interjection: include the word ORANGE in your final reply."

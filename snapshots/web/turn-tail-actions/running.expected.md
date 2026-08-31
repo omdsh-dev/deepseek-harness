@@ -10,6 +10,7 @@
     - tab "Chat" [selected]
     - tab "Trajectory"
   - tabpanel "Chat":
+    - text: Tool bash completed.
     - button "System prompt":
       - img
       - img
@@ -27,12 +28,12 @@
       - img
       - text: Think The user wants me to begin with "Reading the workspace now." and call bash with "echo alpha" in the same message. Then after the tool result, reply with the single word DONE and stop.
     - paragraph: Reading the workspace now.
-    - button "Bash Print alpha to stdout":
+    - button "Completed Bash Print alpha to stdout":
       - img
       - img
-      - text: Bash Print alpha to stdout
+      - text: Completed Bash Print alpha to stdout
     - paragraph: partial
-    - status: Deep diving...
+    - text: Deep diving...
   - textbox "Message or run a task... / commands, @ files or sessions"
   - button "Commands":
     - img

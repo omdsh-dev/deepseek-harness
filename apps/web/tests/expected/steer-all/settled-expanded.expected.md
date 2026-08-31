@@ -10,6 +10,7 @@
     - tab "Chat" [selected]
     - tab "Trajectory"
   - tabpanel "Chat":
+    - text: Response completed.
     - button "System prompt":
       - img
       - img
@@ -28,6 +29,7 @@
       - img
       - img
       - text: Think The user wants me to ask them a checkpoint question first, then continue with whatever they interject. Let me do exactly that.
+    - text: Completed
     - button "Ask question 1/1 answered":
       - img
       - img

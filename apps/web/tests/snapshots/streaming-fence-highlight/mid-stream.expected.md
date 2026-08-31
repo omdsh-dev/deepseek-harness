@@ -10,6 +10,7 @@
     - tab "Chat" [selected]
     - tab "Trajectory"
   - tabpanel "Chat":
+    - text: Response started.
     - button "System prompt":
       - img
       - img
@@ -24,7 +25,7 @@
     - text: ts
     - button "Copy"
     - code: "const first: number = 1 const second = \"two\" let tail"
-    - status: Deep diving...
+    - text: Deep diving...
   - textbox "Message or run a task... / commands, @ files or sessions"
   - button "Commands":
     - img

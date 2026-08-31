@@ -16,6 +16,7 @@
   - img
   - img
   - text: "Think The user wants me to use the workflow tool exactly once with specific parameters. Let me carefully follow the instructions:"
+- text: Completed
 - button "Tool call workflow ·":
   - img
   - img

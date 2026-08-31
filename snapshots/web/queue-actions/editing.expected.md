@@ -10,6 +10,7 @@
     - tab "Chat" [selected]
     - tab "Trajectory"
   - tabpanel "Chat":
+    - text: Response started.
     - button "System prompt":
       - img
       - img
@@ -22,7 +23,7 @@
       - img
       - text: Context injection @deepseek-ai/dsh-system-prompt
     - paragraph: partial
-    - status: Deep diving...
+    - text: Deep diving...
   - button "2 queued messages" [disabled] [expanded]
   - list:
     - listitem:

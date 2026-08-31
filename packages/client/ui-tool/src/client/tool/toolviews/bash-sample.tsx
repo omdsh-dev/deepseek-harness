@@ -1,4 +1,4 @@
-import { useState, type KeyboardEvent } from 'react'
+import { useId, useState, type KeyboardEvent } from 'react'
 import type { Context } from '@deepseek-ai/cordis'
 import clsx from 'clsx'
 import {
@@ -29,12 +29,12 @@ function leadingFor(state: ToolRowState) {
 }
 
 /** Visually hidden status — StateDot is aria-hidden; AT needs a text label. */
-function stateStatus(state: ToolRowState, t: BashRowProps['t']): string | null {
+function stateStatus(state: ToolRowState, t: BashRowProps['t']): string {
   switch (state) {
     case 'running': return t('bash.running')
+    case 'ok': return t('bash.completed')
     case 'error': return t('bash.failed')
     case 'stopped': return t('bash.stopped')
-    default: return null
   }
 }
 
@@ -53,6 +53,7 @@ export function BashRow({ toolName, block, sessionId, useSessions, inspect, t }:
     : model.state
   const status = stateStatus(state, t)
   const [expanded, setExpanded] = useState(false)
+  const bodyId = useId()
   // Execution failures and persistent-shell results have no terminal card.
   // Keep their recorded args and complete output reachable through the generic
   // body; background acknowledgements and malformed calls remain collapsed.
@@ -91,20 +92,21 @@ export function BashRow({ toolName, block, sessionId, useSessions, inspect, t }:
         role={expandable ? 'button' : undefined}
         tabIndex={expandable ? 0 : undefined}
         aria-expanded={expandable ? open : undefined}
+        aria-controls={expandable ? bodyId : undefined}
         onClick={expandable ? toggleExpand : undefined}
         onKeyDown={expandable ? toggleFromKeyboard : undefined}
       >
         <span className={css.leading}>{leading}</span>
-        {status !== null && <span className={css.visuallyHidden}>{status}</span>}
+        <span className={css.visuallyHidden}>{status}</span>
         <span className={css.title}>{t(model.titleKey)}</span>
         <span className={css.sep} aria-hidden />
         <span className={clsx(css.summary, failureLine !== null && css.errorSummary)}>
           {failureLine ?? terminal?.description ?? model.summary}
         </span>
       </div>
-      {open && (
-        <div className={css.bodyWrap}>
-          {terminal !== null
+      {expandable && (
+        <div id={bodyId} className={css.bodyWrap} hidden={!open}>
+          {open && (terminal !== null
             ? (
               <TerminalBlock
                 {...terminal.card}
@@ -133,8 +135,8 @@ export function BashRow({ toolName, block, sessionId, useSessions, inspect, t }:
                   </div>
                 )}
               </div>
-            )}
-          {inspect !== undefined && (
+            ))}
+          {open && inspect !== undefined && (
             <button type="button" className={css.inspectButton} onClick={inspect}>
               <IconInspectOutline12 />
               {t('row.inspect')}

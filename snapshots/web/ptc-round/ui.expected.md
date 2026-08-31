@@ -10,6 +10,7 @@
     - tab "Chat" [selected]
     - tab "Trajectory"
   - tabpanel "Chat":
+    - text: Response completed.
     - button "System prompt":
       - img
       - img
@@ -28,12 +29,13 @@
       - img
       - img
       - text: "Think The user wants me to write a single `run_code` program that:"
+    - text: Completed
     - button "Code Run bash echo and catch missing file read":
       - img
       - img
       - text: Code Run bash echo and catch missing file read
     - img
-    - text: Bash Echo CODE_ROUND_OK Failed
+    - text: Completed Bash Echo CODE_ROUND_OK Failed
     - 'button "Read Error: cannot read \"{{cwd}}/workspace/missing.txt\": not found"':
       - img
       - text: "Read Error: cannot read \"{{cwd}}/workspace/missing.txt\": not found"

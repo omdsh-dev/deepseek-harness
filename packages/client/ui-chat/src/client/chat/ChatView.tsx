@@ -10,6 +10,7 @@ import type { ChatViewSlotProps } from '../contract/slots.ts'
 import type { ChatSnapshot, TurnNavigationItem } from '../contract/snapshot.ts'
 import { PendingSteeringBubble, PendingSubmissionBubble } from './MessageItem.tsx'
 import { ChatNodeSeat } from './ChatNodeSeat.tsx'
+import { LiveAnnouncements } from './LiveAnnouncements.tsx'
 import { TurnNavigator } from './TurnNavigator.tsx'
 import { formatRunDuration } from './message-chrome.ts'
 import css from './ChatView.module.css'
@@ -186,7 +187,7 @@ function TurnStatus({ startTime, t }: {
   // has clearly been running for a while.
   const showClock = elapsedMs >= 15_000
   return (
-    <div className={css.turnStatus} role="status" aria-live="polite">
+    <div className={css.turnStatus} data-turn-status="">
       {t('chat.deepDiving')}
       {showClock && (
         <span className={css.turnStatusClock} aria-hidden>
@@ -202,7 +203,8 @@ function TurnStatus({ startTime, t }: {
  * ordered business Node crosses the keyed renderer seat.
  */
 export function ChatView({
-  useSession, useChat, useSessions, useStore, actions, renderSlot, sessionId, openFile, loadOlder, loadImage, openView, chatScroll, forkAt,
+  useSession, useChat, useSessions, useSessionPendingInteraction, useStore,
+  actions, renderSlot, sessionId, openFile, loadOlder, loadImage, openView, chatScroll, forkAt,
   fileMentions, useTranscriptView, t,
 }: ChatViewSlotProps) {
   const order = useChat(s => s.order)
@@ -212,10 +214,13 @@ export function ChatView({
   // Turn enters, leaves, or changes its preview.
   const turnNavigationItems = useChat(s => s.navigation.items())
   const timeline = useChat(s => s.timeline)
+  const conversationNodes = useChat(s => s.legacy.nodes)
+  const runningCalls = useChat(s => s.legacy.runningCalls)
   const inbox = useSession(s => s.queue)
   // Workspace root off the session list row: path summaries display relative to it.
   const cwd = useSessions(s => s.byId[sessionId]?.cwd)
   const running = useSession(s => s.running)
+  const pendingInteraction = useSessionPendingInteraction(snapshot => snapshot.get(sessionId))
   const openState = useSession(s => s.openState)
   const openError = useSession(s => s.openError)
   const hasMore = useSession(s => s.hasMore)
@@ -571,6 +576,16 @@ export function ChatView({
 
   return (
     <div className={css.root}>
+      <LiveAnnouncements
+        sessionId={sessionId}
+        ready={openState === 'open'}
+        running={running}
+        nodes={conversationNodes}
+        timeline={timeline}
+        runningCalls={runningCalls}
+        pendingInteraction={pendingInteraction}
+        t={t}
+      />
       <div ref={listRef} className={css.scroll}>
         <TurnNavigator
           items={turnNavigationItems}

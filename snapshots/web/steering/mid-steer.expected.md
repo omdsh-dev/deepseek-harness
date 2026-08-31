@@ -10,6 +10,7 @@
     - tab "Chat" [selected]
     - tab "Trajectory"
   - tabpanel "Chat":
+    - text: A question needs your answer.
     - button "System prompt":
       - img
       - img
@@ -26,8 +27,7 @@
       - img
       - img
       - text: Ask question waiting
-    - status: Deep diving...
-    - text: "Interjection: include the word BANANA in your final reply."
+    - text: "Deep diving... Interjection: include the word BANANA in your final reply."
     - button "Copy":
       - img
   - region "Ready to continue?":
