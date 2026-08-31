@@ -254,6 +254,10 @@ describe(`assembled core accessibility: ${browserName}`, () => {
     expect(await next.getAttribute('data-trajectory-row-key')).not.toBe(firstKey)
     expect(await tabbableRows.count()).toBe(1)
 
+    const structuredRow = rows.filter({ hasText: '"file_path": "a.txt"' }).first()
+    await structuredRow.waitFor({ timeout: 10_000 })
+    await structuredRow.focus()
+    await expectFocused(structuredRow)
     await page.keyboard.press('Enter')
     const details = page.getByRole('complementary', { name: 'Event details' })
     await details.waitFor({ timeout: 10_000 })
@@ -268,6 +272,29 @@ describe(`assembled core accessibility: ${browserName}`, () => {
     expect(await nextTab.getAttribute('aria-selected')).toBe('true')
     const panel = details.getByRole('tabpanel')
     expect(await panel.getAttribute('aria-labelledby')).toBe(await nextTab.getAttribute('id'))
+
+    const jsonTree = details.getByRole('tree').first()
+    if (await jsonTree.count() === 0) {
+      throw new Error(`selected trajectory record has no JSON tree ${JSON.stringify({
+        tabs: await detailTabs.locator('[role="tab"]').allTextContents(),
+        rows: await rows.allTextContents(),
+      })}`)
+    }
+    await jsonTree.waitFor({ timeout: 10_000 })
+    const jsonRows = jsonTree.locator('[role="treeitem"]')
+    await expect.poll(() => jsonRows.count()).toBeGreaterThan(0)
+    expect(await jsonTree.locator('[role="treeitem"][tabindex="0"]').count()).toBe(1)
+    const jsonTabStop = jsonTree.locator('[role="treeitem"][tabindex="0"]')
+    await tabTo(page, jsonTabStop)
+    await expectFocused(jsonTabStop)
+    await page.keyboard.press('End')
+    const lastJsonRow = jsonRows.last()
+    await expectFocused(lastJsonRow)
+    await page.keyboard.press('Home')
+    await expectFocused(jsonRows.first())
+    await page.keyboard.press('ArrowDown')
+    await expectFocused(jsonRows.nth((await jsonRows.count()) > 1 ? 1 : 0))
+    expect(await jsonTree.locator('[role="treeitem"][tabindex="0"]').count()).toBe(1)
 
     const splitter = details.getByRole('separator', { name: 'Resize event details' })
     expect(await splitter.getAttribute('aria-controls')).toBe('trajectory-detail-panel')
