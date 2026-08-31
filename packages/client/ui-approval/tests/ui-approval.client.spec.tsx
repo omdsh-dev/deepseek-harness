@@ -366,9 +366,11 @@ describe('ApprovalPanel', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Allow once' }))
     expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Allow once' }).disabled).toBe(true)
+    expect(screen.getByText('Waiting').closest('[aria-busy="true"]')).toBeTruthy()
     await waitFor(() => {
       expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Allow once' }).disabled).toBe(false)
     })
+    expect(screen.getByRole('alert').textContent).toBe('transport closed')
     pending.abort(new Error('test cleanup'))
     await pending.result.catch(() => {})
   })

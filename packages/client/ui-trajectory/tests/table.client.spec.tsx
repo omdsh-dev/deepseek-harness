@@ -233,6 +233,51 @@ describe('TrajectoryTable', () => {
     expect(summary.getAttribute('aria-selected')).toBe('true')
   })
 
+  it('exposes the details splitter value and supports the complete keyboard range', () => {
+    render(<TrajectoryTable turns={TURNS} {...FOLD_PROPS} />)
+    fireEvent.click(screen.getByRole('row', { name: /ASSISTANT/ }))
+    const separator = screen.getByRole('separator', { name: 'Resize event details' })
+    const details = separator.parentElement
+    const split = details?.parentElement
+    if (details === null || details === undefined || split === null || split === undefined) {
+      throw new Error('expected the event details split')
+    }
+    const rect = (width: number): DOMRect => ({
+      bottom: 0, height: 0, left: 0, right: width, top: 0, width, x: 0, y: 0,
+      toJSON: () => ({}),
+    })
+    vi.spyOn(split, 'getBoundingClientRect').mockImplementation(() => rect(1_200))
+    let clientWidth = 440
+    Object.defineProperty(details, 'clientWidth', {
+      configurable: true,
+      get: () => clientWidth,
+    })
+    vi.spyOn(details, 'getBoundingClientRect').mockImplementation(() => {
+      const inlineWidth = Number.parseFloat(details.style.width)
+      return rect(Number.isNaN(inlineWidth) ? 440 : inlineWidth)
+    })
+
+    expect(separator.getAttribute('aria-controls')).toBe('trajectory-detail-panel')
+    expect(separator.getAttribute('aria-valuemin')).toBe('320')
+    expect(separator.getAttribute('aria-valuemax')).toBe('720')
+    expect(separator.getAttribute('aria-valuenow')).toBe('440')
+    expect(separator.getAttribute('aria-valuetext')).toBe('440 pixels')
+
+    separator.focus()
+    fireEvent.keyDown(separator, { key: 'ArrowLeft' })
+    expect(separator.getAttribute('aria-valuenow')).toBe('456')
+    clientWidth = 0
+    fireEvent.keyDown(separator, { key: 'ArrowRight' })
+    expect(separator.getAttribute('aria-valuenow')).toBe('440')
+    fireEvent.keyDown(separator, { key: 'Home' })
+    expect(separator.getAttribute('aria-valuenow')).toBe('320')
+    fireEvent.keyDown(separator, { key: 'End' })
+    expect(separator.getAttribute('aria-valuenow')).toBe('720')
+    fireEvent.keyDown(separator, { key: 'Enter' })
+    expect(separator.getAttribute('aria-valuenow')).toBe('440')
+    expect(document.activeElement).toBe(separator)
+  })
+
   it('shows a tool record Duration as exact milliseconds', () => {
     const turns: readonly TrajectoryTurnModel[] = [{
       turn: 1,

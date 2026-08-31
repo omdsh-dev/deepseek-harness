@@ -163,6 +163,37 @@ function wait(questions: PendingQuestion['questions'] = QUESTIONS) {
 const answerBatch = (answers: object[]) => ({ answers })
 
 describe('QuestionComposer', () => {
+  it('names radio groups, uses one tab stop, and moves focus with each question', () => {
+    const { carrier } = wait()
+    render(<QuestionComposer matched={carrier} {...kit} />)
+
+    const group = screen.getByRole('radiogroup', { name: '选择候选人类型' })
+    const first = screen.getByRole('radio', { name: '工程落地型' })
+    const second = screen.getByRole('radio', { name: '研究潜力型' })
+    expect(group.querySelectorAll('[role="radio"][tabindex="0"]')).toHaveLength(1)
+    expect(first.tabIndex).toBe(0)
+    expect(second.tabIndex).toBe(-1)
+
+    first.focus()
+    fireEvent.keyDown(first, { key: 'ArrowDown' })
+    expect(document.activeElement).toBe(second)
+    expect(second.getAttribute('aria-checked')).toBe('true')
+    expect(second.tabIndex).toBe(0)
+    expect(screen.getByText('1 / 3')).toBeTruthy()
+    fireEvent.keyDown(second, { key: 'Home' })
+    expect(document.activeElement).toBe(first)
+    fireEvent.keyDown(first, { key: 'End' })
+    expect(document.activeElement).toBe(second)
+
+    fireEvent.click(second)
+    const custom = screen.getByRole('textbox', { name: zh['custom.label'] })
+    expect(screen.getByText('2 / 3')).toBeTruthy()
+    expect(document.activeElement).toBe(custom)
+    fireEvent.click(screen.getByLabelText(zh['nav.next']))
+    const choices = screen.getByRole('group', { name: '选择重要信号（可多选）' })
+    expect(document.activeElement).toBe(choices.querySelector('[role="checkbox"]'))
+  })
+
   it('collects single, custom, and multi-select answers before one batch submit', () => {
     const { carrier, answer } = wait()
     render(<QuestionComposer matched={carrier} {...kit} />)
@@ -275,12 +306,12 @@ describe('QuestionComposer', () => {
     fireEvent.keyDown(emptyCustom, { key: 'Enter', shiftKey: true })
     expect(screen.getByText('2 / 3')).toBeTruthy()
     fireEvent.keyDown(emptyCustom, { key: 'Enter' })
-    expect(screen.getByText('请选择一个选项或填写自定义答案。')).toBeTruthy()
+    expect(screen.getByRole('alert').textContent).toBe('请选择一个选项或填写自定义答案。')
 
     fireEvent.click(screen.getByLabelText('下一题'))
     fireEvent.click(screen.getByRole('checkbox', { name: '产品判断' }))
     fireEvent.click(screen.getByRole('button', { name: '提交' }))
-    expect(screen.getByText('请先完成这道问题。')).toBeTruthy()
+    expect(screen.getByRole('alert').textContent).toBe('请先完成这道问题。')
     expect(screen.getByText('2 / 3')).toBeTruthy()
     fireEvent.click(screen.getByLabelText('上一题'))
     expect(screen.getByText('1 / 3')).toBeTruthy()

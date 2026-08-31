@@ -37,15 +37,16 @@
       - img
     - button "Dismiss all questions":
       - img
-    - radiogroup:
+    - radiogroup "Ready to continue?":
       - radio "Yes": 1 Yes
       - radio "No": 2 No
-      - textbox "Type your answer"
+      - textbox "Custom answer":
+        - /placeholder: Type your answer
     - button "Previous question" [disabled]:
       - img
     - text: 1 / 1
     - button "Next question" [disabled]:
       - img
-    - status
+    - alert
     - button "Skip this question"
     - button "Submit" [disabled]

@@ -201,6 +201,9 @@ interface DetailsResizeDrag {
 
 const DETAILS_MIN_WIDTH = 320
 const DETAILS_MAX_WIDTH = 720
+const DETAILS_DEFAULT_SHARE = 0.38
+const DETAILS_DEFAULT_MAX_WIDTH = 440
+const DETAILS_FALLBACK_SPLIT_WIDTH = 1_200
 const TABLE_MIN_WIDTH = 280
 const DETAILS_RESIZE_STEP = 16
 const TOOL_REQUEST_SHARE = 0.58
@@ -264,11 +267,26 @@ interface OlderLoadAnchor {
 }
 
 function clampDetailsWidth(width: number, splitWidth: number): number {
-  const maxWidth = Math.max(
+  const maxWidth = detailsResizeMaximum(splitWidth)
+  return Math.round(Math.min(Math.max(width, DETAILS_MIN_WIDTH), maxWidth))
+}
+
+function detailsResizeMaximum(splitWidth: number): number {
+  return Math.max(
     DETAILS_MIN_WIDTH,
     Math.min(DETAILS_MAX_WIDTH, splitWidth - TABLE_MIN_WIDTH),
   )
-  return Math.round(Math.min(Math.max(width, DETAILS_MIN_WIDTH), maxWidth))
+}
+
+function defaultDetailsWidth(splitWidth: number): number {
+  return clampDetailsWidth(
+    Math.min(splitWidth * DETAILS_DEFAULT_SHARE, DETAILS_DEFAULT_MAX_WIDTH),
+    splitWidth,
+  )
+}
+
+function measuredDetailsWidth(details: HTMLElement): number {
+  return details.clientWidth > 0 ? details.clientWidth : details.getBoundingClientRect().width
 }
 
 function defaultToolRequestWidth(splitWidth: number): number {
@@ -1828,6 +1846,7 @@ export function TrajectoryTable({
   const [rowTabStopKey, setRowTabStopKey] = useState<string | null>(null)
   const [thinkingExpanded, setThinkingExpanded] = useState(false)
   const [detailsWidth, setDetailsWidth] = useState<number | null>(null)
+  const [splitWidth, setSplitWidth] = useState(0)
   const [toolRequestOffset, setToolRequestOffset] = useState<number | null>(null)
   const detailsResizeDrag = useRef<DetailsResizeDrag | null>(null)
   const appliedRecordSelection = useRef<TrajectoryTableProps['recordSelection']>(null)
@@ -1843,6 +1862,20 @@ export function TrajectoryTable({
   const followsTableTail = useRef(false)
   const tableScrollInitialized = useRef(false)
   const [tableScrollReady, setTableScrollReady] = useState(false)
+  useEffect(() => {
+    const split = rootRef.current
+    /* v8 ignore next -- the split root renders unconditionally. */
+    if (split === null) return
+    const measure = () => {
+      const width = split.getBoundingClientRect().width
+      if (width > 0) setSplitWidth(width)
+    }
+    measure()
+    if (typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(measure)
+    observer.observe(split)
+    return () => { observer.disconnect() }
+  }, [])
   const cancelPendingRowFocus = useCallback(() => {
     const view = rowFocusGuardView.current
     if (rowFocusGuardFrame.current !== null && view !== null) {
@@ -2473,6 +2506,12 @@ export function TrajectoryTable({
   const olderBusy = olderHistoryLoading || olderLoading
   const showInitialLoading = historyLoading || !tableScrollReady
   const historyRowOffset = hasOlderRecords ? 1 : 0
+  const effectiveSplitWidth = splitWidth > 0 ? splitWidth : DETAILS_FALLBACK_SPLIT_WIDTH
+  const detailsResizeMax = detailsResizeMaximum(effectiveSplitWidth)
+  const detailsResizeValue = clampDetailsWidth(
+    detailsWidth ?? defaultDetailsWidth(effectiveSplitWidth),
+    effectiveSplitWidth,
+  )
 
   return (
     <div ref={rootRef} className={css.split} style={splitStyle}>
@@ -2925,6 +2964,10 @@ export function TrajectoryTable({
             aria-label={t('details.resize')}
             aria-controls="trajectory-detail-panel"
             aria-orientation="vertical"
+            aria-valuemin={DETAILS_MIN_WIDTH}
+            aria-valuemax={detailsResizeMax}
+            aria-valuenow={detailsResizeValue}
+            aria-valuetext={t('details.resizeValue', { value: detailsResizeValue })}
             tabIndex={0}
             title={t('details.resizeTitle')}
             onDoubleClick={() => {
@@ -2941,7 +2984,7 @@ export function TrajectoryTable({
               detailsResizeDrag.current = {
                 pointerId: event.pointerId,
                 startX: event.clientX,
-                startWidth: details.getBoundingClientRect().width,
+                startWidth: measuredDetailsWidth(details),
                 splitWidth,
                 startToolRequestOffset: toolRequestOffset ?? (
                   splitWidth * TOOL_REQUEST_SHARE - defaultToolRequestWidth(splitWidth)
@@ -2972,18 +3015,30 @@ export function TrajectoryTable({
               detailsResizeDrag.current = null
             }}
             onKeyDown={(event) => {
-              if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
+              if (event.key === 'Enter') {
+                setDetailsWidth(null)
+                setToolRequestOffset(null)
+                event.preventDefault()
+                return
+              }
+              const supported = event.key === 'ArrowLeft' || event.key === 'ArrowRight'
+                || event.key === 'Home' || event.key === 'End'
+              if (!supported) return
               const details = event.currentTarget.parentElement
               if (details === null) return
               const split = details.parentElement
               if (split === null) return
-              const direction = event.key === 'ArrowLeft' ? 1 : -1
-              const currentDetailsWidth = details.getBoundingClientRect().width
+              const currentDetailsWidth = measuredDetailsWidth(details)
               const splitWidth = split.getBoundingClientRect().width
-              const nextDetailsWidth = clampDetailsWidth(
-                currentDetailsWidth + direction * DETAILS_RESIZE_STEP,
-                splitWidth,
-              )
+              const nextDetailsWidth = event.key === 'Home'
+                ? DETAILS_MIN_WIDTH
+                : event.key === 'End'
+                  ? detailsResizeMaximum(splitWidth)
+                  : clampDetailsWidth(
+                    currentDetailsWidth
+                    + (event.key === 'ArrowLeft' ? 1 : -1) * DETAILS_RESIZE_STEP,
+                    splitWidth,
+                  )
               const currentToolRequestOffset = toolRequestOffset ?? (
                 splitWidth * TOOL_REQUEST_SHARE - defaultToolRequestWidth(splitWidth)
               )

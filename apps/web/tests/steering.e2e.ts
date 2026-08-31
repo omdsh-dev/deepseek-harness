@@ -138,11 +138,23 @@ describe('web e2e: mid-turn steering lands durably and visibly', () => {
       await compareOrRefreshGolden(MID_EXPECTED, snapshot, MODE)
     }
 
+    const radioGroup = composer.getByRole('radiogroup', { name: 'Ready to continue?' })
+    const yes = radioGroup.getByRole('radio', { name: 'Yes' })
+    const no = radioGroup.getByRole('radio', { name: 'No' })
+    expect(await radioGroup.locator('[role="radio"][tabindex="0"]').count()).toBe(1)
+    await yes.focus()
+    await yes.press('ArrowRight')
+    expect(await no.evaluate(element => document.activeElement === element)).toBe(true)
+    expect(await no.getAttribute('aria-checked')).toBe('true')
+    expect(await composer.count()).toBe(1)
+    await no.press('Home')
+    expect(await yes.evaluate(element => document.activeElement === element)).toBe(true)
+    expect(await yes.getAttribute('aria-checked')).toBe('true')
+
     // Answer the composer; the tool result closes the step, the loop drains
     // the steer as user/message, and the steered continuation runs the
     // final model call.
-    await composer.getByRole('radio', { name: 'Yes' }).click()
-    await composer.getByRole('radio', { name: 'Yes' }).press('Enter')
+    await yes.press('Enter')
     await settled
 
     if (MODE === 'record') {

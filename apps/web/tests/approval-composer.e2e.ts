@@ -82,6 +82,8 @@ describe('web e2e: approval takeover keeps its actions reachable', () => {
     await panel.waitFor({ timeout: MODE === 'record' ? 180_000 : 60_000 })
     const scroll = panel.locator('[data-approval-scroll]')
     await expect.poll(() => scroll.getByText(/tok/).count(), { timeout: 15_000 }).toBeGreaterThan(0)
+    expect(await panel.getByRole('group', { name: 'Approval details' }).count()).toBe(1)
+    expect(await panel.locator('[aria-busy="true"]').count()).toBe(0)
 
     if (MODE !== 'record') {
       const snapshot = await captureStableAria(page, '[data-approval-key]', scaffold.workspaceCwd)

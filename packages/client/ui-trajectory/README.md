@@ -29,7 +29,7 @@ Open the Trajectory tab in the conversation's view ring to inspect agent activit
 
 ### Inspecting records
 
-Selection, timeline navigation, folding, search, and Request totals cover the loaded window. Selecting a record opens a local inspector for token usage, duration, Input, Output, Timing, and durable images. Image URLs use the Conversation-owned per-session cache, so Chat and Trajectory share one authorized read per attachment. A record without text labels its row with the image count. A standalone compaction request appears chronologically in its own `Between turns` section, while a numbered compaction remains inside its owning turn.
+Selection, timeline navigation, folding, search, and Request totals cover the loaded window. The named event table keeps one rendered logical row in the Tab order; Up and Down Arrow, Home, and End move through loaded records across virtual windows, Enter or Space opens details, and Right Arrow enters an associated Request marker. The details tabs use one roving Tab stop, and the named splitter reports its pixel value while Arrow keys resize it, Home and End select its limits, and Enter restores the default. Image URLs use the Conversation-owned per-session cache, so Chat and Trajectory share one authorized read per attachment. A record without text labels its row with the image count. A standalone compaction request appears chronologically in its own `Between turns` section, while a numbered compaction remains inside its owning turn.
 
 ### The timing overview
 

@@ -159,6 +159,8 @@ describe('web e2e: resident question composer round trip', () => {
     const composer = page.locator('[data-question-key]')
     await composer.waitFor({ timeout: MODE === 'record' ? 120_000 : 30_000 })
     await expect.poll(() => composer.getByText('Which color do you prefer?').count(), { timeout: 10_000 }).toBeGreaterThan(0)
+    expect(await composer.getByRole('group', { name: 'Which color do you prefer?' }).count()).toBe(1)
+    expect(await composer.getByRole('textbox', { name: 'Custom answer' }).count()).toBe(1)
 
     const selectedRow = page.locator('[role="treeitem"][aria-selected="true"]')
     await expect.poll(() => selectedRow.locator('[data-state="warning"]').count(), { timeout: 10_000 }).toBe(1)
@@ -222,7 +224,7 @@ describe('web e2e: resident question composer round trip', () => {
     // only a real engine soft-wraps; growth stops at the mirror's cap, past
     // which the textarea is the one thing that scrolls. Replay only, same as
     // the squeeze above: record mode must reach the recording write.
-    const custom = composer.getByRole('textbox')
+    const custom = composer.getByRole('textbox', { name: 'Custom answer' })
     if (MODE !== 'record') {
       const oneLineHeight = await custom.evaluate(el => el.getBoundingClientRect().height)
       await custom.fill('a'.repeat(120))

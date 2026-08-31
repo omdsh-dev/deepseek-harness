@@ -25,7 +25,7 @@ English | [中文](README.zh.md)
 <a id="use-this-package"></a>
 ## Use this package
 
-When the agent asks a question, the composer becomes the question surface: answer each question, navigate with the pager, or skip it. Single-select choices advance immediately; Enter continues the flow and submits once every question is answered or skipped, while Shift+Enter breaks a line instead (during IME composition Enter only confirms the input candidate without advancing).
+When the agent asks a question, the composer becomes the question surface: answer each question, navigate with the pager, or skip it. A single-select group has one Tab stop; Arrow keys, Home, and End move and select without leaving the question, while activating a choice advances immediately. Pager, skip, validation recovery, and automatic advance move focus into the destination question. Enter continues the flow and submits once every question is answered or skipped, while Shift+Enter breaks a line instead (during IME composition Enter only confirms the input candidate without advancing).
 
 ### Answering
 
@@ -37,7 +37,7 @@ A `plan-review` intent — set by `dsh-plan-mode` on the `exit_plan_mode` review
 
 ### Failure and recovery
 
-The generic question flow keeps its current page, selected labels, custom text, and explicit skips in a non-persisted Slot store scoped to the owning Session and keyed by the pending request's local render identity. Switching from Session A to B remounts the strict composer entry, but returning to A reuses A's store and restores the unfinished draft. A different request identity reads an empty draft and replaces the previous value on its first edit; a successful answer or cancellation clears the matching value. The host remains authoritative for whether the request is pending.
+The generic question flow keeps its current page, selected labels, custom text, and explicit skips in a non-persisted Slot store scoped to the owning Session and keyed by the pending request's local render identity. The question, option groups, and custom answer fields keep programmatic names, and validation or transport failures use an assertive announcement while a pending response marks the card busy. Switching from Session A to B remounts the strict composer entry, but returning to A reuses A's store and restores the unfinished draft. A different request identity reads an empty draft and replaces the previous value on its first edit; a successful answer or cancellation clears the matching value. The host remains authoritative for whether the request is pending.
 
 -----
 

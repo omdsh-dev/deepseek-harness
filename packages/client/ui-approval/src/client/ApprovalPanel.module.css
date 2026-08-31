@@ -67,6 +67,13 @@
   padding: 14px 16px;
 }
 
+.feedback {
+  padding: 0 16px;
+  color: var(--dsw-alias-state-error-primary);
+  font-size: 13px;
+  line-height: 18px;
+}
+
 .reject:hover:not(:disabled) {
   background: var(--dsw-alias-interactive-bg-hover-danger);
   color: var(--dsw-alias-state-error-primary);

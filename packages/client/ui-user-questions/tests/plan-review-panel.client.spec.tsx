@@ -270,7 +270,7 @@ describe('PlanReviewPanel', () => {
 
     fireEvent.click(screen.getByRole('button', { name: zh['plan.approve'] }))
     const failure = await screen.findByText('question response rejected: not-pending')
-    expect(failure.getAttribute('role')).toBe('status')
+    expect(failure.getAttribute('role')).toBe('alert')
     // Re-armed for the retry: a lost click must not leave a dead card.
     expect(screen.getByRole('button', { name: zh['plan.approve'] }).hasAttribute('disabled')).toBe(false)
     fireEvent.click(screen.getByRole('button', { name: zh['plan.approve'] }))
