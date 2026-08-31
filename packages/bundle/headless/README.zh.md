@@ -9,7 +9,7 @@ kind: "package-bundle"
 
 ## 概述
 
-`dsh-headless` 从命令行运行一个 dsh 任务并打印最终答案，然后退出——没有 GUI、没有服务器、没有浏览器。输入 `dsh --profile headless "run the tests"`，agent（智能体）会以与其他表层相同的模型、工具与安全默认值完成该任务。它非常适合脚本、CI 与一次性任务：进程不打开任何端口，也不会留下任何后台运行的东西。退出码告诉你结果——任务完成时为 0，中止或出错时为 1。主要边界：每次调用只运行一个任务，没有交互式后续。
+`dsh-headless` 从命令行运行一个 dsh 任务并打印最终答案，然后退出——没有 GUI、没有服务器、没有浏览器。输入 `dsh --profile headless "run the tests"`，agent（智能体）会以与其他表层相同的模型、工具与安全默认值完成该任务。它非常适合脚本、CI、辅助技术终端与一次性任务：进程不打开任何端口，也不会留下任何后台运行的东西。退出码告诉你结果——任务完成时为 0，中止或出错时为 1。主要边界：每次调用只运行一个任务，没有交互式后续。
 
 ## 目录
 
@@ -33,11 +33,35 @@ kind: "package-bundle"
 dsh --profile headless "run the tests"
 ```
 
-agent（智能体）会完成该任务，把提供方的每个非空推理增量流式写入 stderr 的 `dsh: reasoning:` 段，然后把最终答案写入 stdout 并退出。连续推理增量保持在同一段中；提供方未给尾换行时，runner 会在后续输出前结束该段。没有推理内容的成功运行保持 stderr 为空；失败时退出码为 1，并以 `dsh: <code>: <message>` 向 stderr 写入错误。缺失或空白任务会在任何内容运行前被拒绝。任务文本通过唯一的 `task` 设置提供：
+agent（智能体）会完成该任务，把提供方的每个非空推理增量流式写入 stderr 的 `dsh: reasoning:` 段，然后把最终答案写入 stdout 并退出。连续推理增量保持在同一段中；提供方未给尾换行时，runner 会在后续输出前结束该段。没有推理内容的成功运行保持 stderr 为空；失败时退出码为 1，并以 `dsh: <code>: <message>` 向 stderr 写入错误。缺失或空白任务会在任何内容运行前被拒绝。
+
+### 无障碍终端输出
+
+```sh
+dsh --profile headless --accessibility "run the tests"
+```
+
+无障碍展示会抑制逐 token 推理，只向 stderr 写入 `dsh: task started`，再写入一个持久化终态，例如 `dsh: task completed`、`dsh: task failed: <code>: <message>` 或 `dsh: task aborted: <cause>`。最终 assistant 文本仍写入 stdout，但会移除终端转义序列、C0/C1 控制字符、回车重绘与 BEL，同时保留换行和制表符。在此模式中，DSH 不添加颜色、spinner、光标移动或持续更新的计数器。这些属性使进程输出适合开展读屏验证；它们本身不能证明某个特定读屏软件与终端组合已经由残障用户测试。
+
+### 版本化 JSON 输出
+
+```sh
+dsh --profile headless --output-format json "run the tests"
+```
+
+JSON 模式会抑制推理，并在 Session flush 后向 stdout 恰好写入一个以换行结束的对象。对于持久化结果和直接驱动器结果，stderr 都保持为空，因此自动化不需要把部分文本答案与非结构化错误拼接起来。`schemaVersion` 独立于 Session 格式；消费方必须先检查它，再解释其余字段。
+
+```json
+{"type":"dsh-headless-result","schemaVersion":"1.0.0","status":"completed","text":"Tests passed.","reason":{"kind":"completed"}}
+```
+
+runner 设置如下：
 
 | 字段 | 默认值 | 含义 |
 |---|---|---|
 | `task` | 必填 | 单次运行的任务文本 |
+| `accessibility` | `false` | 使用稳定的逐行状态、清理终端控制并抑制推理增量 |
+| `outputFormat` | `text` | 向 stdout 写入最终文本或一个版本化 `json` 结果 |
 
 生成的[配置目录](../../../docs/config-catalog.zh.md#deepseek-aidsh-headless)是每个受支持字段及其 JSDoc 的穷尽式真源。
 
@@ -61,15 +85,15 @@ runner 是核心 API 载体之上的直接驱动器：它通过注册表创建�
 
 ### 运行流程
 
-runner 等待整个应用结算（`ctx.get('loader')?.await()`），确保已组合的工具与适配器不会半挂载，读取共享的 [`agentDefaultModel`](../../core/agent-default-model/README.zh.md) 选择，用该 provider 与模型创建一个全新的持久化 Agent（智能体），并把任务作为普通用户消息提交。它把该 Agent 的非空推理增量流式写入 stderr、等待完全停稳，然后 flush Session，并把所属区间（从 `firstSeq` 起）折叠为最后一条非空 `assistant/message` 文本与最终 `turn/end` 原因。最后，它把最终文本写入 stdout 并请求退出。
+runner 等待整个应用结算（`ctx.get('loader')?.await()`），确保已组合的工具与适配器不会半挂载，读取共享的 [`agentDefaultModel`](../../core/agent-default-model/README.zh.md) 选择，用该 provider 与模型创建一个全新的持久化 Agent（智能体），并把任务作为普通用户消息提交。默认文本模式把该 Agent 的非空推理增量流式写入 stderr；无障碍模式与 JSON 模式会将其抑制。完全停稳后，runner flush Session，把所属区间（从 `firstSeq` 起）折叠为最后一条非空 `assistant/message` 文本与最终 `turn/end` 原因，写入所选投影并请求退出。
 
 ### 叠加在 base 之上的 patch 表层
 
-patch 叠加在 `dsh-base` 之上：继承投影缓存，在基础 `system-prompt` 行上设置编码 persona，保留与 Web 表层相同的临时进程级 PTC mode 开关（`DSH_TOOLS_MODE`），禁用共享的 HMR 行，把 PTC mode 的 worker 作为核心执行能力插入，并挂载启动提供方与 runner。缓存为每个已持久化的一次性会话写入检查点，供后续消费方使用；其持久性屏障会在发布缓存行前 flush 所覆盖的日志前缀，因此可能拆分原本会合并的 JSONL 行。启动提供方（[`src/startup.ts`](src/startup.ts)）注入 `ctx.cmdlineArgs`（[`dsh-cmdline`](../../boot/cmdline/README.zh.md)），读取位置参数、打印应用自己的 `--help`，并提供 `headlessStartup`；runner 注入该服务，再从惰性配置中读取任务。
+patch 叠加在 `dsh-base` 之上：继承投影缓存，在基础 `system-prompt` 行上设置编码 persona，保留与 Web 表层相同的临时进程级 PTC mode 开关（`DSH_TOOLS_MODE`），禁用共享的 HMR 行，把 PTC mode 的 worker 作为核心执行能力插入，并挂载启动提供方与 runner。缓存为每个已持久化的一次性会话写入检查点，供后续消费方使用；其持久性屏障会在发布缓存行前 flush 所覆盖的日志前缀，因此可能拆分原本会合并的 JSONL 行。启动提供方（[`src/startup.ts`](src/startup.ts)）注入 `ctx.cmdlineArgs`（[`dsh-cmdline`](../../boot/cmdline/README.zh.md)），读取位置参数与输出 flag、打印应用自己的 `--help`，并提供 `headlessStartup`；runner 注入该服务，再从惰性配置中读取任务与展示方式。
 
 ### 退出映射
 
-最终 `turn/end` 完成时退出码为 0；任何其他结果——aborted、error，或所属区间内没有轮次——退出码为 1。结束原因为 `error` 时还会向 stderr 写入 `dsh: <code>: <message>`。直接驱动器失败（例如 Agent 创建失败）向 stderr 写入 `dsh: <message>` 并退出 1。
+最终 `turn/end` 完成时退出码为 0；任何其他结果——aborted、blocked、达到 token 上限、interrupted、error、扩展原因，或所属区间内没有轮次——退出码为 1。默认文本模式把模型失败与直接驱动器失败写入 stderr。无障碍模式写入一个经过清理的终态，JSON 模式则把每种结果投影到唯一的 stdout 对象。
 
 ### 源码地图
 
@@ -121,9 +145,10 @@ runner 不向请求前缀添加任何内容；它只是把一条用户消息驱�
 
 - **每次运行一个任务**——任务得到回答后进程即退出；没有交互式后续，因此多步工作请拆成多次运行。
 - **通过 `dsh` 启动器运行**——以其他方式启动 headless profile 会在启动时失败，因为只有启动器能请求进程退出。
-- **首个 token 前没有心跳**——提供方发出第一个非空推理增量前，stderr 保持静默；延迟首个 token 的提供方不会更早给出进度信号。
-- **推理进入 stderr 日志**——重定向与监督进程可能保留更多且可能敏感的模型输出；需要时应把 stderr 路由到受控位置。
-- **只打印推理和最终答案**——没有 assistant 消息的运行向 stdout 打印空行并以 1 退出；中间工具输出不会打印。
+- **默认文本在首个 token 前没有心跳**——提供方发出第一个非空推理增量前，stderr 保持静默；需要稳定开始播报时请使用 `--accessibility`。
+- **默认文本会记录推理**——重定向与监督进程可能保留更多且可能敏感的模型输出；无障碍模式与 JSON 模式会将其抑制。
+- **只打印状态、启用时的推理和最终答案**——没有 assistant 消息的文本运行向 stdout 打印空行并以 1 退出；中间工具输出不会打印。
+- **输出兼容性不等于真实辅助技术证据**——该模式移除了已知终端障碍，但每种终端、操作系统、读屏软件、语音设置与用户工作流仍需单独记录验证。
 
 <a id="dev-note"></a>
 ### 开发备注

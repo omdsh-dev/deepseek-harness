@@ -44,6 +44,8 @@ View 选择规则固定：有效且已注册的持久化选择优先，其次是
 
 普通 composer 运行时，如果草稿为空或输入不可用，主指针操作保持为 Stop。可提交的文字或附件会把同一位置切换为 Queue Send；清空或成功提交草稿后恢复 Stop。繁忙态 Enter 设置继续选择 Queue 或 Steer 键盘操作。可继续 subagent 保留独立的 Send 与 Stop 操作（[决策](../../../.agents/notes/implemented/bug-fix/2026-08-20-running-draft-primary-send.zh.md)）。
 
+composer 的 Context Meter 会在触发器无障碍名称中公开取整后的占用率，并通过稳定的 `aria-controls` 关系同步 `aria-expanded`。点击展开的明细是具名的非模态 region，因此打开时焦点仍停留在触发器上，也不会错误宣称对话框焦点行为。提供方容量和总占用率属于权威数据；系统提示词、工具与消息的组成明确只是启发式估算。
+
 <a id="temporary-composer-entries"></a>
 ## 临时 composer entry
 

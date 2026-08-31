@@ -262,9 +262,18 @@ describe('Tooltip', () => {
     const onMouseLeave = vi.fn()
     const onFocus = vi.fn()
     const onBlur = vi.fn()
+    const onKeyDown = vi.fn()
+    const onTooltipKeyDown = vi.fn()
     render(
-      <Tooltip label="Chained">
-        <button type="button" onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave} onFocus={onFocus} onBlur={onBlur}>anchor</button>
+      <Tooltip label="Chained" onKeyDown={onTooltipKeyDown}>
+        <button
+          type="button"
+          onMouseEnter={onMouseEnter}
+          onMouseLeave={onMouseLeave}
+          onFocus={onFocus}
+          onBlur={onBlur}
+          onKeyDown={(event) => { onKeyDown(); event.preventDefault() }}
+        >anchor</button>
       </Tooltip>,
     )
     const anchor = screen.getByText('anchor')
@@ -272,10 +281,13 @@ describe('Tooltip', () => {
     fireEvent.mouseLeave(anchor)
     fireEvent.focus(anchor)
     fireEvent.blur(anchor)
+    fireEvent.keyDown(anchor, { key: 'ArrowDown' })
     expect(onMouseEnter).toHaveBeenCalledOnce()
     expect(onMouseLeave).toHaveBeenCalledOnce()
     expect(onFocus).toHaveBeenCalledOnce()
     expect(onBlur).toHaveBeenCalledOnce()
+    expect(onKeyDown).toHaveBeenCalledOnce()
+    expect(onTooltipKeyDown).not.toHaveBeenCalled()
   })
 
   it('suppresses the bubble while disabled without remounting the anchor', () => {
@@ -318,15 +330,17 @@ describe('Tooltip', () => {
     expect(screen.queryByRole('tooltip')).toBeNull()
   })
 
-  it('forwards the anchor element to the child ref (object and callback)', () => {
+  it('forwards the anchor element to child and Tooltip refs', () => {
     const objectRef = { current: null as HTMLButtonElement | null }
+    const tooltipRef = { current: null as HTMLElement | null }
     const callbackRef = vi.fn()
     const { rerender } = render(
-      <Tooltip label="Add">
+      <Tooltip label="Add" ref={tooltipRef}>
         <button type="button" ref={objectRef}>anchor</button>
       </Tooltip>,
     )
     expect(objectRef.current).toBe(screen.getByText('anchor'))
+    expect(tooltipRef.current).toBe(screen.getByText('anchor'))
     // Tooltip's own positioning still works through the merged ref.
     fireEvent.mouseEnter(screen.getByText('anchor'))
     expect(screen.getByRole('tooltip')).toBeTruthy()

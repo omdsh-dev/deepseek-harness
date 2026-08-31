@@ -233,6 +233,7 @@ function makeHarness(
   // Rows and the harness must observe the same chat-store instance.
   const chat = createChatStore().create()
   const transcriptView = createSnapshotStore<TranscriptViewMode>('compact')
+  const pendingInteractions = createSnapshotStore<SessionPendingInteractionSnapshot>(new Map())
   const t = makeTranslate(zh, commonZh)
   const toolOwners: Array<{
     callId: string
@@ -344,9 +345,7 @@ function makeHarness(
     useConversation: bindSnapshotSelector(createSnapshotStore(EMPTY_CONVERSATION_SNAPSHOT)),
     useTrajectory: (() => { throw new Error('unused') }),
     useSessions: emptySessions(),
-    useSessionPendingInteraction: bindSnapshotSelector(
-      createSnapshotStore<SessionPendingInteractionSnapshot>(new Map()),
-    ),
+    useSessionPendingInteraction: bindSnapshotSelector(pendingInteractions),
     useWorkspaces: emptyWorkspaces(),
     useProjection: (() => undefined),
     useInput: (() => { throw new Error('unused') }),
@@ -402,6 +401,11 @@ function makeHarness(
     setNodeRenderer: (renderer: React.ComponentProps<typeof ChatNodeSeat>['renderSlot']) => {
       nodeSlotOverride = renderer
     },
+    setPendingInteraction: (interaction?: { readonly key: string; readonly kind: string }) => {
+      pendingInteractions.set(interaction === undefined
+        ? new Map()
+        : new Map([[SID, { ...interaction, sessionId: SID } as never]]))
+    },
   }
 }
 
@@ -433,6 +437,26 @@ function withSystemPrompt(snapshot: ChatSnapshot, text = '# System'): ChatSnapsh
     nodes: [prompt, ...snapshot.nodes.values()],
     timeline: snapshot.timeline,
   })
+}
+
+function withTurnEndReason(
+  snapshot: ChatSnapshot,
+  reason: { readonly kind: string; readonly [key: string]: unknown },
+): ChatSnapshot {
+  const turnNumber = snapshot.timeline.turnOrder.at(-1)
+  if (turnNumber === undefined) throw new Error('fixture lacks a Turn')
+  const turn = snapshot.timeline.turns.get(turnNumber)
+  if (turn === undefined) throw new Error('fixture lacks a Turn')
+  const turns = new Map(snapshot.timeline.turns)
+  turns.set(turnNumber, {
+    ...turn,
+    status: 'closed',
+    end: {
+      type: 'turn/end', seq: 99, time: 99_000,
+      data: { turn: turnNumber, reason },
+    } as never,
+  })
+  return { ...snapshot, timeline: { ...snapshot.timeline, turns } }
 }
 
 function renderedFlowKinds(container: HTMLElement): Array<string | undefined> {
@@ -507,6 +531,17 @@ describe('Chat node rendering', () => {
 })
 
 describe('ChatView', () => {
+  it('exposes a named quiet transcript with user and Assistant article boundaries', () => {
+    const h = makeHarness({ nodes: [user(1, 'question'), assistant(2, 'answer')] })
+    const view = render(<h.ChatView {...h.props} />)
+    const log = view.getByRole('log', { name: '对话记录' })
+
+    expect(log.getAttribute('aria-live')).toBe('off')
+    expect(log.getAttribute('aria-busy')).toBe('false')
+    expect(within(log).getByRole('article', { name: '用户消息' }).textContent).toContain('question')
+    expect(within(log).getByRole('article', { name: 'Assistant 回复' }).textContent).toContain('answer')
+  })
+
   it('leaves the turn rail unrendered when an unrelated Chat update commits', () => {
     const snapshot = chatSnapshotFixture({
       nodes: [
@@ -790,10 +825,12 @@ describe('ChatView', () => {
     expect(view.queryByText('later')).toBeNull()
     const pendingBubble = view.getByText('interrupt now').closest('[data-pending-steering]')
     expect(pendingBubble).not.toBeNull()
+    expect(pendingBubble?.getAttribute('role')).toBe('article')
+    expect(pendingBubble?.getAttribute('aria-label')).toBe('用户消息')
     fireEvent.click(within(pendingBubble as HTMLElement).getByRole('button', { name: '复制' }))
     expect(writeText).toHaveBeenCalledWith('interrupt now')
     expect(within(pendingBubble as HTMLElement).queryByRole('button', { name: '在新对话中分支' })).toBeNull()
-    expect(view.getByRole('status').compareDocumentPosition(view.getByText('interrupt now'))
+    expect(view.getByText('深度求索中...').compareDocumentPosition(view.getByText('interrupt now'))
       & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0)
 
     act(() => {
@@ -862,7 +899,10 @@ describe('ChatView', () => {
       },
     )
     const view = render(<h.ChatView {...h.props} />)
-    expect(view.getByText('即发即显').closest('[data-submission-echo]')).not.toBeNull()
+    const echo = view.getByText('即发即显').closest('[data-submission-echo]')
+    expect(echo).not.toBeNull()
+    expect(echo?.getAttribute('role')).toBe('article')
+    expect(echo?.getAttribute('aria-label')).toBe('用户消息')
 
     // The durable node arrives while the echo is STILL in the session
     // snapshot: the render-time rpcId dedupe keeps exactly one bubble.
@@ -1801,7 +1841,186 @@ describe('ChatView', () => {
     const view = render(<h.ChatView {...h.props} />)
     expect(view.getByTestId('tool-seat-r1')).toBeTruthy()
     expect(h.toolOwners[0]?.block).toMatchObject({ callId: 'r1', argsRaw: '{"command":"cmd-r1"}' })
-    expect(view.getByRole('status').textContent).toBe('深度求索中...')
+    expect(view.getByText('深度求索中...')).toBeTruthy()
+    expect(view.container.querySelector('[data-chat-announcer]')?.textContent).toBe('')
+  })
+
+  it('announces response and root-tool transitions once without streaming noise', async () => {
+    const h = makeHarness({ nodes: [user(1, 'go')] })
+    const view = render(<h.ChatView {...h.props} />)
+    const live = view.container.querySelector('[data-chat-announcer]') as HTMLElement
+    expect(live.getAttribute('aria-live')).toBe('polite')
+    expect(live.getAttribute('aria-atomic')).toBe('true')
+    expect(live.textContent).toBe('')
+
+    act(() => {
+      h.set({ running: true, runningCalls: [runningCall('r1')] })
+    })
+    await waitFor(() => {
+      expect(live.textContent).toBe('回答已开始。 工具 bash 已开始。')
+    })
+    const firstStart = live.firstElementChild
+
+    act(() => {
+      h.setChat({ partial: { turn: 1, step: 1, blocks: [{ kind: 'text', text: 'streaming token' }] } })
+    })
+    expect(live.firstElementChild).toBe(firstStart)
+
+    act(() => {
+      h.set({
+        nodes: [user(1, 'go'), toolResult(2, 'r1')],
+        runningCalls: [],
+        running: false,
+      })
+    })
+    await waitFor(() => {
+      expect(live.textContent).toBe('工具 bash 已完成。 回答已完成。')
+    })
+
+    act(() => {
+      h.set({ running: true, runningCalls: [runningCall('r2')] })
+    })
+    await waitFor(() => {
+      expect(live.textContent).toBe('回答已开始。 工具 bash 已开始。')
+    })
+    expect(live.firstElementChild).not.toBe(firstStart)
+  })
+
+  it('announces failed, stopped, and token-limited terminal states', async () => {
+    const h = makeHarness({ nodes: [user(1, 'go')] })
+    const view = render(<h.ChatView {...h.props} />)
+    const live = view.container.querySelector('[data-chat-announcer]') as HTMLElement
+
+    act(() => {
+      h.set({ running: true, runningCalls: [runningCall('failure')] })
+    })
+    await waitFor(() => { expect(live.textContent).toContain('工具 bash 已开始。') })
+    act(() => {
+      h.set({
+        nodes: [
+          user(1, 'go'),
+          { ...toolResult(2, 'failure'), isError: true, error: { name: 'ToolError', code: 'boom' } },
+          turnError(3),
+        ],
+        runningCalls: [],
+        running: false,
+      })
+    })
+    await waitFor(() => {
+      expect(live.textContent).toBe('工具 bash 失败。 回答失败。')
+    })
+
+    act(() => {
+      h.set({ running: true, runningCalls: [runningCall('stopped', '')] })
+    })
+    await waitFor(() => {
+      expect(live.textContent).toBe('回答已开始。 工具 工具调用 已开始。')
+    })
+    act(() => {
+      h.set({
+        nodes: [
+          user(4, 'again'),
+          {
+            ...toolResult(5, 'stopped', ''),
+            call: null,
+            isError: true,
+            error: { name: 'ToolError', code: 'interrupted' },
+          },
+          turnMaxTokens(6),
+        ],
+        runningCalls: [],
+        running: false,
+      })
+    })
+    await waitFor(() => {
+      expect(live.textContent).toBe('工具 工具调用 已停止。 回答因达到 token 上限而结束。')
+    })
+
+    act(() => { h.set({ running: true }) })
+    await waitFor(() => { expect(live.textContent).toBe('回答已开始。') })
+    act(() => {
+      h.set({
+        nodes: [user(7, 'one more'), { ...assistant(8, 'partial'), interrupted: true }],
+        running: false,
+      })
+    })
+    await waitFor(() => { expect(live.textContent).toBe('回答已停止。') })
+  })
+
+  it.each([
+    [{ kind: 'completed' }, '回答已完成。'],
+    [{ kind: 'error', error: { message: 'broken', code: 'UNKNOWN' } }, '回答失败。'],
+    [{ kind: 'max-tokens' }, '回答因达到 token 上限而结束。'],
+    [{ kind: 'aborted', reason: { kind: 'user' } }, '回答已停止。'],
+    [{ kind: 'interrupted' }, '回答已停止。'],
+    [{ kind: 'blocked' }, '回答已被阻止。'],
+    [{ kind: 'plugin-terminal' }, '回答已结束。'],
+  ])('announces the durable Turn outcome %# without overstating completion', async (reason, expected) => {
+    const open = chatSnapshotFixture({
+      nodes: [userInTurn(1, 'go', 1)],
+      turnTimings: new Map([[1, { startTime: 1_000 }]]),
+    })
+    const h = makeHarness({ chat: open }, { running: true })
+    const view = render(<h.ChatView {...h.props} />)
+    const live = view.container.querySelector('[data-chat-announcer]') as HTMLElement
+    act(() => { h.set({ chat: withTurnEndReason(open, reason), running: false }) })
+    await waitFor(() => { expect(live.textContent).toBe(expected) })
+  })
+
+  it('waits for the durable Turn boundary when running settles first', async () => {
+    const open = chatSnapshotFixture({
+      nodes: [userInTurn(1, 'go', 1)],
+      turnTimings: new Map([[1, { startTime: 1_000 }]]),
+    })
+    const h = makeHarness({ chat: open })
+    const view = render(<h.ChatView {...h.props} />)
+    const live = view.container.querySelector('[data-chat-announcer]') as HTMLElement
+
+    act(() => { h.setSession({ running: true }) })
+    await waitFor(() => { expect(live.textContent).toBe('回答已开始。') })
+    act(() => { h.setSession({ running: false }) })
+    expect(live.textContent).toBe('回答已开始。')
+
+    act(() => {
+      h.set({
+        chat: withTurnEndReason(open, {
+          kind: 'error', error: { message: 'late failure', code: 'UNKNOWN' },
+        }),
+      })
+    })
+    await waitFor(() => { expect(live.textContent).toBe('回答失败。') })
+  })
+
+  it('announces new user-attention requests by stable request key', async () => {
+    const h = makeHarness()
+    const view = render(<h.ChatView {...h.props} />)
+    const live = view.container.querySelector('[data-chat-announcer]') as HTMLElement
+
+    act(() => { h.setPendingInteraction({ key: 'approval:1', kind: 'approval' }) })
+    await waitFor(() => { expect(live.textContent).toBe('需要你审批工具操作。') })
+    const approvalMessage = live.firstElementChild
+    act(() => { h.setPendingInteraction({ key: 'approval:1', kind: 'approval' }) })
+    expect(live.firstElementChild).toBe(approvalMessage)
+
+    act(() => { h.setPendingInteraction({ key: 'question:1', kind: 'question' }) })
+    await waitFor(() => { expect(live.textContent).toBe('需要你回答问题。') })
+    act(() => { h.setPendingInteraction({ key: 'question:2', kind: 'plan-review' }) })
+    await waitFor(() => { expect(live.textContent).toBe('需要你审阅计划。') })
+    act(() => { h.setPendingInteraction({ key: 'plugin:1', kind: 'plugin-request' }) })
+    await waitFor(() => { expect(live.textContent).toBe('需要你处理一项请求。') })
+  })
+
+  it('baselines loading history instead of replaying it as new activity', () => {
+    const h = makeHarness(
+      { runningCalls: [runningCall('existing')] },
+      { running: true, openState: 'loading' },
+    )
+    h.setPendingInteraction({ key: 'question:existing', kind: 'question' })
+    const view = render(<h.ChatView {...h.props} />)
+    const live = view.container.querySelector('[data-chat-announcer]') as HTMLElement
+    expect(live.textContent).toBe('')
+    act(() => { h.setSession({ openState: 'open' }) })
+    expect(live.textContent).toBe('')
   })
 
   it('keeps the Tool renderer mounted when a running call settles into log order', () => {
@@ -1860,7 +2079,7 @@ describe('ChatView', () => {
     )
     const view = render(<h.ChatView {...h.props} />)
     // Freshly mounted (as after a reload) yet already past the 15s gate.
-    const status = view.getByRole('status')
+    const status = view.container.querySelector('[data-turn-status]') as HTMLElement
     expect(status.textContent).toMatch(/^深度求索中\.\.\.2分0\d秒$/)
     expect(status.querySelector('[aria-hidden="true"]')).not.toBeNull()
     act(() => {

@@ -35,6 +35,10 @@ kind: "package-reference"
 
 composer 携带图片附件提交时，只有声明了 `input.images` 的宿主命令继续；其余每条命令路径都会抛出本地化的 `imagesUnsupported` 拒绝，以瞬态 toast 呈现，草稿与图片保持原位——命令绝不消费文本却抛下图片。
 
+### 弹出选择的无障碍行为
+
+`popupSelect` 会把焦点移入搜索 combobox，并通过稳定的 `aria-controls` 关系把筛选器关联到具名 listbox。上／下方向键使 DOM 焦点留在搜索框，同时由 `aria-activedescendant` 与 `aria-selected` 指向同一条高亮 option；Enter 选择该项，Escape 返回拥有此弹窗的确切会话 composer，加载、应用、空结果与错误状态会被公告，而不把每个选项都变成 Tab 停靠点。overlay 通过 `CommandUiRuntime.bindComposerFocus` 注册这条会话局部焦点路径，绝不全局搜索任意 composer。
+
 -----
 
 <a id="understand-the-implementation"></a>

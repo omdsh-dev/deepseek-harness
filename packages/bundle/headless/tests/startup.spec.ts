@@ -53,6 +53,8 @@ export const apply = ctx => globalThis.__headlessStartupApply(ctx)
     `  inject: [${HEADLESS_STARTUP_SERVICE}]`,
     '  config:',
     '    task: !!js ctx.headlessStartup.task',
+    '    accessibility: !!js ctx.headlessStartup.accessibility',
+    '    outputFormat: !!js ctx.headlessStartup.outputFormat',
     '- id: headless-startup',
     `  name: ${pathToFileURL(join(dir, 'startup.mjs')).href}`,
     '',
@@ -83,8 +85,27 @@ export const apply = ctx => globalThis.__headlessStartupApply(ctx)
 describe('headless command-line provider', () => {
   it('joins the task positional into the runner config', async () => {
     const { task, observed } = await bootStartup(['run', 'the', 'tests'])
-    expect(task).toEqual({ task: 'run the tests' })
-    expect(observed.runnerConfig).toEqual({ task: 'run the tests' })
+    expect(task).toEqual({
+      task: 'run the tests',
+      accessibility: false,
+      outputFormat: 'text',
+    })
+    expect(observed.runnerConfig).toEqual(task)
+    expect(observed.exits).toEqual([])
+  })
+
+  it('publishes the assistive-technology and JSON output flags', async () => {
+    const { task, observed } = await bootStartup([
+      '--accessibility',
+      '--output-format', 'json',
+      'inspect', 'the', 'workspace',
+    ])
+    expect(task).toEqual({
+      task: 'inspect the workspace',
+      accessibility: true,
+      outputFormat: 'json',
+    })
+    expect(observed.runnerConfig).toEqual(task)
     expect(observed.exits).toEqual([])
   })
 
@@ -100,8 +121,18 @@ describe('headless command-line provider', () => {
     const { task, observed } = await bootStartup(['--help'])
     expect(observed.out).toContain('dsh --profile headless')
     expect(observed.out).toContain('stream reasoning to stderr')
+    expect(observed.out).toContain('--accessibility')
+    expect(observed.out).toContain('--output-format <format>')
     expect(task).toBeUndefined()
     expect(observed.runnerConfig).toBeUndefined()
     expect(observed.exits).toEqual([0])
+  })
+
+  it('rejects an unsupported output format before the runner activates', async () => {
+    const { task, observed } = await bootStartup(['--output-format', 'xml', 'run', 'the', 'tests'])
+    expect(observed.out).toContain('--output-format must be text or json')
+    expect(task).toBeUndefined()
+    expect(observed.runnerConfig).toBeUndefined()
+    expect(observed.exits).toEqual([1])
   })
 })

@@ -131,6 +131,11 @@ export async function watchClientPlugins(
   const bundles = await build({
     cwd: root,
     workspace: [...pluginDirs],
+    // tsdown's native no-cache hook needs Node >=24.11.1 for config graphs
+    // containing CommonJS dependencies. The supported Node 24.3 line can
+    // return a sourceless load before that fix, while tsx does not transform
+    // workspace child configs. unrun handles the complete config graph.
+    configLoader: 'unrun',
     watch: true,
     hooks: {
       'build:done': ({ options }) => {

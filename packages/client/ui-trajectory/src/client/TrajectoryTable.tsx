@@ -1,7 +1,7 @@
 /** Turn-aware trajectory event ledger with a local record inspector. */
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import type { CSSProperties, ReactNode } from 'react'
+import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, ReactNode } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import {
   IconChevronRightOutline14,
@@ -201,6 +201,9 @@ interface DetailsResizeDrag {
 
 const DETAILS_MIN_WIDTH = 320
 const DETAILS_MAX_WIDTH = 720
+const DETAILS_DEFAULT_SHARE = 0.38
+const DETAILS_DEFAULT_MAX_WIDTH = 440
+const DETAILS_FALLBACK_SPLIT_WIDTH = 1_200
 const TABLE_MIN_WIDTH = 280
 const DETAILS_RESIZE_STEP = 16
 const TOOL_REQUEST_SHARE = 0.58
@@ -264,11 +267,26 @@ interface OlderLoadAnchor {
 }
 
 function clampDetailsWidth(width: number, splitWidth: number): number {
-  const maxWidth = Math.max(
+  const maxWidth = detailsResizeMaximum(splitWidth)
+  return Math.round(Math.min(Math.max(width, DETAILS_MIN_WIDTH), maxWidth))
+}
+
+function detailsResizeMaximum(splitWidth: number): number {
+  return Math.max(
     DETAILS_MIN_WIDTH,
     Math.min(DETAILS_MAX_WIDTH, splitWidth - TABLE_MIN_WIDTH),
   )
-  return Math.round(Math.min(Math.max(width, DETAILS_MIN_WIDTH), maxWidth))
+}
+
+function defaultDetailsWidth(splitWidth: number): number {
+  return clampDetailsWidth(
+    Math.min(splitWidth * DETAILS_DEFAULT_SHARE, DETAILS_DEFAULT_MAX_WIDTH),
+    splitWidth,
+  )
+}
+
+function measuredDetailsWidth(details: HTMLElement): number {
+  return details.clientWidth > 0 ? details.clientWidth : details.getBoundingClientRect().width
 }
 
 function defaultToolRequestWidth(splitWidth: number): number {
@@ -1825,8 +1843,10 @@ export function TrajectoryTable({
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null)
   const [selectedRequest, setSelectedRequest] = useState<SelectedRequest | null>(null)
   const [activeTab, setActiveTab] = useState<DetailTab>('overview')
+  const [rowTabStopKey, setRowTabStopKey] = useState<string | null>(null)
   const [thinkingExpanded, setThinkingExpanded] = useState(false)
   const [detailsWidth, setDetailsWidth] = useState<number | null>(null)
+  const [splitWidth, setSplitWidth] = useState(0)
   const [toolRequestOffset, setToolRequestOffset] = useState<number | null>(null)
   const detailsResizeDrag = useRef<DetailsResizeDrag | null>(null)
   const appliedRecordSelection = useRef<TrajectoryTableProps['recordSelection']>(null)
@@ -1834,9 +1854,101 @@ export function TrajectoryTable({
   const tabHistory = useRef<Set<DetailTab>>(new Set(['overview']))
   const rootRef = useRef<HTMLDivElement>(null)
   const tablePaneRef = useRef<HTMLDivElement>(null)
+  const rowElements = useRef(new Map<string, HTMLTableRowElement>())
+  const focusedRowKey = useRef<string | null>(null)
+  const pendingRowFocusKey = useRef<string | null>(null)
+  const rowFocusGuardFrame = useRef<number | null>(null)
+  const rowFocusGuardView = useRef<Window | null>(null)
   const followsTableTail = useRef(false)
   const tableScrollInitialized = useRef(false)
   const [tableScrollReady, setTableScrollReady] = useState(false)
+  useEffect(() => {
+    const split = rootRef.current
+    /* v8 ignore next -- the split root renders unconditionally. */
+    if (split === null) return
+    const measure = () => {
+      const width = split.getBoundingClientRect().width
+      if (width > 0) setSplitWidth(width)
+    }
+    measure()
+    if (typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(measure)
+    observer.observe(split)
+    return () => { observer.disconnect() }
+  }, [])
+  const cancelPendingRowFocus = useCallback(() => {
+    const view = rowFocusGuardView.current
+    if (rowFocusGuardFrame.current !== null && view !== null) {
+      view.cancelAnimationFrame(rowFocusGuardFrame.current)
+    }
+    rowFocusGuardFrame.current = null
+    pendingRowFocusKey.current = null
+  }, [])
+  const startRowFocusGuard = useCallback(() => {
+    const ownerDocument = rootRef.current?.ownerDocument
+    const view = ownerDocument?.defaultView
+    if (ownerDocument === undefined || view === null || view === undefined) return
+    rowFocusGuardView.current = view
+    if (rowFocusGuardFrame.current !== null) {
+      view.cancelAnimationFrame(rowFocusGuardFrame.current)
+    }
+    let stableFrames = 0
+    const guard = () => {
+      rowFocusGuardFrame.current = null
+      const focusedKey = focusedRowKey.current
+      if (focusedKey === null) return
+      const row = rowElements.current.get(focusedKey)
+      const active = ownerDocument.activeElement
+      const activeIsTrajectoryRow = active?.matches('tr[data-trajectory-row-key]') === true
+      if (row === undefined) {
+        if (active !== ownerDocument.body && !activeIsTrajectoryRow) {
+          focusedRowKey.current = null
+          pendingRowFocusKey.current = null
+          return
+        }
+        stableFrames = 0
+      } else if (active === row) {
+        stableFrames += 1
+      } else if (active === ownerDocument.body || activeIsTrajectoryRow) {
+        pendingRowFocusKey.current = focusedKey
+        row.focus()
+        stableFrames = 0
+      } else {
+        focusedRowKey.current = null
+        pendingRowFocusKey.current = null
+        return
+      }
+      if (stableFrames >= 30) {
+        pendingRowFocusKey.current = null
+        return
+      }
+      rowFocusGuardFrame.current = view.requestAnimationFrame(guard)
+    }
+    rowFocusGuardFrame.current = view.requestAnimationFrame(guard)
+  }, [])
+  useEffect(() => () => {
+    const view = rowFocusGuardView.current
+    if (rowFocusGuardFrame.current !== null && view !== null) {
+      view.cancelAnimationFrame(rowFocusGuardFrame.current)
+    }
+  }, [])
+  useEffect(() => {
+    const ownerDocument = rootRef.current?.ownerDocument
+    if (ownerDocument === undefined) return
+    const handlePointerDown = (event: PointerEvent) => {
+      const focusedKey = focusedRowKey.current
+      if (focusedKey === null) return
+      const row = rowElements.current.get(focusedKey)
+      const target = event.target
+      if (target instanceof Node && row?.contains(target) === true) return
+      focusedRowKey.current = null
+      cancelPendingRowFocus()
+    }
+    ownerDocument.addEventListener('pointerdown', handlePointerDown, true)
+    return () => {
+      ownerDocument.removeEventListener('pointerdown', handlePointerDown, true)
+    }
+  }, [cancelPendingRowFocus])
   const pendingScrollRecordId = useRef<string | null>(null)
   const loadingOlder = useRef(false)
   const [olderLoading, setOlderLoading] = useState(false)
@@ -1881,6 +1993,14 @@ export function TrajectoryTable({
       ? turnRecords
       : collapseAssistantRecords(turnRecords, collapsedAssistants, t)
   }, [allRecords, collapsedAssistants, collapsedTurns, requestGroups, searchMatchIndexes, t])
+  const focusableRecords = useMemo(
+    () => records.filter(record => record.cell.requestOnly !== true),
+    [records],
+  )
+  const focusableRecordKeys = useMemo(
+    () => new Set(focusableRecords.map(trajectoryVirtualRecordKey)),
+    [focusableRecords],
+  )
   const projectedVirtualRows = useMemo(
     () => groupTrajectoryVirtualRows(records),
     [records],
@@ -1921,6 +2041,15 @@ export function TrajectoryTable({
     }
     return indexes
   }, [projectedVirtualRows])
+  const virtualIndexByRowKey = useMemo(() => {
+    const indexes = new Map<string, number>()
+    for (const [virtualIndex, row] of projectedVirtualRows.entries()) {
+      for (const entry of row.entries) {
+        indexes.set(trajectoryVirtualRecordKey(entry.record), virtualIndex)
+      }
+    }
+    return indexes
+  }, [projectedVirtualRows])
   const virtualItems = virtualizationEnabled ? rowVirtualizer.getVirtualItems() : []
   const virtualTop = Math.max(0, (virtualItems[0]?.start ?? 0) - virtualScrollMargin)
   const virtualBottom = virtualItems.length === 0
@@ -1950,6 +2079,31 @@ export function TrajectoryTable({
       terminalRequestBoundary:
         record.cell.requestOnly === true && position === records.length - 1,
     }))
+  const renderedFocusableRecordKeys = new Set(renderedRecords.flatMap(({ record }) =>
+    record.cell.requestOnly === true ? [] : [trajectoryVirtualRecordKey(record)]))
+  const pendingRenderedRowFocusKey = pendingRowFocusKey.current !== null
+    && renderedFocusableRecordKeys.has(pendingRowFocusKey.current)
+    ? pendingRowFocusKey.current
+    : null
+  const effectiveRowTabStopKey = pendingRenderedRowFocusKey
+    ?? (rowTabStopKey !== null
+      && focusableRecordKeys.has(rowTabStopKey)
+      && renderedFocusableRecordKeys.has(rowTabStopKey)
+      ? rowTabStopKey
+      : renderedFocusableRecordKeys.values().next().value ?? null)
+  useLayoutEffect(() => {
+    const pending = pendingRowFocusKey.current
+    if (pending === null) return
+    const row = rowElements.current.get(pending)
+    if (row === undefined) return
+    focusedRowKey.current = pending
+    row.focus()
+    if (!virtualizationEnabled) pendingRowFocusKey.current = null
+  }, [
+    renderedRecords,
+    effectiveRowTabStopKey,
+    virtualizationEnabled,
+  ])
   const requestBoundaryRuns = useMemo(
     () => indexRequestBoundaryRuns(records, requestGroups),
     [records, requestGroups],
@@ -2060,6 +2214,36 @@ export function TrajectoryTable({
     setActiveTab(tab)
   }
 
+  const handleDetailTabKeyDown = (
+    event: ReactKeyboardEvent<HTMLButtonElement>,
+    currentIndex: number,
+  ): void => {
+    let nextIndex: number | undefined
+    switch (event.key) {
+      case 'ArrowLeft':
+        nextIndex = (currentIndex - 1 + selectedTabs.length) % selectedTabs.length
+        break
+      case 'ArrowRight':
+        nextIndex = (currentIndex + 1) % selectedTabs.length
+        break
+      case 'Home':
+        nextIndex = 0
+        break
+      case 'End':
+        nextIndex = selectedTabs.length - 1
+        break
+      default:
+        return
+    }
+    const next = selectedTabs.at(nextIndex)
+    const target = event.currentTarget.parentElement
+      ?.querySelectorAll<HTMLButtonElement>('[role="tab"]').item(nextIndex)
+    if (next === undefined || target === undefined) return
+    event.preventDefault()
+    target.focus()
+    activateTab(next.id)
+  }
+
   const clearInspectorSelection = () => {
     setSelectedRecordId(null)
     setSelectedRequest(null)
@@ -2076,11 +2260,36 @@ export function TrajectoryTable({
     setSelectedRequest(null)
     setSelectedRecordId(record === undefined ? null : trajectoryRecordId(record.cell))
     if (record === undefined) return
+    setRowTabStopKey(trajectoryVirtualRecordKey(record))
     const tabs = detailTabs(record)
     const available = new Set(tabs.map(tab => tab.id))
     const recent = [...tabHistory.current].reverse().find(tab => available.has(tab))
     setActiveTab(recent ?? tabs[0]?.id ?? 'overview')
   }, [allRecords, onRecordSelect])
+
+  const focusRecordRow = (
+    record: TableRecord,
+    align: 'auto' | 'start' | 'end' = 'auto',
+  ): void => {
+    const key = trajectoryVirtualRecordKey(record)
+    followsTableTail.current = false
+    cancelPendingRowFocus()
+    focusedRowKey.current = key
+    setRowTabStopKey(key)
+    const renderedRow = rowElements.current.get(key)
+    if (renderedRow !== undefined) {
+      pendingRowFocusKey.current = null
+      renderedRow.focus()
+      if (virtualizationEnabled) startRowFocusGuard()
+      return
+    }
+    pendingRowFocusKey.current = key
+    const virtualIndex = virtualIndexByRowKey.get(key)
+    if (virtualizationEnabled && virtualIndex !== undefined) {
+      rowVirtualizer.scrollToIndex(virtualIndex, { align })
+      startRowFocusGuard()
+    }
+  }
   useEffect(() => {
     if (
       recordSelection === null
@@ -2297,6 +2506,12 @@ export function TrajectoryTable({
   const olderBusy = olderHistoryLoading || olderLoading
   const showInitialLoading = historyLoading || !tableScrollReady
   const historyRowOffset = hasOlderRecords ? 1 : 0
+  const effectiveSplitWidth = splitWidth > 0 ? splitWidth : DETAILS_FALLBACK_SPLIT_WIDTH
+  const detailsResizeMax = detailsResizeMaximum(effectiveSplitWidth)
+  const detailsResizeValue = clampDetailsWidth(
+    detailsWidth ?? defaultDetailsWidth(effectiveSplitWidth),
+    effectiveSplitWidth,
+  )
 
   return (
     <div ref={rootRef} className={css.split} style={splitStyle}>
@@ -2326,8 +2541,13 @@ export function TrajectoryTable({
         <table
           className={css.table}
           data-scroll-ready={tableScrollReady || undefined}
+          aria-label={t('table.events')}
+          aria-describedby="trajectory-events-keyboard-instructions"
           aria-rowcount={records.length + historyRowOffset}
         >
+          <caption id="trajectory-events-keyboard-instructions" className={css.visuallyHidden}>
+            {t('table.keyboardInstructions')}
+          </caption>
           <colgroup>
             <col className={css.eventColumn} />
             <col className={css.contentColumn} />
@@ -2408,12 +2628,45 @@ export function TrajectoryTable({
                       : 'request.label', { request })
                   const requestSelected = requestInfo !== undefined
                 && selectedRequest?.identity === requestIdentity(requestInfo)
+                  const rowKey = trajectoryVirtualRecordKey(record)
                   const sectionActive = record.turn === null
                     ? activeSection === record.section
                     : activeTurn === record.turn
                   return (
                     <tr
-                      tabIndex={isRequestOnly ? -1 : 0}
+                      ref={(element) => {
+                        if (element === null) rowElements.current.delete(rowKey)
+                        else {
+                          rowElements.current.set(rowKey, element)
+                          const active = element.ownerDocument.activeElement
+                          if (
+                            pendingRowFocusKey.current === rowKey
+                            || (focusedRowKey.current === rowKey
+                              && active === element.ownerDocument.body)
+                          ) {
+                            element.focus()
+                          }
+                        }
+                      }}
+                      tabIndex={!isRequestOnly && rowKey === effectiveRowTabStopKey ? 0 : -1}
+                      onFocus={(event) => {
+                        if (event.target !== event.currentTarget) return
+                        focusedRowKey.current = rowKey
+                        setRowTabStopKey(rowKey)
+                      }}
+                      onBlur={(event) => {
+                        if (event.target !== event.currentTarget) return
+                        const next = event.relatedTarget
+                        if (next === null || next === event.currentTarget.ownerDocument.body) {
+                          if (focusedRowKey.current === rowKey) {
+                            pendingRowFocusKey.current = rowKey
+                            startRowFocusGuard()
+                          }
+                          return
+                        }
+                        if (focusedRowKey.current === rowKey) focusedRowKey.current = null
+                        if (pendingRowFocusKey.current === rowKey) cancelPendingRowFocus()
+                      }}
                       aria-rowindex={position + 1 + historyRowOffset}
                       aria-label={isCollapsedSummary
                         ? t('request.collapsedSummary', {
@@ -2448,6 +2701,9 @@ export function TrajectoryTable({
                       data-timeline-focus={isCollapsedSummary || timelineFocusIndexes === null
                         ? undefined
                         : timelineFocusIndexes.has(record.cell.index) ? 'inside' : 'outside'}
+                      onPointerDown={() => {
+                        if (pendingRowFocusKey.current === rowKey) cancelPendingRowFocus()
+                      }}
                       onClick={isRequestOnly
                         ? undefined
                         : isCollapsedSummary
@@ -2482,7 +2738,48 @@ export function TrajectoryTable({
                         onToggleTurn(record.turn)
                       }}
                       onKeyDown={(event) => {
-                        if (isRequestOnly) return
+                        if (isRequestOnly || event.target !== event.currentTarget) return
+                        if (pendingRowFocusKey.current === rowKey) cancelPendingRowFocus()
+                        if (event.key === 'Tab') focusedRowKey.current = null
+                        if (event.key === 'ArrowRight') {
+                          const control = event.currentTarget
+                            .querySelector<HTMLButtonElement>('[data-request-boundary-control]')
+                          if (control !== null) {
+                            event.preventDefault()
+                            control.focus()
+                          }
+                          return
+                        }
+                        const current = focusableRecords.findIndex(candidate =>
+                          trajectoryVirtualRecordKey(candidate) === rowKey)
+                        let nextIndex: number | undefined
+                        switch (event.key) {
+                          case 'ArrowUp':
+                            nextIndex = Math.max(0, current - 1)
+                            break
+                          case 'ArrowDown':
+                            nextIndex = Math.min(focusableRecords.length - 1, current + 1)
+                            break
+                          case 'Home':
+                            nextIndex = 0
+                            break
+                          case 'End':
+                            nextIndex = focusableRecords.length - 1
+                            break
+                        }
+                        if (nextIndex !== undefined) {
+                          const next = focusableRecords[nextIndex]
+                          if (next !== undefined) {
+                            event.preventDefault()
+                            focusRecordRow(
+                              next,
+                              event.key === 'Home'
+                                ? 'start'
+                                : event.key === 'End' ? 'end' : 'auto',
+                            )
+                          }
+                          return
+                        }
                         if (event.key !== 'Enter' && event.key !== ' ') return
                         event.preventDefault()
                         if (isCollapsedSummary) {
@@ -2503,6 +2800,8 @@ export function TrajectoryTable({
                               : css.requestBoundaryControl}
                             aria-label={requestLabel}
                             aria-pressed={requestSelected}
+                            tabIndex={-1}
+                            data-request-boundary-control=""
                             data-label={requestLabel}
                             data-request-run-index={requestRunIndex}
                             data-request-status={requestStatus}
@@ -2514,6 +2813,14 @@ export function TrajectoryTable({
                               }
                             }}
                             onDoubleClick={(event) => { event.stopPropagation() }}
+                            onKeyDown={(event) => {
+                              if (event.key !== 'ArrowLeft' && event.key !== 'Escape') return
+                              const row = event.currentTarget.closest<HTMLTableRowElement>('tr')
+                              if (row === null) return
+                              event.preventDefault()
+                              event.stopPropagation()
+                              row.focus()
+                            }}
                           />
                         )}
                         {record.turn !== null
@@ -2657,6 +2964,10 @@ export function TrajectoryTable({
             aria-label={t('details.resize')}
             aria-controls="trajectory-detail-panel"
             aria-orientation="vertical"
+            aria-valuemin={DETAILS_MIN_WIDTH}
+            aria-valuemax={detailsResizeMax}
+            aria-valuenow={detailsResizeValue}
+            aria-valuetext={t('details.resizeValue', { value: detailsResizeValue })}
             tabIndex={0}
             title={t('details.resizeTitle')}
             onDoubleClick={() => {
@@ -2673,7 +2984,7 @@ export function TrajectoryTable({
               detailsResizeDrag.current = {
                 pointerId: event.pointerId,
                 startX: event.clientX,
-                startWidth: details.getBoundingClientRect().width,
+                startWidth: measuredDetailsWidth(details),
                 splitWidth,
                 startToolRequestOffset: toolRequestOffset ?? (
                   splitWidth * TOOL_REQUEST_SHARE - defaultToolRequestWidth(splitWidth)
@@ -2704,18 +3015,30 @@ export function TrajectoryTable({
               detailsResizeDrag.current = null
             }}
             onKeyDown={(event) => {
-              if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
+              if (event.key === 'Enter') {
+                setDetailsWidth(null)
+                setToolRequestOffset(null)
+                event.preventDefault()
+                return
+              }
+              const supported = event.key === 'ArrowLeft' || event.key === 'ArrowRight'
+                || event.key === 'Home' || event.key === 'End'
+              if (!supported) return
               const details = event.currentTarget.parentElement
               if (details === null) return
               const split = details.parentElement
               if (split === null) return
-              const direction = event.key === 'ArrowLeft' ? 1 : -1
-              const currentDetailsWidth = details.getBoundingClientRect().width
+              const currentDetailsWidth = measuredDetailsWidth(details)
               const splitWidth = split.getBoundingClientRect().width
-              const nextDetailsWidth = clampDetailsWidth(
-                currentDetailsWidth + direction * DETAILS_RESIZE_STEP,
-                splitWidth,
-              )
+              const nextDetailsWidth = event.key === 'Home'
+                ? DETAILS_MIN_WIDTH
+                : event.key === 'End'
+                  ? detailsResizeMaximum(splitWidth)
+                  : clampDetailsWidth(
+                    currentDetailsWidth
+                    + (event.key === 'ArrowLeft' ? 1 : -1) * DETAILS_RESIZE_STEP,
+                    splitWidth,
+                  )
               const currentToolRequestOffset = toolRequestOffset ?? (
                 splitWidth * TOOL_REQUEST_SHARE - defaultToolRequestWidth(splitWidth)
               )
@@ -2786,7 +3109,7 @@ export function TrajectoryTable({
             </button>
           </div>
           <div className={css.detailTabs} role="tablist" aria-label={t('details.event')}>
-            {selectedTabs.map(tab => (
+            {selectedTabs.map((tab, index) => (
               <button
                 key={tab.id}
                 id={`trajectory-detail-${tab.id}`}
@@ -2794,8 +3117,10 @@ export function TrajectoryTable({
                 role="tab"
                 aria-controls="trajectory-detail-panel"
                 aria-selected={activeTab === tab.id}
+                tabIndex={activeTab === tab.id ? 0 : -1}
                 className={activeTab === tab.id ? `${css.detailTab} ${css.detailTabActive}` : css.detailTab}
                 onClick={() => { activateTab(tab.id) }}
+                onKeyDown={(event) => { handleDetailTabKeyDown(event, index) }}
               >
                 {t(tab.labelKey)}
               </button>
@@ -2808,6 +3133,7 @@ export function TrajectoryTable({
               : css.detailBody}
             role="tabpanel"
             aria-labelledby={`trajectory-detail-${activeTab}`}
+            tabIndex={0}
           >
             {selectedRequestInfo !== undefined
               && selectedRequestState !== undefined

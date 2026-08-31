@@ -31,7 +31,7 @@ export interface AcpConfig {
 
 Depends on: `Stream` (`@agentclientprotocol/sdk`)
 
-Source: [`packages/acp/acp/src/index.ts:75`](../packages/acp/acp/src/index.ts)
+Source: [`packages/acp/acp/src/index.ts:76`](../packages/acp/acp/src/index.ts)
 
 <a id="deepseek-aidsh-agent-default-model"></a>
 
@@ -798,14 +798,21 @@ Source: [`packages/goal/goal/src/index.ts:171`](../packages/goal/goal/src/index.
 Requires: `agentDefaultModel` · `agents` · `sessions`
 
 ```ts config-catalog
-/** Plugin config: the task resolved from this app's injected provider service. */
+/** Plugin config resolved from this app's injected command-line provider. */
 export interface Config {
   /** The prompt text for the single run. */
   task: string
+  /** Use stable line-oriented text status and suppress reasoning deltas. */
+  accessibility: boolean
+  /** Render stdout as final text or one versioned JSON result. */
+  outputFormat: HeadlessOutputFormat
 }
+
+/** One final-answer presentation selected by the invocation. */
+export type HeadlessOutputFormat = typeof HEADLESS_OUTPUT_FORMATS[number]
 ```
 
-Source: [`packages/bundle/headless/src/index.ts:33`](../packages/bundle/headless/src/index.ts)
+Source: [`packages/bundle/headless/src/index.ts:40`](../packages/bundle/headless/src/index.ts)
 
 <a id="deepseek-aidsh-hooks-claude-code"></a>
 
@@ -2868,7 +2875,7 @@ export interface Config {
 }
 ```
 
-Source: [`packages/shell/tool-pwsh-persistent/src/index.ts:472`](../packages/shell/tool-pwsh-persistent/src/index.ts)
+Source: [`packages/shell/tool-pwsh-persistent/src/index.ts:470`](../packages/shell/tool-pwsh-persistent/src/index.ts)
 
 <a id="deepseek-aidsh-tool-ralph"></a>
 

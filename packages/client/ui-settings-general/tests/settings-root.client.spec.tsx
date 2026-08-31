@@ -134,6 +134,8 @@ describe('SettingsRoot trigger', () => {
 
   it('hands the rail state to the trigger seat', () => {
     const { renderSlot } = mount({ wide: false })
+    const trigger = screen.getByRole('button', { name: 'Settings' })
+    expect(trigger.getAttribute('aria-label')).toBe('Settings')
     expect(renderSlot).toHaveBeenCalledWith('settings.trigger', { wide: false })
   })
 
@@ -228,10 +230,19 @@ describe('SettingsPanel close paths', () => {
     expect(screen.getByRole('dialog')).toBeTruthy()
   })
 
-  it('lands focus on the close button when the dialog opens', () => {
-    mount()
-    openPanel()
+  it('contains focus, inerts the app, and restores the trigger', () => {
+    const mounted = mount()
+    mounted.view.container.id = 'root'
+    const trigger = openPanel()
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Close' }))
+    expect(document.getElementById('root')?.inert).toBe(true)
+    fireEvent.keyDown(document, { key: 'Tab' })
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'General' }))
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true })
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Close' }))
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(document.activeElement).toBe(trigger)
+    expect(document.getElementById('root')?.inert).not.toBe(true)
   })
 })
 

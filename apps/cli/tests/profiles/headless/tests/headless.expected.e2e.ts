@@ -61,7 +61,12 @@ interface DeepSeekDefaultsServer {
 }
 
 /** Serve one deterministic DeepSeek-compatible response while retaining its request body. */
-async function deepseekDefaultsServer(): Promise<DeepSeekDefaultsServer> {
+async function deepseekDefaultsServer(options: {
+  keepAliveCount?: number
+  keepAliveIntervalMs?: number
+} = {}): Promise<DeepSeekDefaultsServer> {
+  const keepAliveCount = options.keepAliveCount ?? 3
+  const keepAliveIntervalMs = options.keepAliveIntervalMs ?? 60
   const requests: JsonObject[] = []
   const server = createServer((request: IncomingMessage, response: ServerResponse) => {
     let body = ''
@@ -70,11 +75,11 @@ async function deepseekDefaultsServer(): Promise<DeepSeekDefaultsServer> {
     request.on('end', () => {
       requests.push(JSON.parse(body) as JsonObject)
       response.writeHead(200, { 'content-type': 'text/event-stream' })
-      let keepAlives = 3
+      let keepAlives = keepAliveCount
       const write = (): void => {
         if (keepAlives-- > 0) {
           response.write(': keep-alive\n\n')
-          setTimeout(write, 60)
+          setTimeout(write, keepAliveIntervalMs)
           return
         }
         response.end([
@@ -84,7 +89,7 @@ async function deepseekDefaultsServer(): Promise<DeepSeekDefaultsServer> {
           '',
         ].join('\n\n'))
       }
-      setTimeout(write, 60)
+      setTimeout(write, keepAliveIntervalMs)
     })
   })
   await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve))
@@ -421,7 +426,14 @@ describe('headless stream-json snapshots', () => {
   }, LOADER_SMOKE_TEST_TIMEOUT_MS)
 
   it('keeps provider comments alive and sends DeepSeek defaults through the one-shot app', async () => {
-    const server = await deepseekDefaultsServer()
+    // The complete response deliberately arrives after the adapter's 2s idle
+    // bound, while each comment has a 20x scheduling margin. The former
+    // 60ms/150ms ratio retried under ordinary hosted-runner contention and
+    // turned a comment-parsing contract into a CPU-timing assertion.
+    const server = await deepseekDefaultsServer({
+      keepAliveCount: 25,
+      keepAliveIntervalMs: 100,
+    })
     try {
       const result = await runLoaderSmoke({
         label: 'DeepSeek adapter defaults headless stream-json snapshot',

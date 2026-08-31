@@ -240,7 +240,7 @@ describe('FileMutationRow diff card', () => {
     const openFile = vi.fn()
     const view = render(<FileMutationRow {...{ ...rowProps(settled()), openFile }} />)
     // The path link rides the collapsed summary, so it opens without expanding.
-    fireEvent.click(view.getByRole('button', { name: 'notes/demo.txt' }))
+    fireEvent.click(view.getByRole('button', { name: '打开文件 notes/demo.txt' }))
     // The row passes the tool's own path; the injected openFile resolves it
     // against the session cwd (apply.ts), so the row must not resolve twice.
     expect(openFile).toHaveBeenCalledWith('notes/demo.txt')

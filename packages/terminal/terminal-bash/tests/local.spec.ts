@@ -334,6 +334,9 @@ describe.skipIf(!hasPwsh)('terminal-bash pwsh real shell', () => {
         text: '$env:KEEP = "ok"; Set-Location /',
         submit: true,
       })
+      // A command echo followed by silence is not completion: only the exact
+      // stdin/prompt contract proves this same persistent shell accepts the
+      // next send without crossing operation output boundaries.
       expect((await first.done).waitReason).toBe('stdin_read')
       const second = ctx.terminals.startSend(agent, created.sessionId, {
         text: 'Write-Output "keep=$env:KEEP secret=$env:DSH_TEST_SECRET"',

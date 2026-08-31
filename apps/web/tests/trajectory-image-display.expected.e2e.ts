@@ -93,7 +93,11 @@ it('renders durable record images in the Trajectory details panel from the share
   // Selecting the record opens the details panel; the ui-attachment gallery
   // resolves the durable reference through the SAME per-session cache Chat
   // used, so the object URL is identical — no second attachment read.
-  const panel = await screen.findByRole('tabpanel')
+  await waitFor(() => {
+    expect(document.querySelector('#trajectory-detail-panel')).not.toBeNull()
+  })
+  const panel = document.querySelector('#trajectory-detail-panel')
+  if (!(panel instanceof HTMLElement)) throw new Error('trajectory detail panel missing')
   await waitFor(() => {
     expect(within(panel).getAllByRole('img').length).toBeGreaterThan(0)
   }, { timeout: 10_000 })

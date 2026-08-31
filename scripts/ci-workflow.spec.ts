@@ -67,11 +67,12 @@ describe('CI workflow', () => {
       || !isRecord(workflow.jobs['node-24'])
       || !isRecord(workflow.jobs['node-24-coverage'])
       || !isRecord(workflow.jobs['node-24-consumers'])
+      || !isRecord(workflow.jobs['node-24-accessibility'])
       || !isRecord(workflow.jobs['all-checks-passed'])
       || !isRecord(masterWorkflow.jobs)
       || !isRecord(masterWorkflow.jobs['wine-apt-cache'])
       || !isRecord(masterWorkflow.jobs['serial-windows'])) {
-      throw new TypeError('CI workflow must define windows, windows-build, windows-coverage, windows-native-tests, windows-observational, node-24, node-24-coverage, node-24-consumers, and all-checks-passed; ci-master must define wine-apt-cache and serial-windows')
+      throw new TypeError('CI workflow must define windows, windows-build, windows-coverage, windows-native-tests, windows-observational, node-24, node-24-coverage, node-24-consumers, node-24-accessibility, and all-checks-passed; ci-master must define wine-apt-cache and serial-windows')
     }
 
     const windows = workflow.jobs.windows
@@ -84,6 +85,7 @@ describe('CI workflow', () => {
     const node24 = workflow.jobs['node-24']
     const node24Coverage = workflow.jobs['node-24-coverage']
     const node24Consumers = workflow.jobs['node-24-consumers']
+    const node24Accessibility = workflow.jobs['node-24-accessibility']
     const aggregate = workflow.jobs['all-checks-passed']
     if (!Array.isArray(windows.steps) || !Array.isArray(aggregate.needs)) {
       throw new TypeError('Windows job must define steps and the aggregate must define needs')
@@ -103,6 +105,8 @@ describe('CI workflow', () => {
       expect(typeof job['runs-on']).toBe('string')
       expect(job['runs-on'], `${jobName} runs-on must use the Windows failover switch`).toContain('DSH_CI_FAILOVER_WINDOWS')
       expect(job['runs-on'], `${jobName} runs-on must not use the Linux failover switch`).not.toContain('DSH_CI_FAILOVER_LINUX')
+      expect(job['runs-on'], `${jobName} must use a standard runner outside upstream`).toContain("github.repository_owner != 'deepseek-harness'")
+      expect(job['runs-on']).toContain('windows-2025')
       expect(job['runs-on']).toContain('self-hosted')
       expect(job['runs-on']).toContain('dsh-win-ci')
       expect(job['runs-on']).toContain('dsh-windows-2025-16core')
@@ -117,9 +121,14 @@ describe('CI workflow', () => {
     ))
     expect(buildCommands.map(step => step.run)).toContain('pnpm run check:ci:windows-blocking')
 
-    // windows-coverage uses the lower 4-partition profile.
+    // windows-coverage preserves the upstream profile while bounding standard
+    // four-core fork runners to the same owner-scoped budget as Linux.
     expect(windowsCoverage.name).toBe('windows node 24 / coverage')
-    expect(windowsCoverage.env).toMatchObject({ DSH_COVERAGE_PARTITIONS: '4' })
+    expect(windowsCoverage.env).toMatchObject({
+      DSH_COVERAGE_MAX_WORKERS: "${{ github.repository_owner != 'deepseek-harness' && '2' || '6' }}",
+      DSH_COVERAGE_PARTITIONS: "${{ github.repository_owner != 'deepseek-harness' && '2' || '4' }}",
+      DSH_GATE_CONCURRENCY: "${{ github.repository_owner != 'deepseek-harness' && '1' || '3' }}",
+    })
     const coverageSteps = windowsCoverage.steps as unknown[]
     const coverageCommands = coverageSteps.filter((step): step is Record<string, unknown> & { run: string } => (
       isRecord(step) && typeof step.run === 'string'
@@ -133,8 +142,23 @@ describe('CI workflow', () => {
       isRecord(step) && typeof step.run === 'string'
     ))
     const nativeTestCommand = nativeTestCommands.map(step => step.run).join('\n')
-    expect(nativeTestCommand).toContain('--no-file-parallelism')
-    expect(nativeTestCommand).toContain('--testTimeout 90000')
+    const workerLifecycleCommands = nativeTestCommands
+      .filter(step => step.run.includes('workflow-worker-thread.spec.ts'))
+      .map(step => step.run)
+    const remainingNativeCommand = nativeTestCommands.find(step => step.run.includes('tool-pwsh/tests/loader.spec.ts'))?.run
+    expect(workerLifecycleCommands).toHaveLength(4)
+    expect(workerLifecycleCommands.every(command => command.includes('--no-file-parallelism'))).toBe(true)
+    expect(workerLifecycleCommands.every(command => command.includes('--testTimeout 90000'))).toBe(true)
+    expect(workerLifecycleCommands.every(command => !command.includes('tool-pwsh/tests/loader.spec.ts'))).toBe(true)
+    expect(workerLifecycleCommands).toEqual(expect.arrayContaining([
+      expect.stringContaining('--testNamePattern "script execution over a real worker thread"'),
+      expect.stringContaining('--testNamePattern "lifecycle: parse errors, cancellation, termination, disposal"'),
+      expect.stringContaining('--testNamePattern "worker death"'),
+      expect.stringContaining('--testNamePattern "service API"'),
+    ]))
+    expect(remainingNativeCommand).toContain('--no-file-parallelism')
+    expect(remainingNativeCommand).toContain('--testTimeout 90000')
+    expect(remainingNativeCommand).not.toContain('workflow-worker-thread.spec.ts')
     expect(nativeTestCommand).toContain('tool-pwsh/tests/loader.spec.ts')
     expect(nativeTestCommand).toContain('workflow-worker-thread.spec.ts')
 
@@ -161,15 +185,76 @@ describe('CI workflow', () => {
     expect(aggregate.needs).not.toContain('windows-observational')
     expect(aggregate.needs).not.toContain('serial-windows')
 
-    // Linux failover is a separate switch: the three required Linux workers
+    // Linux failover is a separate switch: the four required Linux workers
     // and the verdict job resolve their pool through DSH_CI_FAILOVER_LINUX,
     // never the Windows switch.
-    for (const [jobName, job] of [['node-24', node24], ['node-24-coverage', node24Coverage], ['node-24-consumers', node24Consumers]] as const) {
+    for (const [jobName, job] of [['node-24', node24], ['node-24-coverage', node24Coverage], ['node-24-consumers', node24Consumers], ['node-24-accessibility', node24Accessibility]] as const) {
       expect(typeof job['runs-on']).toBe('string')
       expect(job['runs-on'], `${jobName} runs-on must use the Linux failover switch`).toContain('DSH_CI_FAILOVER_LINUX')
       expect(job['runs-on'], `${jobName} runs-on must not use the Windows failover switch`).not.toContain('DSH_CI_FAILOVER_WINDOWS')
+      expect(job['runs-on'], `${jobName} must use a standard runner outside upstream`).toContain("github.repository_owner != 'deepseek-harness'")
+      expect(job['runs-on']).toContain('ubuntu-24.04')
       expect(job['runs-on']).toContain('vm-backup')
     }
+    if (!isRecord(node24Coverage.env) || !isRecord(node24Consumers.env)) {
+      throw new TypeError('Linux coverage and consumer jobs must define environment budgets')
+    }
+    expect(node24Coverage.env).toMatchObject({
+      DSH_COVERAGE_MAX_WORKERS: "${{ github.repository_owner != 'deepseek-harness' && '2' || '6' }}",
+      DSH_COVERAGE_PARTITIONS: "${{ github.repository_owner != 'deepseek-harness' && '2' || '4' }}",
+      DSH_GATE_CONCURRENCY: "${{ github.repository_owner != 'deepseek-harness' && '1' || '3' }}",
+    })
+    expect(node24Consumers.env).toMatchObject({
+      TZ: 'Asia/Shanghai',
+      DSH_GATE_CONCURRENCY: "${{ github.repository_owner != 'deepseek-harness' && '2' || '10' }}",
+      DSH_OXLINT_THREADS: "${{ github.repository_owner != 'deepseek-harness' && '2' || '8' }}",
+      DSH_PUBLINT_CONCURRENCY: "${{ github.repository_owner != 'deepseek-harness' && '2' || '8' }}",
+      DSH_WEB_SNAPSHOT_WORKERS: "${{ github.repository_owner != 'deepseek-harness' && '2' || '6' }}",
+    })
+    expect(node24Consumers.env.DSH_SNAPSHOT_MAX_CONCURRENCY).toContain(
+      "github.repository_owner != 'deepseek-harness' && '2'",
+    )
+    expect(node24Accessibility).toMatchObject({
+      name: 'node 24 / accessibility browser contracts',
+      env: { DSH_SNAPSHOT: 'replay' },
+      'timeout-minutes': 30,
+    })
+    if (!Array.isArray(node24Accessibility.steps)) {
+      throw new TypeError('Accessibility browser job must define steps')
+    }
+    const accessibilityCommands = node24Accessibility.steps
+      .filter((step): step is Record<string, unknown> & { run: string } => (
+        isRecord(step) && typeof step.run === 'string'
+      ))
+      .map(step => step.run)
+      .join('\n')
+    expect(accessibilityCommands).toContain('pnpm --filter @deepseek-ai/dsh-web-frontend exec playwright install --with-deps chromium firefox webkit')
+    expect(accessibilityCommands).toContain('pnpm --filter @deepseek-ai/dsh-web-frontend exec playwright install chromium firefox webkit')
+    expect(node24Accessibility.steps).toContainEqual(expect.objectContaining({
+      name: 'Run versioned assembled-app accessibility evidence',
+      run: 'pnpm run test:web:accessibility:evidence',
+    }))
+    expect(node24Accessibility.steps).toContainEqual(expect.objectContaining({
+      name: 'Retain exact-revision accessibility evidence',
+      uses: 'actions/upload-artifact@v4',
+      with: {
+        name: 'dsh-core-browser-accessibility-${{ github.run_id }}-${{ github.run_attempt }}',
+        path: '.artifacts/accessibility/core-browser-evidence.json',
+        'if-no-files-found': 'error',
+        'retention-days': 7,
+      },
+    }))
+    const packageJson = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8')) as unknown
+    if (!isRecord(packageJson) || !isRecord(packageJson.scripts)) {
+      throw new TypeError('package.json must define scripts')
+    }
+    expect(packageJson.scripts['test:web:accessibility']).toBe(
+      'pnpm run build && pnpm run test:web:accessibility:built',
+    )
+    expect(packageJson.scripts['test:web:accessibility:evidence']).toBe(
+      'pnpm run build && pnpm run test:web:accessibility:evidence:built',
+    )
+    expect(aggregate.needs).toContain('node-24-accessibility')
     expect(aggregate['runs-on']).toContain('DSH_CI_FAILOVER_LINUX')
     expect(aggregate['runs-on']).not.toContain('DSH_CI_FAILOVER_WINDOWS')
     expect(aggregate['runs-on']).toContain('vm-backup')
@@ -563,19 +648,25 @@ describe('Python release workflows', () => {
 })
 
 describe('Issue lifecycle workflow', () => {
-  it('runs the lifecycle job on every PR/review event but gates token and board steps', () => {
+  it('keeps fork checks read-only and gates upstream integrations', () => {
     const lifecycle = loadWorkflow('.github/workflows/issue-lifecycle.yml')
     const policy = loadWorkflow('.github/workflows/issue-policy.yml')
+    const preview = loadWorkflow('.github/workflows/build-preview-cloudflare.yml')
     const lifecycleJob = workflowJob(lifecycle, 'lifecycle')
+    const previewJob = workflowJob(preview, 'preview')
     if (!Array.isArray(lifecycleJob.steps)) throw new TypeError('Issue lifecycle job must define steps')
 
-    // The job has no job-level `if`, so it is listed on every pull_request /
-    // pull_request_review event and reports success instead of a gray skip. The
-    // write-capable steps are gated at step level so approved/commented reviews
-    // never mint a Project/Issue App token nor touch the board.
+    // Forks do not have the upstream GitHub App, deployment secrets, or larger
+    // runner. The read-only policy remains active in the current repository.
     expect(lifecycle.on).toHaveProperty('pull_request')
     expect(lifecycle.on).toHaveProperty('pull_request_review')
-    expect(lifecycleJob.if).toBeUndefined()
+    expect(lifecycleJob.if).toBe("github.repository_owner == 'deepseek-harness'")
+    expect(previewJob.if).toBe("github.repository_owner == 'deepseek-harness'")
+    expect(previewJob['runs-on']).toBe('dsh-ubuntu-24-04-16core')
+    const policySource = readFileSync(resolve(root, '.github/issue-management/policy.mjs'), 'utf8')
+    expect(policySource).toContain('process.env.GITHUB_REPOSITORY')
+    expect(policySource).toContain('config.organization = runtimeRepository[0]')
+    expect(policySource).toContain('config.repository = runtimeRepository[1]')
     // Keep the subscription-type gates: issue-lifecycle does not re-subscribe
     // ready_for_review (issue-policy owns that) and only reacts to submitted
     // review events.

@@ -210,7 +210,8 @@ export function chatSnapshotFixture(input: {
         type: 'turn/start', seq: Math.max(0, (endSeq ?? 1) - 1), time: timing.startTime, turn,
       } as never,
       end: timing?.endTime === undefined || endSeq === undefined ? undefined : {
-        type: 'turn/end', seq: endSeq, time: timing.endTime, turn, reason: 'completed',
+        type: 'turn/end', seq: endSeq, time: timing.endTime,
+        data: { turn, reason: { kind: 'completed' } },
       } as never,
       status: endSeq === undefined ? 'open' : 'closed',
       steps: EMPTY,

@@ -116,9 +116,17 @@ describe('WelcomeNotice', () => {
     }
     expect(dialog.querySelectorAll('p')).toHaveLength(2)
     expect(dialog.querySelectorAll('button')).toHaveLength(1)
-    expect(screen.getByRole('button', { name: WELCOME_NOTICE_COPY.zh.continueLabel })).toBeTruthy()
-    expect(document.activeElement).toBe(screen.getByRole('heading', { name: WELCOME_NOTICE_COPY.zh.title }))
+    const action = screen.getByRole('button', { name: WELCOME_NOTICE_COPY.zh.continueLabel })
+    const title = screen.getByRole('heading', { name: WELCOME_NOTICE_COPY.zh.title })
+    expect(action).toBeTruthy()
+    expect(document.activeElement).toBe(title)
     expect(h.appRoot.inert).toBe(true)
+
+    fireEvent.keyDown(document, { key: 'Tab' })
+    expect(document.activeElement).toBe(action)
+    title.focus()
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true })
+    expect(document.activeElement).toBe(action)
 
     fireEvent.keyDown(document, { key: 'Escape' })
     fireEvent.click(document.querySelector('[class*="mask"]')!)

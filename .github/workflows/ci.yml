@@ -12,24 +12,24 @@ env:
   DSH_TELEMETRY_DISABLED: '1'
 
 # Cancel a superseded pull-request run on a new push so a fresh head does not
-# queue a second full 9-job run behind a stale one (paid enterprise runners
-# would otherwise stack with no auto-cancellation).
+# queue a second full required run behind a stale one (resource-intensive
+# required runners would otherwise stack with no auto-cancellation).
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
 
-  # Three enterprise jobs isolate coverage, static analysis, and the
-  # build-backed consumer tail. The consumer job owns the only Linux build so
-  # all three jobs enter runner allocation independently.
+  # Four required Linux jobs isolate coverage, static analysis, the build-backed
+  # consumer tail, and focused assembled-app accessibility contracts. The
+  # latter two build independently so browser failures stay attributable.
   #
   # FAILOVER (Linux): each Linux enterprise job resolves its pool through the
   # DSH_CI_FAILOVER_LINUX repository variable. Unset (normal), the expressions
   # pick the hosted enterprise pools below. Setting the variable to
   # 'selfhosted' (repo Settings → Actions → Variables; writer-manageable
   # repository state — not PR-editable, no merge required) retargets all
-  # three onto the in-house
+  # four onto the in-house
   # vm-backup pool and re-running the failed jobs is the entire switch —
   # see .agents/notes/implemented/process/2026-07-26-ci-failover-runbook.md. The
   # in-house pool's readiness is re-proven on every master push by the
@@ -39,7 +39,9 @@ jobs:
   node-24:
     if: github.event_name == 'pull_request'
     runs-on: >-
-      ${{ vars.DSH_CI_FAILOVER_LINUX == 'selfhosted'
+      ${{ github.repository_owner != 'deepseek-harness'
+          && 'ubuntu-24.04'
+          || vars.DSH_CI_FAILOVER_LINUX == 'selfhosted'
           && github.event.pull_request.user.login != 'dependabot[bot]'
           && fromJSON('["self-hosted", "linux", "x64", "vm-backup"]')
           || 'dsh-ubuntu-24-04-16core' }}
@@ -91,17 +93,19 @@ jobs:
   node-24-coverage:
     if: github.event_name == 'pull_request'
     runs-on: >-
-      ${{ vars.DSH_CI_FAILOVER_LINUX == 'selfhosted'
+      ${{ github.repository_owner != 'deepseek-harness'
+          && 'ubuntu-24.04'
+          || vars.DSH_CI_FAILOVER_LINUX == 'selfhosted'
           && github.event.pull_request.user.login != 'dependabot[bot]'
           && fromJSON('["self-hosted", "linux", "x64", "vm-backup"]')
           || 'dsh-ubuntu-24-04-16core' }}
     name: node 24 / coverage
     env:
-      # Partitioning replaces the instrumented share; this budget gives the
-      # exempt-heavy gate two workers on both hosted and failover runners.
-      DSH_COVERAGE_MAX_WORKERS: '6'
-      DSH_COVERAGE_PARTITIONS: '4'
-      DSH_GATE_CONCURRENCY: '3'
+      # Standard four-core fork runners keep process-backed tests out of broad
+      # CPU starvation; the upstream 16-core path retains its established load.
+      DSH_COVERAGE_MAX_WORKERS: ${{ github.repository_owner != 'deepseek-harness' && '2' || '6' }}
+      DSH_COVERAGE_PARTITIONS: ${{ github.repository_owner != 'deepseek-harness' && '2' || '4' }}
+      DSH_GATE_CONCURRENCY: ${{ github.repository_owner != 'deepseek-harness' && '1' || '3' }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -153,19 +157,24 @@ jobs:
   node-24-consumers:
     if: github.event_name == 'pull_request'
     runs-on: >-
-      ${{ vars.DSH_CI_FAILOVER_LINUX == 'selfhosted'
+      ${{ github.repository_owner != 'deepseek-harness'
+          && 'ubuntu-24.04'
+          || vars.DSH_CI_FAILOVER_LINUX == 'selfhosted'
           && github.event.pull_request.user.login != 'dependabot[bot]'
           && fromJSON('["self-hosted", "linux", "x64", "vm-backup"]')
           || 'dsh-ubuntu-24-04-16core' }}
     name: node 24 / snapshots and artifacts
     env:
-      DSH_GATE_CONCURRENCY: '10'
+      # Persisted Web fixtures use the project reference zone rather than the
+      # runner image's local zone. Forks also bound work for a four-core host.
+      TZ: Asia/Shanghai
+      DSH_GATE_CONCURRENCY: ${{ github.repository_owner != 'deepseek-harness' && '2' || '10' }}
       DSH_NODE_COMPAT_SKIP_TYPECHECK: '1'
-      DSH_OXLINT_THREADS: '8'
-      DSH_PUBLINT_CONCURRENCY: '8'
-      DSH_WEB_SNAPSHOT_WORKERS: '6'
+      DSH_OXLINT_THREADS: ${{ github.repository_owner != 'deepseek-harness' && '2' || '8' }}
+      DSH_PUBLINT_CONCURRENCY: ${{ github.repository_owner != 'deepseek-harness' && '2' || '8' }}
+      DSH_WEB_SNAPSHOT_WORKERS: ${{ github.repository_owner != 'deepseek-harness' && '2' || '6' }}
       # Failover halves snapshot concurrency for the shared 64-core VM.
-      DSH_SNAPSHOT_MAX_CONCURRENCY: ${{ vars.DSH_CI_FAILOVER_LINUX == 'selfhosted' && github.event.pull_request.user.login != 'dependabot[bot]' && '12' || '32' }}
+      DSH_SNAPSHOT_MAX_CONCURRENCY: ${{ github.repository_owner != 'deepseek-harness' && '2' || vars.DSH_CI_FAILOVER_LINUX == 'selfhosted' && github.event.pull_request.user.login != 'dependabot[bot]' && '12' || '32' }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -234,6 +243,81 @@ jobs:
 
       - name: Run compatibility, snapshot, and artifact gates
         run: pnpm run check:ci:consumers
+
+  node-24-accessibility:
+    if: github.event_name == 'pull_request'
+    runs-on: >-
+      ${{ github.repository_owner != 'deepseek-harness'
+          && 'ubuntu-24.04'
+          || vars.DSH_CI_FAILOVER_LINUX == 'selfhosted'
+          && github.event.pull_request.user.login != 'dependabot[bot]'
+          && fromJSON('["self-hosted", "linux", "x64", "vm-backup"]')
+          || 'dsh-ubuntu-24-04-16core' }}
+    name: node 24 / accessibility browser contracts
+    timeout-minutes: 30
+    env:
+      TZ: Asia/Shanghai
+      DSH_SNAPSHOT: replay
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          dest: ${{ runner.temp }}/setup-pnpm-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.PRIMARY_NODE_VERSION }}
+
+      - name: Configure pnpm store path
+        id: pnpm-store
+        run: |
+          store_root="$HOME/.local/share/pnpm/store"
+          echo "PNPM_CONFIG_STORE_DIR=$store_root" >> "$GITHUB_ENV"
+          store_path=$(PNPM_CONFIG_STORE_DIR="$store_root" pnpm store path --silent)
+          echo "path=$store_path" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache/restore@v4
+        if: vars.DSH_CI_FAILOVER_LINUX != 'selfhosted' || github.event.pull_request.user.login == 'dependabot[bot]'
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: ${{ runner.os }}-node-${{ env.PRIMARY_NODE_VERSION }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-node-${{ env.PRIMARY_NODE_VERSION }}-pnpm-
+
+      - uses: actions/cache/restore@v4
+        if: vars.DSH_CI_FAILOVER_LINUX != 'selfhosted' || github.event.pull_request.user.login == 'dependabot[bot]'
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+
+      - name: Install (immutable)
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browser matrix and hosted dependencies
+        if: vars.DSH_CI_FAILOVER_LINUX != 'selfhosted' || github.event.pull_request.user.login == 'dependabot[bot]'
+        run: pnpm --filter @deepseek-ai/dsh-web-frontend exec playwright install --with-deps chromium firefox webkit
+
+      # The persistent VM image owns Playwright's Linux system packages; do
+      # not mutate the shared host with apt on every failover run.
+      - name: Install Playwright browser matrix on the failover VM
+        if: vars.DSH_CI_FAILOVER_LINUX == 'selfhosted' && github.event.pull_request.user.login != 'dependabot[bot]'
+        run: pnpm --filter @deepseek-ai/dsh-web-frontend exec playwright install chromium firefox webkit
+
+      - name: Run versioned assembled-app accessibility evidence
+        run: pnpm run test:web:accessibility:evidence
+
+      - name: Retain exact-revision accessibility evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: dsh-core-browser-accessibility-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .artifacts/accessibility/core-browser-evidence.json
+          if-no-files-found: error
+          retention-days: 7
 
 
   node-compat:
@@ -419,7 +503,9 @@ jobs:
   windows-build:
     if: github.event_name == 'pull_request'
     runs-on: >-
-      ${{ vars.DSH_CI_FAILOVER_WINDOWS == 'selfhosted'
+      ${{ github.repository_owner != 'deepseek-harness'
+          && 'windows-2025'
+          || vars.DSH_CI_FAILOVER_WINDOWS == 'selfhosted'
           && github.event.pull_request.user.login != 'dependabot[bot]'
           && fromJSON('["self-hosted", "dsh-win-ci", "windows"]')
           || 'dsh-windows-2025-16core' }}
@@ -450,17 +536,20 @@ jobs:
   windows-coverage:
     if: github.event_name == 'pull_request'
     runs-on: >-
-      ${{ vars.DSH_CI_FAILOVER_WINDOWS == 'selfhosted'
+      ${{ github.repository_owner != 'deepseek-harness'
+          && 'windows-2025'
+          || vars.DSH_CI_FAILOVER_WINDOWS == 'selfhosted'
           && github.event.pull_request.user.login != 'dependabot[bot]'
           && fromJSON('["self-hosted", "dsh-win-ci", "windows"]')
           || 'dsh-windows-2025-16core' }}
     name: windows node 24 / coverage
     timeout-minutes: 120
     env:
-      DSH_COVERAGE_MAX_WORKERS: '6'
-      DSH_COVERAGE_PARTITIONS: '4'
+      # Forks run this lane on a standard four-core Windows host.
+      DSH_COVERAGE_MAX_WORKERS: ${{ github.repository_owner != 'deepseek-harness' && '2' || '6' }}
+      DSH_COVERAGE_PARTITIONS: ${{ github.repository_owner != 'deepseek-harness' && '2' || '4' }}
       DSH_COVERAGE_TEST_TIMEOUT_MS: '90000'
-      DSH_GATE_CONCURRENCY: '3'
+      DSH_GATE_CONCURRENCY: ${{ github.repository_owner != 'deepseek-harness' && '1' || '3' }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -511,7 +600,9 @@ jobs:
   windows-native-tests:
     if: github.event_name == 'pull_request'
     runs-on: >-
-      ${{ vars.DSH_CI_FAILOVER_WINDOWS == 'selfhosted'
+      ${{ github.repository_owner != 'deepseek-harness'
+          && 'windows-2025'
+          || vars.DSH_CI_FAILOVER_WINDOWS == 'selfhosted'
           && github.event.pull_request.user.login != 'dependabot[bot]'
           && fromJSON('["self-hosted", "dsh-win-ci", "windows"]')
           || 'dsh-windows-2025-16core' }}
@@ -535,14 +626,45 @@ jobs:
       - name: Install (immutable)
         shell: pwsh
         run: pnpm install --frozen-lockfile
-      - name: Run Windows-specific native tests
+      - name: Run Windows worker script execution tests
+        shell: pwsh
+        run: >-
+          pnpm exec vitest run
+          --no-file-parallelism
+          --testTimeout 90000
+          --testNamePattern "script execution over a real worker thread"
+          packages/workflow/workflow-worker-thread/tests/workflow-worker-thread.spec.ts
+      - name: Run Windows worker lifecycle tests
+        shell: pwsh
+        run: >-
+          pnpm exec vitest run
+          --no-file-parallelism
+          --testTimeout 90000
+          --testNamePattern "lifecycle: parse errors, cancellation, termination, disposal"
+          packages/workflow/workflow-worker-thread/tests/workflow-worker-thread.spec.ts
+      - name: Run Windows worker death tests
+        shell: pwsh
+        run: >-
+          pnpm exec vitest run
+          --no-file-parallelism
+          --testTimeout 90000
+          --testNamePattern "worker death"
+          packages/workflow/workflow-worker-thread/tests/workflow-worker-thread.spec.ts
+      - name: Run Windows worker service API tests
+        shell: pwsh
+        run: >-
+          pnpm exec vitest run
+          --no-file-parallelism
+          --testTimeout 90000
+          --testNamePattern "service API"
+          packages/workflow/workflow-worker-thread/tests/workflow-worker-thread.spec.ts
+      - name: Run remaining Windows-specific native tests
         shell: pwsh
         run: >-
           pnpm exec vitest run
           --no-file-parallelism
           --testTimeout 90000
           packages/shell/tool-pwsh/tests/loader.spec.ts
-          packages/workflow/workflow-worker-thread/tests/workflow-worker-thread.spec.ts
           packages/workflow/tool-ralph/tests/integration.spec.ts
           packages/subprocess/subprocess-local/tests/process-exit.spec.ts
           packages/session/session-persistence-sqlite/tests/differential.spec.ts
@@ -551,7 +673,9 @@ jobs:
     if: github.event_name == 'pull_request'
     continue-on-error: true
     runs-on: >-
-      ${{ vars.DSH_CI_FAILOVER_WINDOWS == 'selfhosted'
+      ${{ github.repository_owner != 'deepseek-harness'
+          && 'windows-2025'
+          || vars.DSH_CI_FAILOVER_WINDOWS == 'selfhosted'
           && github.event.pull_request.user.login != 'dependabot[bot]'
           && fromJSON('["self-hosted", "dsh-win-ci", "windows"]')
           || 'dsh-windows-2025-16core' }}
@@ -605,7 +729,7 @@ jobs:
           && github.event.pull_request.user.login != 'dependabot[bot]'
           && fromJSON('["self-hosted", "linux", "x64", "vm-backup"]')
           || 'ubuntu-latest' }}
-    needs: [node-24, node-24-coverage, node-24-consumers, node-compat, python-sdk, python-runtime, windows, windows-build, windows-native-tests]
+    needs: [node-24, node-24-coverage, node-24-consumers, node-24-accessibility, node-compat, python-sdk, python-runtime, windows, windows-build, windows-native-tests]
     if: always() && github.event_name == 'pull_request'
     steps:
       - name: Fail if any needed job did not succeed

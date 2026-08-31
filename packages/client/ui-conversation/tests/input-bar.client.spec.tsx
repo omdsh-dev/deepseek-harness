@@ -1335,7 +1335,7 @@ describe('command launcher chrome and control seats', () => {
     expect([...trigger.querySelectorAll('svg')]
       .every(icon => icon.closest('[aria-hidden="true"]') !== null)).toBe(true)
     fireEvent.click(trigger)
-    const items = view.getAllByRole('menuitem')
+    const items = view.getAllByRole('menuitemradio')
     expect(items.map(o => o.textContent)).toEqual(['仅可查看', '可写入工作区', '完全权限'])
     fireEvent.click(items[1]!)
     // Optimistic pick + disable until admission resolves (command stub resolves true).
@@ -1362,12 +1362,13 @@ describe('command launcher chrome and control seats', () => {
     const trigger = view.getByLabelText(/^访问模式/) as HTMLButtonElement
     expect(trigger.textContent).toBe('Project Files')
     fireEvent.click(trigger)
-    expect(view.getAllByRole('menuitem').map(item => item.textContent))
+    expect(view.getAllByRole('menuitemradio').map(item => item.textContent))
       .toEqual(['Review Only', 'Project Files', 'Operator Mode', 'Custom Mode', '__proto__'])
   })
 
   it('requires explicit risk acknowledgement before submitting full access', async () => {
-    const command = vi.fn(() => Promise.resolve(true))
+    const admission = Promise.withResolvers<boolean>()
+    const command = vi.fn(() => admission.promise)
     const permissions = {
       options: [
         { value: 'workspace-write', name: 'workspace-write' },
@@ -1375,12 +1376,14 @@ describe('command launcher chrome and control seats', () => {
       ],
       currentValue: 'workspace-write',
     }
-    const { view } = bench({ permissions, command })
-    fireEvent.click(view.getByLabelText(/^访问模式/))
-    fireEvent.click(view.getByRole('menuitem', { name: '完全权限' }))
+    const { view, session } = bench({ permissions, command })
+    const trigger = view.getByLabelText(/^访问模式/) as HTMLButtonElement
+    fireEvent.click(trigger)
+    fireEvent.click(view.getByRole('menuitemradio', { name: '完全权限' }))
 
     expect(command).not.toHaveBeenCalled()
     expect(view.getByRole('dialog', { name: '确认启用完全权限？' })).toBeTruthy()
+    expect(document.activeElement).toBe(view.getByRole('checkbox', { name: '我已了解风险，并愿意继续' }))
     const enable = view.getByRole('button', { name: '启用完全权限' }) as HTMLButtonElement
     expect(enable.disabled).toBe(true)
 
@@ -1392,7 +1395,14 @@ describe('command launcher chrome and control seats', () => {
     expect(command).toHaveBeenCalledWith('/permission danger-full-access')
     expect(view.queryByRole('dialog')).toBeNull()
     expect((view.getByLabelText(/^访问模式/) as HTMLButtonElement).textContent).toBe('完全权限')
+    // The real command path can settle before the surrounding input lock is
+    // released. Focus restoration must remain pending across that ordering.
+    act(() => { session.set(snapshotOf({ removed: true })) })
+    await act(async () => { admission.resolve(true); await admission.promise })
+    expect(document.activeElement).not.toBe(trigger)
+    act(() => { session.set(snapshotOf()) })
     await act(async () => {})
+    expect(document.activeElement).toBe(trigger)
   })
 
   it('cancels a full access selection without changing permission and resets acknowledgement', () => {
@@ -1407,14 +1417,16 @@ describe('command launcher chrome and control seats', () => {
     const { view } = bench({ permissions, command })
     const openConfirmation = () => {
       fireEvent.click(view.getByLabelText(/^访问模式/))
-      fireEvent.click(view.getByRole('menuitem', { name: '完全权限' }))
+      fireEvent.click(view.getByRole('menuitemradio', { name: '完全权限' }))
     }
 
     openConfirmation()
     fireEvent.click(view.getByRole('checkbox'))
     fireEvent.click(view.getByRole('button', { name: '取消' }))
     expect(command).not.toHaveBeenCalled()
-    expect((view.getByLabelText(/^访问模式/) as HTMLButtonElement).textContent).toBe('可写入工作区')
+    const trigger = view.getByLabelText(/^访问模式/) as HTMLButtonElement
+    expect(trigger.textContent).toBe('可写入工作区')
+    expect(document.activeElement).toBe(trigger)
 
     openConfirmation()
     expect((view.getByRole('checkbox') as HTMLInputElement).checked).toBe(false)
@@ -1432,7 +1444,7 @@ describe('command launcher chrome and control seats', () => {
     }
     const { view, session } = bench({ permissions, command })
     fireEvent.click(view.getByLabelText(/^访问模式/))
-    fireEvent.click(view.getByRole('menuitem', { name: '完全权限' }))
+    fireEvent.click(view.getByRole('menuitemradio', { name: '完全权限' }))
     fireEvent.click(view.getByRole('checkbox'))
     act(() => { session.set(snapshotOf({ removed: true })) })
     expect(view.queryByRole('dialog')).toBeNull()
@@ -1450,7 +1462,7 @@ describe('command launcher chrome and control seats', () => {
     }
     const { view, props } = bench({ permissions, command })
     fireEvent.click(view.getByLabelText(/^访问模式/))
-    fireEvent.click(view.getByRole('menuitem', { name: '完全权限' }))
+    fireEvent.click(view.getByRole('menuitemradio', { name: '完全权限' }))
     fireEvent.click(view.getByRole('checkbox'))
     view.rerender(<InputBar {...props} sessionId={'s2' as SessionId} />)
     expect(view.queryByRole('dialog')).toBeNull()

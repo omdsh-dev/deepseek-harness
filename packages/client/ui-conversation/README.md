@@ -44,6 +44,8 @@ Default sends commit optimistically: Enter clears the draft, occurrence table, a
 
 While a normal composer is running, its primary pointer action remains Stop when the draft is empty or input is unavailable. Actionable text or attachments switch the same seat to Queue Send; clearing or successfully submitting the draft restores Stop. The busy-Enter setting continues to select the Queue or Steer keyboard action. Continuable subagents keep separate Send and Stop actions ([decision](../../../.agents/notes/implemented/bug-fix/2026-08-20-running-draft-primary-send.md)).
 
+The composer Context Meter exposes its rounded occupancy in the trigger's accessible name and synchronizes `aria-expanded` with a stable `aria-controls` relationship. Its click-open breakdown is a named non-modal region, so opening it keeps focus on the trigger and does not falsely advertise dialog focus behavior. Provider capacity and total occupancy are authoritative; the system-prompt, tool, and message composition is explicitly heuristic.
+
 <a id="temporary-composer-entries"></a>
 ## Temporary composer entries
 

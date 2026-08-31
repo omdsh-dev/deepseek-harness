@@ -258,7 +258,7 @@ describe('web e2e: agent-preset selection', () => {
   it('applies the staged pick to the blank session, and the host honors it', async () => {
     onTestFailed(() => saveFailureShot(page, 'web-e2e-agent-preset-stage'))
     await page.getByRole('button', { name: 'Standard mode' }).click()
-    await page.getByRole('menuitem', { name: /Minimal mode/ }).click()
+    await page.getByRole('menuitemradio', { name: /Minimal mode/ }).click()
 
     // The chip stages; the blank session the workspace connect produced is
     // what the stage lands on. The host's own answer is what comes back.
@@ -268,7 +268,7 @@ describe('web e2e: agent-preset selection', () => {
   it('says why a switch was refused instead of letting the chip revert in silence', async () => {
     onTestFailed(() => saveFailureShot(page, 'web-e2e-agent-preset-refused'))
     await page.getByRole('button', { name: 'Minimal mode' }).click()
-    await page.getByRole('menuitem', { name: /Refusing mode/ }).click()
+    await page.getByRole('menuitemradio', { name: /Refusing mode/ }).click()
 
     // Health cleared every row, so nothing on the settings page says this
     // preset is unusable — the banner is where the host's reason lands, and
@@ -306,7 +306,7 @@ describe('web e2e: agent-preset selection', () => {
     // answers "already standard" and sends nothing — and restores the catalog
     // instead of leaving the session reading the narrower composition.
     await page.getByRole('button', { name: 'Minimal mode' }).click()
-    await page.getByRole('menuitem', { name: /^Standard mode/ }).first().click()
+    await page.getByRole('menuitemradio', { name: /^Standard mode/ }).first().click()
     await expect.poll(() => livePreset(scaffold), { timeout: 15_000 }).toBe('standard')
 
     await writeComposerDraft(page, composer, '/')

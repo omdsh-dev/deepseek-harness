@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { Context } from '@deepseek-ai/cordis'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { bindSnapshotSelector, RemoteError } from '@deepseek-ai/dsh-client-test-runtime'
 import type { SettingsNamespaceView } from '@deepseek-ai/dsh-api-remotes/client'
 import { SettingsSchemaService } from '@deepseek-ai/dsh-client-ui-settings/src/client/schema.ts'
@@ -91,10 +91,10 @@ describe('PermissionRow', () => {
     fireEvent.click(button)
     expect(button.getAttribute('aria-expanded')).toBe('false')
     fireEvent.click(button)
-    fireEvent.click(screen.getByRole('menuitem', { name: '仅可查看' }))
+    fireEvent.click(screen.getByRole('menuitemradio', { name: '仅可查看' }))
     expect(mutate).not.toHaveBeenCalled()
     fireEvent.click(button)
-    fireEvent.click(screen.getByRole('menuitem', { name: '可写入工作区' }))
+    fireEvent.click(screen.getByRole('menuitemradio', { name: '可写入工作区' }))
     await screen.findByRole('button', { name: '可写入工作区' })
     expect(mutate).toHaveBeenCalledOnce()
   })
@@ -108,13 +108,16 @@ describe('PermissionRow', () => {
       },
     })
     mount(controller)
-    fireEvent.click(await screen.findByRole('button', { name: '仅可查看' }))
-    fireEvent.click(screen.getByRole('menuitem', { name: '完全权限' }))
+    const selector = await screen.findByRole('button', { name: '仅可查看' })
+    fireEvent.click(selector)
+    fireEvent.click(screen.getByRole('menuitemradio', { name: '完全权限' }))
     expect(mutate).not.toHaveBeenCalled()
+    expect(document.activeElement).toBe(screen.getByRole('checkbox', { name: '我已了解风险，并愿意继续' }))
     fireEvent.click(screen.getByRole('button', { name: '取消' }))
     expect(screen.queryByRole('dialog', { name: '确认启用完全权限？' })).toBeNull()
-    fireEvent.click(screen.getByRole('button', { name: '仅可查看' }))
-    fireEvent.click(screen.getByRole('menuitem', { name: '完全权限' }))
+    expect(document.activeElement).toBe(selector)
+    fireEvent.click(selector)
+    fireEvent.click(screen.getByRole('menuitemradio', { name: '完全权限' }))
     const dialog = screen.getByRole('dialog', { name: '确认启用完全权限？' })
     const enable = screen.getByRole('button', { name: '启用完全权限' })
     expect((enable as HTMLButtonElement).disabled).toBe(true)
@@ -122,6 +125,7 @@ describe('PermissionRow', () => {
     fireEvent.click(enable)
     await waitFor(() => { expect(mutate).toHaveBeenCalledOnce() })
     expect(dialog.isConnected).toBe(false)
+    await waitFor(() => { expect(document.activeElement).toBe(screen.getByRole('button', { name: '完全权限' })) })
   })
 
   it('hides an unavailable namespace and disables a read-only provider', async () => {
@@ -166,7 +170,49 @@ describe('PermissionRow', () => {
     describe.resolve(ok({ writable: true, hasDocument: false, namespaces: [view('read-only')] }))
     const button = await screen.findByRole('button', { name: '仅可查看' })
     fireEvent.click(button)
-    fireEvent.click(screen.getByRole('menuitem', { name: '可写入工作区' }))
+    fireEvent.click(screen.getByRole('menuitemradio', { name: '可写入工作区' }))
     expect((await screen.findByRole('alert')).textContent).toBe('changed elsewhere')
+  })
+
+  it('drops deferred focus restoration when the settings owner becomes unavailable', async () => {
+    const mutation = Promise.withResolvers<ReturnType<typeof ok<SettingsNamespaceView>>>()
+    const controller = derivedController({
+      settings: {
+        describe: () => Promise.resolve(ok({ writable: true, hasDocument: false, namespaces: [view('read-only')] })),
+        mutate: () => mutation.promise,
+      },
+    })
+    const rendered = mount(controller)
+    fireEvent.click(await screen.findByRole('button', { name: '仅可查看' }))
+    fireEvent.click(screen.getByRole('menuitemradio', { name: '可写入工作区' }))
+    act(() => {
+      controller.store.update((state) => {
+        state.status = 'unavailable'
+        state.writable = false
+      })
+    })
+    expect(rendered.container.textContent).toBe('')
+    await act(async () => {
+      mutation.resolve(ok(view('workspace-write', 1)))
+      await mutation.promise
+    })
+  })
+
+  it('does not target a detached selector when an in-flight save settles after unmount', async () => {
+    const mutation = Promise.withResolvers<ReturnType<typeof ok<SettingsNamespaceView>>>()
+    const controller = derivedController({
+      settings: {
+        describe: () => Promise.resolve(ok({ writable: true, hasDocument: false, namespaces: [view('read-only')] })),
+        mutate: () => mutation.promise,
+      },
+    })
+    const rendered = mount(controller)
+    fireEvent.click(await screen.findByRole('button', { name: '仅可查看' }))
+    fireEvent.click(screen.getByRole('menuitemradio', { name: '可写入工作区' }))
+    rendered.unmount()
+    await act(async () => {
+      mutation.resolve(ok(view('workspace-write', 1)))
+      await mutation.promise
+    })
   })
 })

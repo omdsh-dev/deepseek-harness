@@ -123,26 +123,35 @@ async function startupSession(
       await session.initialize(signal)
       return
     }
-    // pwsh cannot install its prompt from the environment. Write the prompt
-    // function through the session, pin UTF-8 output before user input, and
-    // accept only backend stdin_read evidence; echoed setup source containing
-    // the printable prompt is not readiness. Follow-up sends bridge silence
-    // settlements during startup, while one absolute deadline bounds them.
-    let viewport = ''
+    // pwsh cannot install its prompt from the environment. First observe its
+    // native startup output through the session's no-input initialization:
+    // PSReadLine can otherwise absorb a bootstrap written during terminal
+    // negotiation without accepting its submit key. Then write the prompt
+    // function once, pin UTF-8 before user input, and
+    // accept only backend stdin_read evidence together with the owned marker;
+    // echoed setup source cannot emit that marker and is not readiness.
+    // Follow-up probes bridge silence and output/operation boundaries, while
+    // one absolute deadline bounds the complete sequence.
+    await session.initialize(signal)
+    let setupSent = false
     for (;;) {
-      const first = viewport.length === 0
+      const sendsSetup = !setupSent
       startupOperation = session.startSend({
-        text: first ? ENCODING_PREAMBLE + PWSH_PROMPT_SETUP : '',
-        submit: first,
+        text: sendsSetup ? ENCODING_PREAMBLE + PWSH_PROMPT_SETUP : '',
+        submit: sendsSetup,
         ...signal !== undefined ? { signal } : {},
       })
+      if (sendsSetup) setupSent = true
       const result = await startupOperation.done
       if (result.waitReason === 'session_exit') throw new Error('PTY shell exited during startup')
       if (result.waitReason === 'timeout') throw new Error('PTY shell did not reach readiness before startup timeout')
-      viewport = result.viewport
-      if (result.waitReason === 'stdin_read') break
+      if (result.waitReason === 'stdin_read' && session.hasSeenControlledPrompt()) {
+        // Never expose the echoed internal bootstrap as model or assistive-
+        // technology output. The owned marker proves this exact concise prompt.
+        session.motd = CONTROLLED_PROMPT
+        break
+      }
     }
-    session.motd = viewport
   }
   const races: Promise<void>[] = []
   let onAbort: (() => void) | undefined

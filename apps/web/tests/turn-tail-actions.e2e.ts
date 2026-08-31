@@ -136,7 +136,7 @@ describe('web e2e: assistant IconActions wait for the turn to end', () => {
     await expect.poll(() => existsSync(marker), { timeout: 20_000 }).toBe(true)
     expect(await page.locator('[data-turn-process]').count()).toBe(0)
     await expect.poll(
-      () => page.getByRole('status').filter({ hasText: 'Deep diving...' }).isVisible(),
+      () => page.locator('[data-turn-status]').filter({ hasText: 'Deep diving...' }).isVisible(),
       { timeout: 10_000 },
     ).toBe(true)
     // Only the user bubble owns a footer (clock + copy; user bubbles carry no
@@ -244,7 +244,7 @@ describe('web e2e: assistant IconActions wait for the turn to end', () => {
     await page.getByRole('button', { name: 'Settings', exact: true }).click()
     const dialog = page.getByRole('dialog', { name: 'Settings' })
     await dialog.getByRole('button', { name: 'Compact', exact: true }).click()
-    await page.getByRole('menuitem', { name: 'Normal', exact: true }).click()
+    await page.getByRole('menuitemradio', { name: 'Normal', exact: true }).click()
     await page.keyboard.press('Escape')
 
     await expect.poll(() => process.count(), { timeout: 10_000 }).toBe(0)
@@ -255,7 +255,7 @@ describe('web e2e: assistant IconActions wait for the turn to end', () => {
     await page.getByRole('button', { name: 'Settings', exact: true }).click()
     const restored = page.getByRole('dialog', { name: 'Settings' })
     await restored.getByRole('button', { name: 'Normal', exact: true }).click()
-    await page.getByRole('menuitem', { name: 'Compact', exact: true }).click()
+    await page.getByRole('menuitemradio', { name: 'Compact', exact: true }).click()
     await page.keyboard.press('Escape')
     await process.waitFor({ timeout: 10_000 })
     expect(await process.getAttribute('aria-expanded')).toBe('false')

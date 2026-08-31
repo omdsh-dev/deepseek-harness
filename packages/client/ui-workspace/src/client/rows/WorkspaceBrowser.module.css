@@ -161,6 +161,11 @@
   color: var(--dsw-alias-label-caption);
 }
 
+.searchExpanded:focus-within {
+  border-color: var(--dsw-alias-state-business-primary);
+  box-shadow: 0 0 0 1px var(--dsw-alias-state-business-primary);
+}
+
 .searchButton {
   flex: none;
   display: inline-flex;
@@ -231,6 +236,13 @@
 
 .clearButton:hover {
   background: var(--dsw-alias-interactive-bg-hover);
+}
+
+@media (forced-colors: active) {
+  .searchExpanded:focus-within {
+    border-color: CanvasText;
+    box-shadow: 0 0 0 1px CanvasText;
+  }
 }
 
 /* Rail variant (own .rail class from the wide owner prop — the region never

@@ -90,13 +90,13 @@ describe('PluginInventorySettingsTab', () => {
     const switcher = screen.getByRole('button', { name: en.switcherLabel })
     expect(switcher.textContent).toBe('标准模式 (default)')
     fireEvent.click(switcher)
-    expect(screen.getAllByRole('menuitem').map(item => item.textContent)).toEqual([
+    expect(screen.getAllByRole('menuitemradio').map(item => item.textContent)).toEqual([
       '标准模式 (default)',
       'ptc',
       '坏预设 (failed to load)',
     ])
     fireEvent.keyDown(document, { key: 'Escape' })
-    expect(screen.queryAllByRole('menuitem')).toHaveLength(0)
+    expect(screen.queryAllByRole('menuitemradio')).toHaveLength(0)
     expect(screen.getByText(en.presetSubtitle)).toBeTruthy()
     expect(view.container.querySelector('[data-preset-plugin-count]')?.getAttribute('data-preset-plugin-count')).toBe('6')
 
@@ -174,7 +174,7 @@ describe('PluginInventorySettingsTab', () => {
     const view = await renderReady()
     const pickPreset = (label: string): void => {
       fireEvent.click(screen.getByRole('button', { name: en.switcherLabel }))
-      fireEvent.click(screen.getByRole('menuitem', { name: label }))
+      fireEvent.click(screen.getByRole('menuitemradio', { name: label }))
     }
 
     pickPreset('ptc')
@@ -220,7 +220,7 @@ describe('PluginInventorySettingsTab', () => {
     const switcher = screen.getByRole('button', { name: en.switcherLabel })
     expect(switcher.textContent).toBe('Localized standard (default)')
     fireEvent.click(switcher)
-    expect(screen.getAllByRole('menuitem').map(item => item.textContent)).toEqual([
+    expect(screen.getAllByRole('menuitemradio').map(item => item.textContent)).toEqual([
       'Localized standard (default)',
       'Localized ptc',
       '坏预设 (failed to load)',
@@ -238,7 +238,7 @@ describe('PluginInventorySettingsTab', () => {
   it('jumps from a preset-provided row to the preset that enables it', async () => {
     await renderReady()
     fireEvent.click(screen.getByRole('button', { name: en.switcherLabel }))
-    fireEvent.click(screen.getByRole('menuitem', { name: 'ptc' }))
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'ptc' }))
 
     fireEvent.click(globalToggle())
     fireEvent.click(screen.getByRole('button', { name: 'tool-bash, Enabled via presets' }))
