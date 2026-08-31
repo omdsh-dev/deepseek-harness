@@ -6,6 +6,7 @@ import {
   assertCleanStatus,
   buildEvidenceReport,
   CORE_BROWSER_EVIDENCE,
+  CORE_BROWSER_SCHEMA,
   CORE_TASKS,
   engineEvidence,
   NON_AT_BROWSER_PROTOCOL,
@@ -102,6 +103,7 @@ describe('web accessibility evidence', () => {
       engines: [evidence('chromium'), evidence('firefox'), evidence('webkit')],
     })
     expect(report.result).toBe('pass')
+    expect(report.$schema).toBe(CORE_BROWSER_SCHEMA)
     expect(report.dsh).toMatchObject({ revision: 'a'.repeat(40), dirty: false })
     expect(report.limitations.join(' ')).toContain('not assistive-technology')
     expect(report.limitations.join(' ')).toContain('not a real browser-zoom')
@@ -132,11 +134,13 @@ describe('web accessibility evidence', () => {
       'utf8',
     )) as {
       properties: {
+        $schema: { const: string }
         protocol: { const: string }
         evidence: { const: string }
         dsh: { properties: { revision: { pattern: string }; dirty: { const: boolean } } }
       }
     }
+    expect(schema.properties.$schema.const).toBe(CORE_BROWSER_SCHEMA)
     expect(schema.properties.protocol.const).toBe(NON_AT_BROWSER_PROTOCOL)
     expect(schema.properties.evidence.const).toBe(CORE_BROWSER_EVIDENCE)
     expect(schema.properties.dsh.properties.revision.pattern).toBe('^[0-9a-f]{40}$')

@@ -17,7 +17,9 @@
     "limitations"
   ],
   "properties": {
-    "$schema": { "type": "string" },
+    "$schema": {
+      "const": "https://raw.githubusercontent.com/omdsh-dev/dsh-accessibility/main/CORE-BROWSER-EVIDENCE.schema.json"
+    },
     "protocol": { "const": "dsh-non-at-browser/1.0.0-draft" },
     "evidence": { "const": "dsh-core-browser-non-at" },
     "result": { "enum": ["pass", "partial"] },

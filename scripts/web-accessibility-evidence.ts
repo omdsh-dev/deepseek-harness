@@ -12,6 +12,7 @@ import { pnpmInvocation } from './pnpm-invocation.ts'
 
 export const NON_AT_BROWSER_PROTOCOL = 'dsh-non-at-browser/1.0.0-draft' as const
 export const CORE_BROWSER_EVIDENCE = 'dsh-core-browser-non-at' as const
+export const CORE_BROWSER_SCHEMA = 'https://raw.githubusercontent.com/omdsh-dev/dsh-accessibility/main/CORE-BROWSER-EVIDENCE.schema.json' as const
 
 const supported = ['chromium', 'firefox', 'webkit'] as const
 export type BrowserName = typeof supported[number]
@@ -145,7 +146,7 @@ export interface EngineEvidence {
 }
 
 export interface CoreBrowserEvidenceReport {
-  $schema: string
+  $schema: typeof CORE_BROWSER_SCHEMA
   protocol: typeof NON_AT_BROWSER_PROTOCOL
   evidence: typeof CORE_BROWSER_EVIDENCE
   result: 'pass' | 'partial'
@@ -252,7 +253,7 @@ export function buildEvidenceReport(input: {
   if (new Set(selected).size !== selected.length) throw new Error('evidence contains duplicate engines')
   const full = supported.every(engine => selected.includes(engine)) && selected.length === supported.length
   return {
-    $schema: '../../scripts/web-accessibility-evidence.schema.json',
+    $schema: CORE_BROWSER_SCHEMA,
     protocol: NON_AT_BROWSER_PROTOCOL,
     evidence: CORE_BROWSER_EVIDENCE,
     result: full ? 'pass' : 'partial',
@@ -375,7 +376,7 @@ async function main(): Promise<void> {
       engines,
     })
     await mkdir(dirname(output), { recursive: true })
-    await writeFile(output, `${JSON.stringify(report, null, 2)}\n`, { flag: 'wx' })
+    await writeFile(output, `${JSON.stringify(report, null, 2)}\n`)
     console.log(`Accessibility evidence: ${report.result} (${output})`)
   } finally {
     await rm(temporaryRoot, { recursive: true, force: true })
