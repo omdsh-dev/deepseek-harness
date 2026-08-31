@@ -1,4 +1,5 @@
 - main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy":
     - button "Use the bash tool to" [disabled]
   - img
@@ -11,29 +12,33 @@
     - tab "Trajectory"
   - tabpanel "Chat":
     - text: Response completed.
-    - button "System prompt":
-      - img
-      - img
-      - text: System prompt
-    - text: "Use the bash tool to run exactly: echo WEB_E2E_OK. Then reply with the single word DONE and stop. {{clock}}"
-    - button "Copy":
-      - img
-    - button "1 tool call":
-      - text: 1 tool call
-      - img
-    - paragraph: DONE
-    - button "Copy":
-      - img
-    - button "Good response":
-      - img
-    - button "Bad response":
-      - img
-    - button "Branch into a new conversation":
-      - img
-    - button "Ran for {{duration}}":
-      - img
-      - text: Ran for {{duration}}
-    - text: {{clock}}
+    - log "Conversation transcript":
+      - button "System prompt":
+        - img
+        - img
+        - text: System prompt
+      - article "User message":
+        - text: "Use the bash tool to run exactly: echo WEB_E2E_OK. Then reply with the single word DONE and stop. {{clock}}"
+        - button "Copy":
+          - img
+      - button "1 tool call":
+        - text: 1 tool call
+        - img
+      - article "Assistant response"
+      - article "Assistant response":
+        - paragraph: DONE
+      - button "Copy":
+        - img
+      - button "Good response":
+        - img
+      - button "Bad response":
+        - img
+      - button "Branch into a new conversation":
+        - img
+      - button "Ran for {{duration}}":
+        - img
+        - text: Ran for {{duration}}
+      - text: {{clock}}
   - textbox "Message or run a task... / commands, @ files or sessions"
   - button "Commands":
     - img

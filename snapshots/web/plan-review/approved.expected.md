@@ -1,4 +1,5 @@
 - main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy":
     - 'button "Plan a small change: add" [disabled]'
   - img
@@ -11,35 +12,39 @@
     - tab "Trajectory"
   - tabpanel "Chat":
     - text: Response completed.
-    - img
-    - text: plan Plan mode on. Use /plan off to leave.
-    - button "System prompt":
+    - log "Conversation transcript":
       - img
-      - img
-      - text: System prompt
-    - text: "Plan a small change: add a --greeting flag to a CLI. Do not read or write any files. Call exit_plan_mode with a short plan of at most five bullet points. Once the plan is approved, reply with the single word DONE and stop. {{clock}}"
-    - button "Copy":
-      - img
-    - button "1 tool call · 1 message":
-      - text: 1 tool call · 1 message
-      - img
-    - button "System prompt":
-      - img
-      - img
-      - text: System prompt
-    - paragraph: DONE
-    - button "Copy":
-      - img
-    - button "Good response":
-      - img
-    - button "Bad response":
-      - img
-    - button "Branch into a new conversation":
-      - img
-    - button "Ran for {{duration}}":
-      - img
-      - text: Ran for {{duration}}
-    - text: {{clock}}
+      - text: plan Plan mode on. Use /plan off to leave.
+      - button "System prompt":
+        - img
+        - img
+        - text: System prompt
+      - article "User message":
+        - text: "Plan a small change: add a --greeting flag to a CLI. Do not read or write any files. Call exit_plan_mode with a short plan of at most five bullet points. Once the plan is approved, reply with the single word DONE and stop. {{clock}}"
+        - button "Copy":
+          - img
+      - button "1 tool call · 1 message":
+        - text: 1 tool call · 1 message
+        - img
+      - article "Assistant response"
+      - button "System prompt":
+        - img
+        - img
+        - text: System prompt
+      - article "Assistant response":
+        - paragraph: DONE
+      - button "Copy":
+        - img
+      - button "Good response":
+        - img
+      - button "Bad response":
+        - img
+      - button "Branch into a new conversation":
+        - img
+      - button "Ran for {{duration}}":
+        - img
+        - text: Ran for {{duration}}
+      - text: {{clock}}
   - textbox "Message or run a task... / commands, @ files or sessions"
   - button "Commands":
     - img

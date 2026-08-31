@@ -1,4 +1,5 @@
 - main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy":
     - button "workspace" [disabled]
   - img
@@ -11,25 +12,27 @@
     - tab "Trajectory"
   - tabpanel "Chat":
     - text: Response started.
-    - group "Command input": /goal Keep the composer context panels aligned
-    - 'button "goal Goal created Status: active Objective: Keep the composer context panels aligned Rounds: 0/256 Activation: armed Commands: /goal edit <objective>, /goal pause, /goal clear"':
-      - img
-      - img
-      - text: "goal Goal created Status: active Objective: Keep the composer context panels aligned Rounds: 0/256 Activation: armed Commands: /goal edit <objective>, /goal pause, /goal clear"
-    - button "System prompt":
-      - img
-      - img
-      - text: System prompt
-    - button "Context injection goal":
-      - img
-      - img
-      - text: Context injection goal
-    - button "Context injection @deepseek-ai/dsh-system-prompt":
-      - img
-      - img
-      - text: Context injection @deepseek-ai/dsh-system-prompt
-    - paragraph: partial
-    - text: Deep diving...
+    - log "Conversation transcript":
+      - group "Command input": /goal Keep the composer context panels aligned
+      - 'button "goal Goal created Status: active Objective: Keep the composer context panels aligned Rounds: 0/256 Activation: armed Commands: /goal edit <objective>, /goal pause, /goal clear"':
+        - img
+        - img
+        - text: "goal Goal created Status: active Objective: Keep the composer context panels aligned Rounds: 0/256 Activation: armed Commands: /goal edit <objective>, /goal pause, /goal clear"
+      - button "System prompt":
+        - img
+        - img
+        - text: System prompt
+      - button "Context injection goal":
+        - img
+        - img
+        - text: Context injection goal
+      - button "Context injection @deepseek-ai/dsh-system-prompt":
+        - img
+        - img
+        - text: Context injection @deepseek-ai/dsh-system-prompt
+      - article "Assistant response":
+        - paragraph: partial
+      - text: Deep diving...
   - region "To-dos":
     - button "To-dos 1 completed · 1 in progress"
   - img

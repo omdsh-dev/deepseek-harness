@@ -1,4 +1,5 @@
 - main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy":
     - button "Reply with the single word" [disabled]
   - img
@@ -11,33 +12,36 @@
     - tab "Trajectory"
   - tabpanel "Chat":
     - text: Response completed.
-    - button "System prompt":
-      - img
-      - img
-      - text: System prompt
-    - text: Reply with the single word LIGHTHOUSE and stop. {{clock}}
-    - button "Copy":
-      - img
-    - button "Thought for a while":
-      - text: Thought for a while
-      - img
-    - paragraph: LIGHTHOUSE
-    - button "Copy":
-      - img
-    - button "Good response":
-      - img
-    - button "Bad response":
-      - img
-    - button "Branch into a new conversation":
-      - img
-    - button "Ran for {{duration}}":
-      - img
-      - text: Ran for {{duration}}
-    - text: {{clock}}
-    - 'button "feedback Feedback recorded for session session-{{uuid}} Anonymous user: {{uuid}}. Session sharing is feedback-gated; recording feedback uploads the session records not yet shared."':
-      - img
-      - img
-      - text: "feedback Feedback recorded for session session-{{uuid}} Anonymous user: {{uuid}}. Session sharing is feedback-gated; recording feedback uploads the session records not yet shared."
+    - log "Conversation transcript":
+      - button "System prompt":
+        - img
+        - img
+        - text: System prompt
+      - article "User message":
+        - text: Reply with the single word LIGHTHOUSE and stop. {{clock}}
+        - button "Copy":
+          - img
+      - button "Thought for a while":
+        - text: Thought for a while
+        - img
+      - article "Assistant response":
+        - paragraph: LIGHTHOUSE
+      - button "Copy":
+        - img
+      - button "Good response":
+        - img
+      - button "Bad response":
+        - img
+      - button "Branch into a new conversation":
+        - img
+      - button "Ran for {{duration}}":
+        - img
+        - text: Ran for {{duration}}
+      - text: {{clock}}
+      - 'button "feedback Feedback recorded for session session-{{uuid}} Anonymous user: {{uuid}}. Session sharing is feedback-gated; recording feedback uploads the session records not yet shared."':
+        - img
+        - img
+        - text: "feedback Feedback recorded for session session-{{uuid}} Anonymous user: {{uuid}}. Session sharing is feedback-gated; recording feedback uploads the session records not yet shared."
   - textbox "Message or run a task... / commands, @ files or sessions"
   - button "Commands":
     - img

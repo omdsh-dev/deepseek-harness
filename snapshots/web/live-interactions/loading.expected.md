@@ -1,4 +1,5 @@
 - main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy":
     - button "Reply with a one-sentence description" [disabled]
   - img
@@ -11,19 +12,22 @@
     - tab "Trajectory"
   - tabpanel "Chat":
     - text: Response started.
-    - button "System prompt":
-      - img
-      - img
-      - text: System prompt
-    - text: Reply with a one-sentence description of event sourcing, then stop. {{clock}}
-    - button "Copy":
-      - img
-    - button "Context injection @deepseek-ai/dsh-system-prompt":
-      - img
-      - img
-      - text: Context injection @deepseek-ai/dsh-system-prompt
-    - paragraph: partial
-    - text: Deep diving...
+    - log "Conversation transcript":
+      - button "System prompt":
+        - img
+        - img
+        - text: System prompt
+      - article "User message":
+        - text: Reply with a one-sentence description of event sourcing, then stop. {{clock}}
+        - button "Copy":
+          - img
+      - button "Context injection @deepseek-ai/dsh-system-prompt":
+        - img
+        - img
+        - text: Context injection @deepseek-ai/dsh-system-prompt
+      - article "Assistant response":
+        - paragraph: partial
+      - text: Deep diving...
   - textbox "Message or run a task... / commands, @ files or sessions"
   - button "Commands":
     - img

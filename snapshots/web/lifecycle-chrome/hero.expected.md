@@ -21,6 +21,7 @@
     - img
     - text: Settings
 - main:
+  - heading "DSH application" [level=1]
   - text: Into the Unknown Preview
   - button "Choose workspace":
     - img

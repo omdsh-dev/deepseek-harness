@@ -16,6 +16,19 @@
   transition: none;
 }
 
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  border: 0;
+  white-space: nowrap;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .frame {
     transition: none;
@@ -24,9 +37,20 @@
 
 .sidebarCol {
   min-width: 0;
+  /* `hidden` is the compatibility fallback; `clip` keeps the grid track from
+     becoming a programmatically pannable box when focus enters the rail. */
   overflow: hidden;
+  overflow: clip;
   background: var(--dsw-specific-sidebar-fill);
   border-right: 1px solid var(--dsw-alias-border-l1);
+}
+
+/* Zoom reflow settles immediately so focus cannot chase an animating rail. */
+@media (max-width: 600px) {
+  .frame,
+  .handle {
+    transition: none;
+  }
 }
 
 .centerCol {

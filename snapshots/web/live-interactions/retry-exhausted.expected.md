@@ -1,4 +1,5 @@
 - main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy":
     - button "Reply with a one-sentence description" [disabled]
   - img
@@ -11,22 +12,24 @@
     - tab "Trajectory"
   - tabpanel "Chat":
     - text: Response failed.
-    - button "System prompt":
-      - img
-      - img
-      - text: System prompt
-    - text: Reply with a one-sentence description of event sourcing, then stop. {{clock}}
-    - button "Copy":
-      - img
-    - button "Context injection @deepseek-ai/dsh-system-prompt":
-      - img
-      - img
-      - text: Context injection @deepseek-ai/dsh-system-prompt
-    - group:
-      - status: Retried model request (2/2) · {{duration}}
-    - status:
-      - text: This turn failedupstream 503
-      - code: SERVER
+    - log "Conversation transcript":
+      - button "System prompt":
+        - img
+        - img
+        - text: System prompt
+      - article "User message":
+        - text: Reply with a one-sentence description of event sourcing, then stop. {{clock}}
+        - button "Copy":
+          - img
+      - button "Context injection @deepseek-ai/dsh-system-prompt":
+        - img
+        - img
+        - text: Context injection @deepseek-ai/dsh-system-prompt
+      - group:
+        - status: Retried model request (2/2) · {{duration}}
+      - status:
+        - text: This turn failedupstream 503
+        - code: SERVER
   - textbox "Message or run a task... / commands, @ files or sessions"
   - button "Commands":
     - img

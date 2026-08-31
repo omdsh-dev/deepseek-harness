@@ -1,4 +1,5 @@
 - main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy":
     - button "Use the ask_user_question tool to" [disabled]
   - img
@@ -11,35 +12,41 @@
     - tab "Trajectory"
   - tabpanel "Chat":
     - text: Response completed.
-    - button "System prompt":
-      - img
-      - img
-      - text: System prompt
-    - text: Use the ask_user_question tool to ask me exactly one question with id "checkpoint", question "Ready to continue?", header "Checkpoint", and options labeled "Yes" and "No". After I answer, reply with one short sentence acknowledging my answer and stop. {{clock}}
-    - button "Copy":
-      - img
-    - button "1 tool call":
-      - text: 1 tool call
-      - img
-    - text: "Interjection: include the word BANANA in your final reply. {{clock}}"
-    - button "Copy":
-      - img
-    - text: "Interjection: include the word ORANGE in your final reply. {{clock}}"
-    - button "Copy":
-      - img
-    - paragraph: "Got it: BANANA and ORANGE."
-    - button "Copy":
-      - img
-    - button "Good response":
-      - img
-    - button "Bad response":
-      - img
-    - button "Branch into a new conversation":
-      - img
-    - button "Ran for {{duration}}":
-      - img
-      - text: Ran for {{duration}}
-    - text: {{clock}}
+    - log "Conversation transcript":
+      - button "System prompt":
+        - img
+        - img
+        - text: System prompt
+      - article "User message":
+        - text: Use the ask_user_question tool to ask me exactly one question with id "checkpoint", question "Ready to continue?", header "Checkpoint", and options labeled "Yes" and "No". After I answer, reply with one short sentence acknowledging my answer and stop. {{clock}}
+        - button "Copy":
+          - img
+      - button "1 tool call":
+        - text: 1 tool call
+        - img
+      - article "Assistant response"
+      - article "User message":
+        - text: "Interjection: include the word BANANA in your final reply. {{clock}}"
+        - button "Copy":
+          - img
+      - article "User message":
+        - text: "Interjection: include the word ORANGE in your final reply. {{clock}}"
+        - button "Copy":
+          - img
+      - article "Assistant response":
+        - paragraph: "Got it: BANANA and ORANGE."
+      - button "Copy":
+        - img
+      - button "Good response":
+        - img
+      - button "Bad response":
+        - img
+      - button "Branch into a new conversation":
+        - img
+      - button "Ran for {{duration}}":
+        - img
+        - text: Ran for {{duration}}
+      - text: {{clock}}
   - textbox "Message or run a task... / commands, @ files or sessions"
   - button "Commands":
     - img

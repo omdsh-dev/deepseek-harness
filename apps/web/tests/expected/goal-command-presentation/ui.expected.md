@@ -1,4 +1,5 @@
 - main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy":
     - button "workspace" [disabled]
   - img
@@ -10,11 +11,12 @@
     - tab "Chat" [selected]
     - tab "Trajectory"
   - tabpanel "Chat":
-    - group "Command input": /goal
-    - 'button "goal No goal is currently set. Usage: /goal [<objective>|clear|edit <objective>|pause|resume]"':
-      - img
-      - img
-      - text: "goal No goal is currently set. Usage: /goal [<objective>|clear|edit <objective>|pause|resume]"
+    - log "Conversation transcript":
+      - group "Command input": /goal
+      - 'button "goal No goal is currently set. Usage: /goal [<objective>|clear|edit <objective>|pause|resume]"':
+        - img
+        - img
+        - text: "goal No goal is currently set. Usage: /goal [<objective>|clear|edit <objective>|pause|resume]"
   - textbox "Message or run a task... / commands, @ files or sessions"
   - button "Commands":
     - img

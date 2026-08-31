@@ -1,4 +1,5 @@
 - main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy":
     - button "Math rendering" [disabled]
   - button "Session log":
@@ -8,42 +9,45 @@
     - tab "Chat" [selected]
     - tab "Trajectory"
   - tabpanel "Chat":
-    - text: Render this mathematical proof. {{clock}}
-    - button "Copy":
-      - img
-    - heading "Math rendering" [level=2]
-    - paragraph:
-      - text: Inline dollar
-      - math: θ
-      - text: and backslash
-      - math: 1 5
-      - text: .
-    - math: π 4 < θ < π 2
-    - math: θ ∈ ( π 4 , π 2 ) . (1)
-    - table:
-      - rowgroup:
-        - row "Symbol Value":
-          - columnheader "Symbol"
-          - columnheader "Value"
-      - rowgroup:
-        - row:
-          - cell:
-            - math: θ
-          - cell:
-            - math: 1 5
-    - paragraph: MATH_RENDERING_DONE
-    - button "Copy":
-      - img
-    - button "Good response":
-      - img
-    - button "Bad response":
-      - img
-    - button "Branch into a new conversation":
-      - img
-    - button "Ran for {{duration}}":
-      - img
-      - text: Ran for {{duration}}
-    - text: {{clock}}
+    - log "Conversation transcript":
+      - article "User message":
+        - text: Render this mathematical proof. {{clock}}
+        - button "Copy":
+          - img
+      - article "Assistant response":
+        - heading "Math rendering" [level=2]
+        - paragraph:
+          - text: Inline dollar
+          - math: θ
+          - text: and backslash
+          - math: 1 5
+          - text: .
+        - math: π 4 < θ < π 2
+        - math: θ ∈ ( π 4 , π 2 ) . (1)
+        - table:
+          - rowgroup:
+            - row "Symbol Value":
+              - columnheader "Symbol"
+              - columnheader "Value"
+          - rowgroup:
+            - row:
+              - cell:
+                - math: θ
+              - cell:
+                - math: 1 5
+        - paragraph: MATH_RENDERING_DONE
+      - button "Copy":
+        - img
+      - button "Good response":
+        - img
+      - button "Bad response":
+        - img
+      - button "Branch into a new conversation":
+        - img
+      - button "Ran for {{duration}}":
+        - img
+        - text: Ran for {{duration}}
+      - text: {{clock}}
   - textbox "Message or run a task... / commands, @ files or sessions"
   - button "Commands":
     - img

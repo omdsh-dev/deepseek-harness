@@ -102,6 +102,7 @@ function mountFrame() {
       SessionProvider={SessionProviderStub}
       t={key => (({
         'brand.localBuild': 'DSH Local Build',
+        'layout.application': 'DSH application',
         'layout.sidebar': 'Sidebar',
         'layout.details': 'Details',
         'layout.collapsed': 'Collapsed',
@@ -292,12 +293,13 @@ describe('AppFrame', () => {
   })
 
   it('owns named shell landmarks and keeps the closed mounted details pane inert', () => {
-    const { frame, getByTestId } = mountFrame()
+    const { frame, getByTestId, getByRole } = mountFrame()
     expect(tracks(frame)).toEqual([280, 0])
     expect(getByTestId('details-content')).toBeTruthy()
     expect(frame.hasAttribute('data-details-collapsed')).toBe(true)
     expect(frame.querySelector('nav[aria-label="Sidebar"]')).not.toBeNull()
     expect(frame.querySelector('main')).not.toBeNull()
+    expect(getByRole('heading', { level: 1, name: 'DSH application' })).toBeTruthy()
     const details = frame.querySelector<HTMLElement>('aside[aria-label="Details"]')!
     expect(details.getAttribute('aria-hidden')).toBe('true')
     expect(details.inert).toBe(true)

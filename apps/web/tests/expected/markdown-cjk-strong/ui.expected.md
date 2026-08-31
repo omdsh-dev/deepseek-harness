@@ -1,4 +1,5 @@
 - main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy":
     - button "CJK strong emphasis" [disabled]
   - button "Session log":
@@ -8,47 +9,50 @@
     - tab "Chat" [selected]
     - tab "Trajectory"
   - tabpanel "Chat":
-    - text: Render adjacent CJK strong emphasis. {{clock}}
-    - button "Copy":
-      - img
-    - heading "CJK strong emphasis" [level=2]
-    - paragraph:
-      - strong: 注意：
-      - text: 内容
-    - paragraph:
-      - strong: "Notice:"
-      - text: 内容
-    - paragraph:
-      - strong: 事件中间件（waterfall）
-      - text: 实现
-    - paragraph:
-      - strong: 事件中间件(waterfall)
-      - text: 实现
-    - paragraph:
-      - strong: 句号。
-      - text: 后续
-    - paragraph:
-      - strong: Period.
-      - text: 后续
-    - paragraph:
-      - strong: 提醒！
-      - text: 继续
-    - paragraph:
-      - strong: Warning!
-      - text: 继续
-    - paragraph: CJK_STRONG_DONE
-    - button "Copy":
-      - img
-    - button "Good response":
-      - img
-    - button "Bad response":
-      - img
-    - button "Branch into a new conversation":
-      - img
-    - button "Ran for {{duration}}":
-      - img
-      - text: Ran for {{duration}}
-    - text: {{clock}}
+    - log "Conversation transcript":
+      - article "User message":
+        - text: Render adjacent CJK strong emphasis. {{clock}}
+        - button "Copy":
+          - img
+      - article "Assistant response":
+        - heading "CJK strong emphasis" [level=2]
+        - paragraph:
+          - strong: 注意：
+          - text: 内容
+        - paragraph:
+          - strong: "Notice:"
+          - text: 内容
+        - paragraph:
+          - strong: 事件中间件（waterfall）
+          - text: 实现
+        - paragraph:
+          - strong: 事件中间件(waterfall)
+          - text: 实现
+        - paragraph:
+          - strong: 句号。
+          - text: 后续
+        - paragraph:
+          - strong: Period.
+          - text: 后续
+        - paragraph:
+          - strong: 提醒！
+          - text: 继续
+        - paragraph:
+          - strong: Warning!
+          - text: 继续
+        - paragraph: CJK_STRONG_DONE
+      - button "Copy":
+        - img
+      - button "Good response":
+        - img
+      - button "Bad response":
+        - img
+      - button "Branch into a new conversation":
+        - img
+      - button "Ran for {{duration}}":
+        - img
+        - text: Ran for {{duration}}
+      - text: {{clock}}
   - textbox "Message or run a task... / commands, @ files or sessions"
   - button "Commands":
     - img

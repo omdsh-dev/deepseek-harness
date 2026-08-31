@@ -1,4 +1,5 @@
 - main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy":
     - button "Use the read tool twice" [disabled]
   - button "Session log":
@@ -11,54 +12,58 @@
     - navigation "Turn navigation":
       - button "Jump to turn 1"
       - button "Jump to turn 2"
-    - button "System prompt":
-      - img
-      - img
-      - text: System prompt
-    - text: "Use the read tool twice in one assistant message: read a.txt and b.txt. Then reply with the single word DONE and stop. 7/25 {{clock}}"
-    - button "Copy":
-      - img
-    - button "2 tool calls" [expanded]:
-      - text: 2 tool calls
-      - img
-    - button "Think The user wants me to read a.txt and b.txt, then reply with \"DONE\". Let me do both reads in parallel.":
-      - img
-      - img
-      - text: Think The user wants me to read a.txt and b.txt, then reply with "DONE". Let me do both reads in parallel.
-    - text: Completed
-    - button "Read Completed a.txt":
-      - img
-      - img
-    - text: Read
-    - button "Open file a.txt": a.txt
-    - text: Completed
-    - button "Read Completed b.txt":
-      - img
-      - img
-    - text: Read
-    - button "Open file b.txt": b.txt
-    - button "Think Both files have been read. a.txt contains \"alpha\" and b.txt contains \"beta\". I'll now reply with DONE as instructed.":
-      - img
-      - img
-      - text: Think Both files have been read. a.txt contains "alpha" and b.txt contains "beta". I'll now reply with DONE as instructed.
-    - paragraph: DONE
-    - button "Copy":
-      - img
-    - button "Good response":
-      - img
-    - button "Bad response":
-      - img
-    - button "Branch into a new conversation":
-      - img
-    - button "Ran for {{duration}}":
-      - img
-      - text: Ran for {{duration}}
-    - text: 7/25 {{clock}}
-    - button "compact Compacted 5 history items (~{{tokens}} tokens)"
-    - button "Context injection AGENTS.md":
-      - img
-      - img
-      - text: Context injection AGENTS.md
+    - log "Conversation transcript":
+      - button "System prompt":
+        - img
+        - img
+        - text: System prompt
+      - article "User message":
+        - text: "Use the read tool twice in one assistant message: read a.txt and b.txt. Then reply with the single word DONE and stop. 7/25 {{clock}}"
+        - button "Copy":
+          - img
+      - button "2 tool calls" [expanded]:
+        - text: 2 tool calls
+        - img
+      - article "Assistant response":
+        - button "Think The user wants me to read a.txt and b.txt, then reply with \"DONE\". Let me do both reads in parallel.":
+          - img
+          - img
+          - text: Think The user wants me to read a.txt and b.txt, then reply with "DONE". Let me do both reads in parallel.
+      - text: Completed
+      - button "Read Completed a.txt":
+        - img
+        - img
+      - text: Read
+      - button "Open file a.txt": a.txt
+      - text: Completed
+      - button "Read Completed b.txt":
+        - img
+        - img
+      - text: Read
+      - button "Open file b.txt": b.txt
+      - article "Assistant response":
+        - button "Think Both files have been read. a.txt contains \"alpha\" and b.txt contains \"beta\". I'll now reply with DONE as instructed.":
+          - img
+          - img
+          - text: Think Both files have been read. a.txt contains "alpha" and b.txt contains "beta". I'll now reply with DONE as instructed.
+        - paragraph: DONE
+      - button "Copy":
+        - img
+      - button "Good response":
+        - img
+      - button "Bad response":
+        - img
+      - button "Branch into a new conversation":
+        - img
+      - button "Ran for {{duration}}":
+        - img
+        - text: Ran for {{duration}}
+      - text: 7/25 {{clock}}
+      - button "compact Compacted 5 history items (~{{tokens}} tokens)"
+      - button "Context injection AGENTS.md":
+        - img
+        - img
+        - text: Context injection AGENTS.md
   - textbox "Message or run a task... / commands, @ files or sessions"
   - button "Commands":
     - img

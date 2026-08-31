@@ -134,6 +134,8 @@ describe('SettingsRoot trigger', () => {
 
   it('hands the rail state to the trigger seat', () => {
     const { renderSlot } = mount({ wide: false })
+    const trigger = screen.getByRole('button', { name: 'Settings' })
+    expect(trigger.getAttribute('aria-label')).toBe('Settings')
     expect(renderSlot).toHaveBeenCalledWith('settings.trigger', { wide: false })
   })
 

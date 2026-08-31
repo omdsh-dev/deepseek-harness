@@ -308,7 +308,10 @@ export function AppFrame({
             the shell's own pending rendering. The conversation
             is session-maybe; SessionProvider withholds the strict details
             entry while no session is current. */}
-        <CenterColumn>{renderSlot('conversation', {})}</CenterColumn>
+        <CenterColumn>
+          <h1 className={css.visuallyHidden}>{t('layout.application')}</h1>
+          {renderSlot('conversation', {})}
+        </CenterColumn>
         <DetailsColumn label={detailsLabel} collapsed={detailsCollapsed}>
           <SessionProvider>{renderSlot('details', {})}</SessionProvider>
         </DetailsColumn>

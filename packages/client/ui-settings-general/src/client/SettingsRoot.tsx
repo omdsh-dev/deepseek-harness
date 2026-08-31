@@ -84,7 +84,17 @@ function SettingsPanel({ rows, renderSlot, activeId, onSelect, onClose }: PanelP
             <span className={css.hiddenLabel}>{renderSlot('settings.close', {})}</span>
           </button>
         </div>
-        <div className={css.options}>
+        <div
+          className={css.options}
+          onFocusCapture={(event) => {
+            const target = event.target
+            requestAnimationFrame(() => {
+              if (target instanceof HTMLElement && target.matches(':focus')) {
+                target.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+              }
+            })
+          }}
+        >
           {active !== undefined && renderSlot('settings.section', { close: onClose }, { only: active })}
         </div>
       </div>
@@ -176,6 +186,7 @@ export function SettingsRoot(props: SettingsRootComponentProps) {
           ref={triggerButton}
           type="button"
           className={clsx(css.trigger, !wide && css.rail)}
+          aria-label={wide ? undefined : t('trigger')}
           aria-haspopup="dialog"
           aria-expanded={open}
           onClick={() => { setOpen(true) }}

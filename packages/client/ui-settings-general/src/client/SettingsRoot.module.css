@@ -206,6 +206,11 @@
   min-height: 0;
   padding: 0 24px 24px;
   overflow-y: auto;
+  scroll-padding-block: 12px;
+}
+
+.options :where(a[href], button, input, select, textarea, [contenteditable='true'], [tabindex]:not([tabindex='-1'])) {
+  scroll-margin-block: 12px;
 }
 
 /* Visually-hidden text seat (close button accessible name from slot content). */
@@ -216,4 +221,47 @@
   overflow: hidden;
   clip: rect(0 0 0 0);
   white-space: nowrap;
+}
+
+/* At the WCAG reflow width, stack navigation above the section rather than
+   leaving an 188px rail beside an unusably narrow content strip. */
+@media (max-width: 600px) {
+  .panel {
+    flex-direction: column;
+  }
+
+  .nav {
+    width: 100%;
+    gap: 8px;
+    padding: 12px 12px 0;
+  }
+
+  .navTitle {
+    padding: 0 8px;
+  }
+
+  .navList {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .navCell {
+    min-width: 0;
+    width: 100%;
+    padding-right: 8px;
+    padding-left: 8px;
+  }
+
+  .content {
+    min-height: 0;
+  }
+
+  .header {
+    height: 44px;
+    padding: 8px 12px 6px;
+  }
+
+  .options {
+    padding: 0 12px 16px;
+  }
 }

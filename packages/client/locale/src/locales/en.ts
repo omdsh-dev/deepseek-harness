@@ -31,6 +31,7 @@ export const en = {
   'expand': 'Expand',
   'back': 'Back',
   'brand.localBuild': 'DSH Local Build',
+  'layout.application': 'DSH application',
   'layout.sidebar': 'Sidebar',
   'layout.details': 'Details',
   'layout.collapsed': 'Collapsed',

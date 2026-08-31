@@ -593,7 +593,15 @@ export function ChatView({
           onNavigate={navigateToTurn}
           t={t}
         />
-        <div ref={columnRef} className={css.column} data-chat-flow="">
+        <div
+          ref={columnRef}
+          className={css.column}
+          data-chat-flow=""
+          role="log"
+          aria-label={t('chat.log')}
+          aria-live="off"
+          aria-busy={running}
+        >
           {openState === 'loading' && <div className={css.hint}>{t('chat.loadingHistory')}</div>}
           {openState === 'error' && openError !== null && (
             <div className={css.openError}>

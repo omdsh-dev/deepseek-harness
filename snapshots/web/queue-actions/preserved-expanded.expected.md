@@ -1,4 +1,5 @@
 - main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy":
     - button "Reply with a one-sentence description" [disabled]
   - img
@@ -11,34 +12,37 @@
     - tab "Trajectory"
   - tabpanel "Chat":
     - text: Response stopped.
-    - button "System prompt":
-      - img
-      - img
-      - text: System prompt
-    - text: Reply with a one-sentence description of event sourcing, then stop. {{clock}}
-    - button "Copy":
-      - img
-    - button "Thought for a while" [expanded]:
-      - text: Thought for a while
-      - img
-    - button "Context injection @deepseek-ai/dsh-system-prompt":
-      - img
-      - img
-      - text: Context injection @deepseek-ai/dsh-system-prompt
-    - paragraph: partial
-    - text: Stopped
-    - button "Copy":
-      - img
-    - button "Good response":
-      - img
-    - button "Bad response":
-      - img
-    - button "Branch into a new conversation":
-      - img
-    - button "Ran for {{duration}}":
-      - img
-      - text: Ran for {{duration}}
-    - text: {{clock}}
+    - log "Conversation transcript":
+      - button "System prompt":
+        - img
+        - img
+        - text: System prompt
+      - article "User message":
+        - text: Reply with a one-sentence description of event sourcing, then stop. {{clock}}
+        - button "Copy":
+          - img
+      - button "Thought for a while" [expanded]:
+        - text: Thought for a while
+        - img
+      - button "Context injection @deepseek-ai/dsh-system-prompt":
+        - img
+        - img
+        - text: Context injection @deepseek-ai/dsh-system-prompt
+      - article "Assistant response":
+        - paragraph: partial
+        - text: Stopped
+      - button "Copy":
+        - img
+      - button "Good response":
+        - img
+      - button "Bad response":
+        - img
+      - button "Branch into a new conversation":
+        - img
+      - button "Ran for {{duration}}":
+        - img
+        - text: Ran for {{duration}}
+      - text: {{clock}}
   - button "2 queued messages" [expanded]
   - list:
     - listitem:

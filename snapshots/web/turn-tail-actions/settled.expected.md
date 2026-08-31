@@ -1,4 +1,5 @@
 - main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy":
     - button "Begin your reply with the" [disabled]
   - img
@@ -11,31 +12,35 @@
     - tab "Trajectory"
   - tabpanel "Chat":
     - text: Response stopped.
-    - button "System prompt":
-      - img
-      - img
-      - text: System prompt
-    - text: Begin your reply with the plain sentence "Reading the workspace now." as text, and in that same message call the bash tool with the command "echo alpha". After the tool result, reply with the single word DONE and stop. {{clock}}
-    - button "Copy":
-      - img
-    - button "1 tool call · 1 message":
-      - text: 1 tool call · 1 message
-      - img
-    - paragraph: partial
-    - text: Stopped
-    - button "Copy":
-      - img
-    - tooltip "Copy"
-    - button "Good response":
-      - img
-    - button "Bad response":
-      - img
-    - button "Branch into a new conversation":
-      - img
-    - button "Ran for {{duration}}":
-      - img
-      - text: Ran for {{duration}}
-    - text: {{clock}}
+    - log "Conversation transcript":
+      - button "System prompt":
+        - img
+        - img
+        - text: System prompt
+      - article "User message":
+        - text: Begin your reply with the plain sentence "Reading the workspace now." as text, and in that same message call the bash tool with the command "echo alpha". After the tool result, reply with the single word DONE and stop. {{clock}}
+        - button "Copy":
+          - img
+      - button "1 tool call · 1 message":
+        - text: 1 tool call · 1 message
+        - img
+      - article "Assistant response"
+      - article "Assistant response":
+        - paragraph: partial
+        - text: Stopped
+      - button "Copy":
+        - img
+      - tooltip "Copy"
+      - button "Good response":
+        - img
+      - button "Bad response":
+        - img
+      - button "Branch into a new conversation":
+        - img
+      - button "Ran for {{duration}}":
+        - img
+        - text: Ran for {{duration}}
+      - text: {{clock}}
   - textbox "Message or run a task... / commands, @ files or sessions"
   - button "Commands":
     - img

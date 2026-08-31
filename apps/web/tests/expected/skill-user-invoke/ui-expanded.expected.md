@@ -1,4 +1,5 @@
 - main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy":
     - button "/user-invoke-demo and confirm the fixtur" [disabled]
   - img
@@ -11,37 +12,40 @@
     - tab "Trajectory"
   - tabpanel "Chat":
     - text: Response completed.
-    - button "System prompt":
-      - img
-      - img
-      - text: System prompt
-    - text: /user-invoke-demo and confirm the fixture wiring {{clock}}
-    - button "Copy":
-      - img
-    - button "Thought for a while" [expanded]:
-      - text: Thought for a while
-      - img
-    - button "Context injection @deepseek-ai/dsh-system-prompt":
-      - img
-      - img
-      - text: Context injection @deepseek-ai/dsh-system-prompt
-    - button "Context injection user-invoke-demo":
-      - img
-      - img
-      - text: Context injection user-invoke-demo
-    - paragraph: USER_INVOKE_REPLY acknowledged; following the injected skill.
-    - button "Copy":
-      - img
-    - button "Good response":
-      - img
-    - button "Bad response":
-      - img
-    - button "Branch into a new conversation":
-      - img
-    - button "Ran for {{duration}}":
-      - img
-      - text: Ran for {{duration}}
-    - text: {{clock}}
+    - log "Conversation transcript":
+      - button "System prompt":
+        - img
+        - img
+        - text: System prompt
+      - article "User message":
+        - text: /user-invoke-demo and confirm the fixture wiring {{clock}}
+        - button "Copy":
+          - img
+      - button "Thought for a while" [expanded]:
+        - text: Thought for a while
+        - img
+      - button "Context injection @deepseek-ai/dsh-system-prompt":
+        - img
+        - img
+        - text: Context injection @deepseek-ai/dsh-system-prompt
+      - button "Context injection user-invoke-demo":
+        - img
+        - img
+        - text: Context injection user-invoke-demo
+      - article "Assistant response":
+        - paragraph: USER_INVOKE_REPLY acknowledged; following the injected skill.
+      - button "Copy":
+        - img
+      - button "Good response":
+        - img
+      - button "Bad response":
+        - img
+      - button "Branch into a new conversation":
+        - img
+      - button "Ran for {{duration}}":
+        - img
+        - text: Ran for {{duration}}
+      - text: {{clock}}
   - textbox "Message or run a task... / commands, @ files or sessions"
   - button "Commands":
     - img

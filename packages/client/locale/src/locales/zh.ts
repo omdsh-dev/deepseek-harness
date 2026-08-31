@@ -29,6 +29,7 @@ export const zh = {
   'expand': '展开',
   'back': '返回',
   'brand.localBuild': 'DSH 本地构建',
+  'layout.application': 'DSH 应用',
   'layout.sidebar': '侧边栏',
   'layout.details': '详情',
   'layout.collapsed': '已收起',

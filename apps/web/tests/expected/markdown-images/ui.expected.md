@@ -1,4 +1,5 @@
 - main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy":
     - button "Markdown image policy" [disabled]
   - button "Session log":
@@ -8,26 +9,29 @@
     - tab "Chat" [selected]
     - tab "Trajectory"
   - tabpanel "Chat":
-    - text: Show the Markdown image policy. {{clock}}
-    - button "Copy":
-      - img
-    - heading "Markdown images" [level=2]
-    - paragraph:
-      - img "Remote test image"
-    - paragraph: Local test image
-    - paragraph: REMOTE_IMAGE_DONE
-    - button "Copy":
-      - img
-    - button "Good response":
-      - img
-    - button "Bad response":
-      - img
-    - button "Branch into a new conversation":
-      - img
-    - button "Ran for {{duration}}":
-      - img
-      - text: Ran for {{duration}}
-    - text: {{clock}}
+    - log "Conversation transcript":
+      - article "User message":
+        - text: Show the Markdown image policy. {{clock}}
+        - button "Copy":
+          - img
+      - article "Assistant response":
+        - heading "Markdown images" [level=2]
+        - paragraph:
+          - img "Remote test image"
+        - paragraph: Local test image
+        - paragraph: REMOTE_IMAGE_DONE
+      - button "Copy":
+        - img
+      - button "Good response":
+        - img
+      - button "Bad response":
+        - img
+      - button "Branch into a new conversation":
+        - img
+      - button "Ran for {{duration}}":
+        - img
+        - text: Ran for {{duration}}
+      - text: {{clock}}
   - textbox "Message or run a task... / commands, @ files or sessions"
   - button "Commands":
     - img

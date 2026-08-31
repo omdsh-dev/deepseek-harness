@@ -531,6 +531,17 @@ describe('Chat node rendering', () => {
 })
 
 describe('ChatView', () => {
+  it('exposes a named quiet transcript with user and Assistant article boundaries', () => {
+    const h = makeHarness({ nodes: [user(1, 'question'), assistant(2, 'answer')] })
+    const view = render(<h.ChatView {...h.props} />)
+    const log = view.getByRole('log', { name: '对话记录' })
+
+    expect(log.getAttribute('aria-live')).toBe('off')
+    expect(log.getAttribute('aria-busy')).toBe('false')
+    expect(within(log).getByRole('article', { name: '用户消息' }).textContent).toContain('question')
+    expect(within(log).getByRole('article', { name: 'Assistant 回复' }).textContent).toContain('answer')
+  })
+
   it('leaves the turn rail unrendered when an unrelated Chat update commits', () => {
     const snapshot = chatSnapshotFixture({
       nodes: [

@@ -462,3 +462,32 @@
   opacity: 0.4;
   cursor: default;
 }
+
+@media (max-width: 600px) {
+  .cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .card,
+  .cardMain,
+  .cardFoot {
+    min-width: 0;
+  }
+
+  .cardHead {
+    flex-wrap: wrap;
+  }
+
+  .inUse {
+    margin-left: 0;
+  }
+
+  .iconButton::after {
+    right: 0;
+    left: auto;
+    max-width: calc(100vw - 72px);
+    transform: none;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}

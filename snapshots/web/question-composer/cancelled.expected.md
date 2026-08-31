@@ -1,4 +1,5 @@
 - main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy":
     - button "Use the ask_user_question tool to" [disabled]
   - button "Session log":
@@ -8,29 +9,32 @@
     - tab "Chat" [selected]
     - tab "Trajectory"
   - tabpanel "Chat":
-    - button "System prompt":
-      - img
-      - img
-      - text: System prompt
-    - text: "Use the ask_user_question tool to ask me exactly one multi-select question with id \"color\", question \"Which color do you prefer?\", header \"Pick one\", and two options: label \"Blue\" with description \"A cool recessive hue that reads as calm and trustworthy in long reading sessions and dense dashboards.\", and label \"Green\" with description \"A restful mid-spectrum hue with the highest perceived brightness, easiest on the eye over long sessions.\" Set multi_select to true. After I answer, reply with the single word DONE and stop. {{clock}}"
-    - button "Copy":
-      - img
-    - button "Context injection @deepseek-ai/dsh-system-prompt":
-      - img
-      - img
-      - text: Context injection @deepseek-ai/dsh-system-prompt
-    - button "Think The user wants me to use the ask_user_question tool with specific parameters. Let me do exactly that.":
-      - img
-      - img
-      - text: Think The user wants me to use the ask_user_question tool with specific parameters. Let me do exactly that.
-    - text: Completed
-    - button "Ask question cancelled" [expanded]:
-      - img
-      - text: Ask question cancelled
-    - paragraph: This question set was cancelled before answers were submitted.
-    - list:
-      - listitem: Which color do you prefer?
-    - button "Inspect"
+    - log "Conversation transcript":
+      - button "System prompt":
+        - img
+        - img
+        - text: System prompt
+      - article "User message":
+        - text: "Use the ask_user_question tool to ask me exactly one multi-select question with id \"color\", question \"Which color do you prefer?\", header \"Pick one\", and two options: label \"Blue\" with description \"A cool recessive hue that reads as calm and trustworthy in long reading sessions and dense dashboards.\", and label \"Green\" with description \"A restful mid-spectrum hue with the highest perceived brightness, easiest on the eye over long sessions.\" Set multi_select to true. After I answer, reply with the single word DONE and stop. {{clock}}"
+        - button "Copy":
+          - img
+      - button "Context injection @deepseek-ai/dsh-system-prompt":
+        - img
+        - img
+        - text: Context injection @deepseek-ai/dsh-system-prompt
+      - article "Assistant response":
+        - button "Think The user wants me to use the ask_user_question tool with specific parameters. Let me do exactly that.":
+          - img
+          - img
+          - text: Think The user wants me to use the ask_user_question tool with specific parameters. Let me do exactly that.
+      - text: Completed
+      - button "Ask question cancelled" [expanded]:
+        - img
+        - text: Ask question cancelled
+      - paragraph: This question set was cancelled before answers were submitted.
+      - list:
+        - listitem: Which color do you prefer?
+      - button "Inspect"
   - textbox "Message or run a task... / commands, @ files or sessions"
   - button "Commands":
     - img

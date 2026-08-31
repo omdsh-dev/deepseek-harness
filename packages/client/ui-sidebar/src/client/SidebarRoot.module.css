@@ -345,6 +345,12 @@
   width: auto;
 }
 
+/* Keep the bottom Settings control on the rail's explicit content track.
+   Firefox otherwise shrink-wraps the seat and can clip its focus outline. */
+.collapsed .settingsArea {
+  width: 100%;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .wide,
   .fading > *,

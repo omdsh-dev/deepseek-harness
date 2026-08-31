@@ -1,4 +1,5 @@
 - main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy":
     - button "Use the ask_user_question tool to" [disabled]
   - img
@@ -11,27 +12,30 @@
     - tab "Trajectory"
   - tabpanel "Chat":
     - text: Response started.
-    - button "System prompt":
-      - img
-      - img
-      - text: System prompt
-    - text: Use the ask_user_question tool to ask me exactly one question with id "checkpoint", question "Ready to continue?", header "Checkpoint", and options labeled "Yes" and "No". After I answer, reply with one short sentence acknowledging my answer and stop. {{clock}}
-    - button "Copy":
-      - img
-    - button "Context injection @deepseek-ai/dsh-system-prompt":
-      - img
-      - img
-      - text: Context injection @deepseek-ai/dsh-system-prompt
-    - button "Think The user wants me to ask them a checkpoint question first, then continue with whatever they interject. Let me do exactly that.":
-      - img
-      - img
-      - text: Think The user wants me to ask them a checkpoint question first, then continue with whatever they interject. Let me do exactly that.
-    - text: "Deep diving... Interjection: include the word BANANA in your final reply."
-    - button "Copy":
-      - img
-    - text: "Interjection: include the word ORANGE in your final reply."
-    - button "Copy":
-      - img
+    - log "Conversation transcript":
+      - button "System prompt":
+        - img
+        - img
+        - text: System prompt
+      - article "User message":
+        - text: Use the ask_user_question tool to ask me exactly one question with id "checkpoint", question "Ready to continue?", header "Checkpoint", and options labeled "Yes" and "No". After I answer, reply with one short sentence acknowledging my answer and stop. {{clock}}
+        - button "Copy":
+          - img
+      - button "Context injection @deepseek-ai/dsh-system-prompt":
+        - img
+        - img
+        - text: Context injection @deepseek-ai/dsh-system-prompt
+      - article "Assistant response":
+        - button "Think The user wants me to ask them a checkpoint question first, then continue with whatever they interject. Let me do exactly that.":
+          - img
+          - img
+          - text: Think The user wants me to ask them a checkpoint question first, then continue with whatever they interject. Let me do exactly that.
+      - text: "Deep diving... Interjection: include the word BANANA in your final reply."
+      - button "Copy":
+        - img
+      - text: "Interjection: include the word ORANGE in your final reply."
+      - button "Copy":
+        - img
   - textbox "Message or run a task... / commands, @ files or sessions"
   - button "Commands":
     - img
