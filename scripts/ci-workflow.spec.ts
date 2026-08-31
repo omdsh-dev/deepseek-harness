@@ -230,13 +230,29 @@ describe('CI workflow', () => {
       .join('\n')
     expect(accessibilityCommands).toContain('pnpm --filter @deepseek-ai/dsh-web-frontend exec playwright install --with-deps chromium firefox webkit')
     expect(accessibilityCommands).toContain('pnpm --filter @deepseek-ai/dsh-web-frontend exec playwright install chromium firefox webkit')
-    expect(accessibilityCommands).toContain('pnpm run test:web:accessibility')
+    expect(node24Accessibility.steps).toContainEqual(expect.objectContaining({
+      name: 'Run versioned assembled-app accessibility evidence',
+      run: 'pnpm run test:web:accessibility:evidence',
+    }))
+    expect(node24Accessibility.steps).toContainEqual(expect.objectContaining({
+      name: 'Retain exact-revision accessibility evidence',
+      uses: 'actions/upload-artifact@v4',
+      with: {
+        name: 'dsh-core-browser-accessibility-${{ github.run_id }}-${{ github.run_attempt }}',
+        path: '.artifacts/accessibility/core-browser-evidence.json',
+        'if-no-files-found': 'error',
+        'retention-days': 7,
+      },
+    }))
     const packageJson = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8')) as unknown
     if (!isRecord(packageJson) || !isRecord(packageJson.scripts)) {
       throw new TypeError('package.json must define scripts')
     }
     expect(packageJson.scripts['test:web:accessibility']).toBe(
       'pnpm run build && pnpm run test:web:accessibility:built',
+    )
+    expect(packageJson.scripts['test:web:accessibility:evidence']).toBe(
+      'pnpm run build && pnpm run test:web:accessibility:evidence:built',
     )
     expect(aggregate.needs).toContain('node-24-accessibility')
     expect(aggregate['runs-on']).toContain('DSH_CI_FAILOVER_LINUX')

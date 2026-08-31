@@ -308,8 +308,16 @@ jobs:
         if: vars.DSH_CI_FAILOVER_LINUX == 'selfhosted' && github.event.pull_request.user.login != 'dependabot[bot]'
         run: pnpm --filter @deepseek-ai/dsh-web-frontend exec playwright install chromium firefox webkit
 
-      - name: Run assembled-app keyboard and screen-reader contracts
-        run: pnpm run test:web:accessibility
+      - name: Run versioned assembled-app accessibility evidence
+        run: pnpm run test:web:accessibility:evidence
+
+      - name: Retain exact-revision accessibility evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: dsh-core-browser-accessibility-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .artifacts/accessibility/core-browser-evidence.json
+          if-no-files-found: error
+          retention-days: 7
 
 
   node-compat:
