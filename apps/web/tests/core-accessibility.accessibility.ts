@@ -478,4 +478,61 @@ describe(`assembled core accessibility: ${browserName}`, () => {
     expect(await page.locator('#root').evaluate(element => (element as HTMLElement).inert)).toBe(false)
     expect(tripwire.pageErrors).toEqual([])
   }, 60_000)
+
+  it('operates Full access risk admission and returns to its durable owner', async () => {
+    onTestFailed(() => saveFailureShot(page, `core-accessibility-${browserName}-full-access`))
+    const trigger = page.locator('button[aria-label^="Access mode, current:"]').first()
+    await trigger.waitFor({ timeout: 15_000 })
+    await tabTo(page, trigger)
+    await expectFocused(trigger)
+    await page.keyboard.press('Enter')
+    const menu = page.getByRole('menu')
+    await menu.waitFor({ timeout: 10_000 })
+    const fullAccess = menu.getByRole('menuitemradio', { name: 'Full access' })
+    await page.keyboard.press('End')
+    await expectFocused(fullAccess)
+    await page.keyboard.press('Enter')
+
+    const dialog = page.getByRole('dialog', { name: 'Enable Full access?' })
+    await dialog.waitFor({ timeout: 10_000 })
+    const risk = dialog.getByText(/sensitive operations/)
+    const acknowledgement = dialog.getByRole('checkbox', {
+      name: 'I understand the risks and want to continue',
+    })
+    const enable = dialog.getByRole('button', { name: 'Enable Full access' })
+    expect(await dialog.getAttribute('aria-describedby')).toBe(await risk.getAttribute('id'))
+    expect(await dialog.evaluate(element => [...element.querySelectorAll('svg')]
+      .some(icon => icon.closest('[aria-hidden="true"]') !== null))).toBe(true)
+    expect(await page.locator('#root').evaluate(element => (element as HTMLElement).inert)).toBe(true)
+    await expectFocused(acknowledgement)
+    expect(await enable.isDisabled()).toBe(true)
+
+    await page.keyboard.press('Escape')
+    await expect.poll(() => dialog.count()).toBe(0)
+    await expectFocused(trigger)
+
+    await page.keyboard.press('Enter')
+    await page.getByRole('menu').waitFor({ timeout: 10_000 })
+    await page.keyboard.press('End')
+    await expectFocused(page.getByRole('menuitemradio', { name: 'Full access' }))
+    await page.keyboard.press('Enter')
+    await dialog.waitFor({ timeout: 10_000 })
+    await expectFocused(acknowledgement)
+    await page.keyboard.press('Space')
+    await expect.poll(() => enable.isEnabled()).toBe(true)
+    await pressForwardTab(page)
+    await expectFocused(dialog.getByRole('button', { name: 'Cancel' }))
+    await pressForwardTab(page)
+    await expectFocused(enable)
+    await page.keyboard.press('Enter')
+
+    await expect.poll(() => trigger.getAttribute('aria-label'), { timeout: 15_000 })
+      .toBe('Access mode, current: Full access')
+    await expect.poll(
+      () => trigger.evaluate(element => document.activeElement === element),
+      { timeout: 10_000 },
+    ).toBe(true)
+    expect(await page.locator('#root').evaluate(element => (element as HTMLElement).inert)).toBe(false)
+    expect(tripwire.pageErrors).toEqual([])
+  }, 60_000)
 })

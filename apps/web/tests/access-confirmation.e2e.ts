@@ -36,7 +36,15 @@ describe('web e2e: Full access confirmation', () => {
     page = await browser.newPage({ viewport: { width: 1680, height: 1000 }, locale: ZH_BROWSER_LOCALE })
     tripwire = watchConsole(page)
     await page.goto(scaffold.authenticatedUrl, { waitUntil: 'load' })
-    await page.waitForSelector('[class*="frame"]', { timeout: 30_000 })
+    try {
+      await page.waitForSelector('[class*="frame"]', { timeout: 30_000 })
+    } catch (error) {
+      const body = await page.locator('body').innerText().catch(() => '')
+      throw new Error(
+        `web frame did not mount; body=${JSON.stringify(body.slice(0, 500))}; pageErrors=${JSON.stringify(tripwire.pageErrors)}`,
+        { cause: error },
+      )
+    }
     await connectFreshWorkspaceZh(page, scaffold.workspaceCwd)
   }, 120_000)
 
@@ -57,7 +65,24 @@ describe('web e2e: Full access confirmation', () => {
     const dialog = page.getByRole('dialog', { name: '确认启用完全权限？' })
     await dialog.waitFor({ timeout: 10_000 })
     const enable = dialog.getByRole('button', { name: '启用完全权限' })
+    const acknowledgement = dialog.getByRole('checkbox', { name: '我已了解风险，并愿意继续' })
     expect(await enable.isDisabled()).toBe(true)
+    expect(await acknowledgement.evaluate(node => node.ownerDocument.activeElement === node)).toBe(true)
+    expect(await dialog.evaluate((node) => {
+      const id = node.getAttribute('aria-describedby')
+      return id === null ? '' : document.getElementById(id)?.textContent ?? ''
+    })).toContain('敏感操作')
+
+    // Cancel returns to the durable permission trigger, not the removed menu
+    // row. Reopen so the same assembled path also covers successful focus
+    // restoration after the command finishes and re-enables the trigger.
+    await dialog.getByRole('button', { name: '取消' }).click()
+    expect(await dialog.count()).toBe(0)
+    expect(await access.evaluate(node => node.ownerDocument.activeElement === node)).toBe(true)
+    await access.click()
+    await page.getByRole('menuitemradio', { name: '完全权限' }).click()
+    await dialog.waitFor({ timeout: 10_000 })
+    expect(await acknowledgement.evaluate(node => node.ownerDocument.activeElement === node)).toBe(true)
 
     // The modal is in this page's body (not a native/new window) and escapes
     // the sticky composer's stacking context.
@@ -65,12 +90,16 @@ describe('web e2e: Full access confirmation', () => {
     const snapshot = await captureStableAria(page, '[role="dialog"]', scaffold.workspaceCwd)
     await compareOrRefreshGolden(UI_EXPECTED, snapshot, MODE)
 
-    await dialog.getByRole('checkbox', { name: '我已了解风险，并愿意继续' }).check()
+    await acknowledgement.check()
     expect(await enable.isEnabled()).toBe(true)
     await enable.click()
     await expect.poll(() => access.getAttribute('aria-label'), { timeout: 10_000 })
       .toBe('访问模式，当前：完全权限')
     expect(await dialog.count()).toBe(0)
+    await expect.poll(
+      () => access.evaluate(node => node.ownerDocument.activeElement === node),
+      { timeout: 5_000 },
+    ).toBe(true)
     expect(tripwire.pageErrors).toEqual([])
   }, 60_000)
 

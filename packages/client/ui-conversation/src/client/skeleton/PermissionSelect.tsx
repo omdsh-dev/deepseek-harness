@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import clsx from 'clsx'
 import type { PermissionSelect as PermissionSelectValue } from '@deepseek-ai/dsh-permission-presets/client'
@@ -88,13 +88,40 @@ export function PermissionSelect({ value, locked, command, t }: PermissionSelect
   const [open, setOpen] = useState(false)
   const [confirmation, setConfirmation] = useState<string | null>(null)
   const [acknowledged, setAcknowledged] = useState(false)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const restoreAfterSubmitRef = useRef(false)
 
   useEffect(() => {
     if (!locked && value !== undefined) return
+    if (value === undefined) restoreAfterSubmitRef.current = false
     setOpen(false)
     setAcknowledged(false)
     setConfirmation(null)
   }, [locked, value])
+
+  useEffect(() => {
+    if (pick !== null || !restoreAfterSubmitRef.current) return
+    if (value === undefined) {
+      restoreAfterSubmitRef.current = false
+      return
+    }
+    const trigger = triggerRef.current
+    // The command promise may settle before the surrounding input machine
+    // releases its lock. Keep the request pending until the durable trigger is
+    // actually focusable; consuming it at pick=null strands focus on <body> in
+    // the assembled RPC path.
+    if (locked || trigger?.isConnected !== true || trigger.disabled) return
+    // The owning input shell also reacts to unlock and may focus the composer
+    // in a sibling effect. Run after that commit's effects, then re-check the
+    // live button so restoration wins without targeting stale/disabled DOM.
+    queueMicrotask(() => {
+      if (!restoreAfterSubmitRef.current) return
+      const readyTrigger = triggerRef.current
+      if (readyTrigger?.isConnected !== true || readyTrigger.disabled) return
+      restoreAfterSubmitRef.current = false
+      readyTrigger.focus()
+    })
+  }, [locked, pick, value])
 
   if (value === undefined) return null
 
@@ -118,6 +145,7 @@ export function PermissionSelect({ value, locked, command, t }: PermissionSelect
     })
 
   const submit = (id: string): void => {
+    restoreAfterSubmitRef.current = true
     setPick(id)
     void command(`/permission ${id}`)
       .catch(() => false)
@@ -127,6 +155,11 @@ export function PermissionSelect({ value, locked, command, t }: PermissionSelect
   const choose = (id: string): void => {
     setOpen(false)
     if (id === value.currentValue) return
+    // The active menu row is removed before a gated dialog captures its
+    // invoker, and this trigger becomes disabled while an admission flies.
+    // Focus the durable owner now; the completion effect restores it once it
+    // is enabled again.
+    triggerRef.current?.focus()
     if (id === FULL_ACCESS) {
       setAcknowledged(false)
       setConfirmation(id)
@@ -158,6 +191,7 @@ export function PermissionSelect({ value, locked, command, t }: PermissionSelect
         side="top"
         anchor={
           <button
+            ref={triggerRef}
             type="button"
             className={css.trigger}
             aria-label={t('input.accessMode', { name: currentLabel })}

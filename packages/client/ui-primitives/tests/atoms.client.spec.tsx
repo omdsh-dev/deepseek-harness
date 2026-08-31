@@ -2,7 +2,9 @@
 import { createRef, useRef, useState } from 'react'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { Button, ConnectionIndicator, Input, Menu, Modal, Pill, Tooltip } from '@deepseek-ai/dsh-client-ui-primitives'
+import {
+  Button, ConnectionIndicator, Input, Menu, Modal, Pill, RiskConfirmation, Tooltip,
+} from '@deepseek-ai/dsh-client-ui-primitives'
 import { POINTER_GRACE_MS } from '../src/pointer-grace.ts'
 
 afterEach(cleanup)
@@ -848,6 +850,37 @@ describe('Modal', () => {
     expect(screen.queryByRole('dialog', { name: 'Inner flow' })).toBeNull()
     expect(outer.inert).not.toBe(true)
     expect(document.activeElement).toBe(opener)
+  })
+})
+
+describe('RiskConfirmation', () => {
+  it('names the risk, hides its warning glyph, and starts on explicit acknowledgement', () => {
+    const onAcknowledgedChange = vi.fn()
+    render(
+      <RiskConfirmation
+        open
+        title="Enable Full access?"
+        description="This permits sensitive operations."
+        acknowledgeLabel="I understand the risks"
+        cancelLabel="Cancel"
+        closeLabel="Close"
+        confirmLabel="Enable Full access"
+        acknowledged={false}
+        onAcknowledgedChange={onAcknowledgedChange}
+        onCancel={() => {}}
+        onConfirm={() => {}}
+      />,
+    )
+    const dialog = screen.getByRole('dialog', { name: 'Enable Full access?' })
+    const description = screen.getByText('This permits sensitive operations.')
+    const checkbox = screen.getByRole('checkbox', { name: 'I understand the risks' })
+    expect(dialog.getAttribute('aria-describedby')).toBe(description.id)
+    expect([...dialog.querySelectorAll('svg')]
+      .some(icon => icon.closest('[aria-hidden="true"]') !== null)).toBe(true)
+    expect(document.activeElement).toBe(checkbox)
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Enable Full access' }).disabled).toBe(true)
+    fireEvent.click(checkbox)
+    expect(onAcknowledgedChange).toHaveBeenCalledExactlyOnceWith(true)
   })
 })
 
