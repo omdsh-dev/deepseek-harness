@@ -280,6 +280,14 @@ describe(`assembled accessibility environments: ${browserName}`, () => {
       await tabTo(focusPage, trajectoryRow)
       await expectFocusedAndUnobscured(focusPage)
 
+      const openSidebar = focusPage.getByRole('button', { name: 'Open sidebar', exact: true })
+      if (await openSidebar.isVisible()) {
+        await tabTo(focusPage, openSidebar)
+        await expectFocusedAndUnobscured(focusPage)
+        await focusPage.keyboard.press('Enter')
+        await expect.poll(() => collapseSidebar.isVisible()).toBe(true)
+      }
+
       const settings = focusPage.getByRole('button', { name: 'Settings', exact: true })
       const settingsElement = await settings.elementHandle()
       expect(settingsElement).not.toBeNull()
