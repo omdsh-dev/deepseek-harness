@@ -29,7 +29,7 @@ The session header keeps the current session title as the lineage breadcrumb and
 
 ### Browsing the tree
 
-Rows display mode plus `running`/`inactive` activity and an optional log-backed title; the trailing column stacks total durable provider usage above active-turn duration. Keyboard navigation works with ArrowRight/ArrowLeft to expand and collapse branches and ArrowUp/ArrowDown, Home, End, and Escape to navigate or close the tree. An unlabeled one-shot row falls back to its session id; corrupt, unsupported, or unavailable rows remain readable but disabled.
+Rows display mode plus `running`/`inactive` activity and an optional log-backed title; the trailing column stacks total durable provider usage above active-turn duration. Click, Enter, or Space activates the count trigger, whose control relationship and expanded state identify the tree to assistive technology; ArrowDown and ArrowUp open it at the first and last enabled row. Exactly one enabled row remains in the page Tab sequence. ArrowUp/ArrowDown, Home, and End move through visible rows; ArrowRight expands a branch and then enters its first enabled child, while ArrowLeft collapses it or returns to its parent. Escape closes the tree and restores the trigger. An unlabeled one-shot row falls back to its session id; corrupt, unsupported, or unavailable rows remain readable but disabled.
 
 ### Continuing a conversation
 

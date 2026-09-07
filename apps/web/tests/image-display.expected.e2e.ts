@@ -66,16 +66,39 @@ it('renders the history image pair through the authorized attachment route and o
   `)
   const userImage = document.querySelector<HTMLElement>('[data-align="end"] img')!
 
-  // A single click opens the original-size lightbox; Escape/close dismisses it.
+  // A single click opens the original-size lightbox. The shared modal owner
+  // makes the app inert, focuses and traps the sole close control, then
+  // restores the exact frame after Escape or close-button dismissal.
   const frame = userImage.closest('button')
   if (frame === null) throw new Error('image frame button missing')
+  frame.focus()
   fireEvent.click(frame)
-  const lightbox = await screen.findByRole('dialog')
+  const appRoot = document.getElementById('root')
+  if (appRoot === null) throw new Error('assembled app root missing')
+  const lightbox = await screen.findByRole('dialog', { name: 'Original image preview' })
+  const close = within(lightbox).getByRole('button', { name: 'Close original image preview' })
+  expect(appRoot.inert).toBe(true)
+  expect(document.activeElement).toBe(close)
   expect(within(lightbox).getByRole('img').getAttribute('src')?.split(':')[0]).toBe('blob')
-  fireEvent.click(within(lightbox).getByRole('button', { name: /Close/ }))
+  fireEvent.keyDown(document, { key: 'Tab' })
+  expect(document.activeElement).toBe(close)
+  fireEvent.keyDown(document, { key: 'Tab', shiftKey: true })
+  expect(document.activeElement).toBe(close)
+  fireEvent.keyDown(document, { key: 'Escape' })
   await waitFor(() => {
     expect(screen.queryByRole('dialog')).toBeNull()
   })
+  expect(appRoot.inert).not.toBe(true)
+  expect(document.activeElement).toBe(frame)
+
+  fireEvent.click(frame)
+  const reopened = await screen.findByRole('dialog', { name: 'Original image preview' })
+  fireEvent.click(within(reopened).getByRole('button', { name: 'Close original image preview' }))
+  await waitFor(() => {
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+  expect(appRoot.inert).not.toBe(true)
+  expect(document.activeElement).toBe(frame)
 })
 
 it('accepts pasted images into the composer rail in order and removes them', async () => {

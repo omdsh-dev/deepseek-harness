@@ -48,7 +48,7 @@ export function PlanReviewPanel({ pending, review, t }: PlanReviewPanelProps) {
 
   return (
     <div className={css.frame} data-plan-review-key={pending.key}>
-      <section className={css.card} aria-label={review.question}>
+      <section className={css.card} aria-label={review.question} aria-busy={busy || undefined}>
         <div className={css.strip}>
           <span className={css.dot} />
           {t('plan.header')}
@@ -57,7 +57,7 @@ export function PlanReviewPanel({ pending, review, t }: PlanReviewPanelProps) {
           <MarkdownText text={review.plan} labels={markdownLabels} />
         </div>
         <div className={css.footer}>
-          <div className={css.feedback} role="status">{error}</div>
+          <div className={css.feedback} role="alert" aria-atomic="true">{error}</div>
           <div className={css.actions}>
             <Button
               variant="ghost" className={css.discuss} icon={<IconEditOutline16 size={14} />}

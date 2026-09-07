@@ -49,3 +49,21 @@
 .chevron {
   flex: none;
 }
+
+@media (max-width: 600px) {
+  .row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .rowText {
+    width: 100%;
+    padding-right: 0;
+  }
+
+  .selector {
+    align-self: flex-start;
+    max-width: 100%;
+  }
+}

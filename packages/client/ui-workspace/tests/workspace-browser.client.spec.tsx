@@ -154,12 +154,12 @@ describe('WorkspaceBrowser', () => {
     fireEvent.click(screen.getByRole('button', { name: '视图选项' }))
     expect(screen.getByText('分组方式')).toBeTruthy() // the menu heading label
     expect(screen.getByRole('separator')).toBeTruthy()
-    expect(screen.getAllByRole('menuitem').map(item => item.textContent)).toEqual([
+    expect(screen.getAllByRole('menuitemradio').map(item => item.textContent)).toEqual([
       '按工作区', '单列表', '手动排序', '最近更新',
     ])
-    expect(screen.getByRole('menuitem', { name: '按工作区' }).querySelector('svg')).toBeTruthy()
-    expect(screen.getByRole('menuitem', { name: '手动排序' }).querySelector('svg')).toBeTruthy()
-    fireEvent.click(screen.getByRole('menuitem', { name: '单列表' }))
+    expect(screen.getByRole('menuitemradio', { name: '按工作区' }).querySelector('svg')).toBeTruthy()
+    expect(screen.getByRole('menuitemradio', { name: '手动排序' }).querySelector('svg')).toBeTruthy()
+    fireEvent.click(screen.getByRole('menuitemradio', { name: '单列表' }))
     // Store-driven flip: title changes, rows flatten newest-first, headers gone.
     expect(b.store.getSnapshot().groupBy).toBe('flat')
     expect(screen.getByText('会话')).toBeTruthy()
@@ -169,8 +169,8 @@ describe('WorkspaceBrowser', () => {
 
     // Back to workspace grouping through the same menu.
     fireEvent.click(screen.getByRole('button', { name: '视图选项' }))
-    expect(screen.getByRole('menuitem', { name: '手动排序' }).hasAttribute('disabled')).toBe(false)
-    fireEvent.click(screen.getByRole('menuitem', { name: '按工作区' }))
+    expect(screen.getByRole('menuitemradio', { name: '手动排序' }).hasAttribute('disabled')).toBe(false)
+    fireEvent.click(screen.getByRole('menuitemradio', { name: '按工作区' }))
     expect(b.store.getSnapshot().groupBy).toBe('workspace')
     expect(screen.getByText('工作区')).toBeTruthy()
 
@@ -179,6 +179,84 @@ describe('WorkspaceBrowser', () => {
     fireEvent.keyDown(document, { key: 'Escape' })
     expect(screen.queryByRole('menu')).toBeNull()
     expect(b.store.getSnapshot().groupBy).toBe('workspace')
+  })
+
+  it('supports roving focus, disclosure, activation, and type-ahead in the grouped tree', () => {
+    mount({
+      useSessions: hook(sessionState([summary('alpha-s', 2), summary('beta-s', 1)])),
+      useWorkspaces: hook(workspaceState([
+        workspace('alpha', ['alpha-s']),
+        workspace('beta', ['beta-s']),
+      ])),
+    })
+    const alpha = screen.getByText('alpha').closest<HTMLElement>('[role="treeitem"]')!
+    const beta = screen.getByText('beta').closest<HTMLElement>('[role="treeitem"]')!
+    const alphaAction = screen.getByRole('button', { name: '在“alpha”中新建会话' })
+    const betaAction = screen.getByRole('button', { name: '在“beta”中新建会话' })
+    expect(alpha.tabIndex).toBe(0)
+    expect(alpha.getAttribute('aria-level')).toBe('1')
+    expect(alphaAction.tabIndex).toBe(0)
+    expect(beta.tabIndex).toBe(-1)
+    expect(betaAction.tabIndex).toBe(-1)
+
+    alpha.focus()
+    fireEvent.keyDown(alpha, { key: 'b' })
+    expect(document.activeElement).toBe(beta)
+    fireEvent.keyDown(beta, { key: 'Home' })
+    expect(document.activeElement).toBe(alpha)
+    fireEvent.keyDown(alpha, { key: 'End' })
+    expect(document.activeElement).toBe(beta)
+    fireEvent.keyDown(beta, { key: 'ArrowUp' })
+    expect(document.activeElement).toBe(alpha)
+    expect(alphaAction.tabIndex).toBe(0)
+    expect(betaAction.tabIndex).toBe(-1)
+
+    fireEvent.keyDown(alpha, { key: 'ArrowRight' })
+    expect(alpha.getAttribute('aria-expanded')).toBe('true')
+    const session = screen.getByText('alpha-s').closest<HTMLElement>('[role="treeitem"]')!
+    expect(session.getAttribute('aria-level')).toBe('2')
+    fireEvent.keyDown(alpha, { key: 'ArrowRight' })
+    expect(document.activeElement).toBe(session)
+    fireEvent.keyDown(session, { key: 'ArrowLeft' })
+    expect(document.activeElement).toBe(alpha)
+    fireEvent.keyDown(alpha, { key: 'ArrowLeft' })
+    expect(alpha.getAttribute('aria-expanded')).toBe('false')
+    fireEvent.keyDown(alpha, { key: 'Enter' })
+    expect(alpha.getAttribute('aria-expanded')).toBe('true')
+
+    alphaAction.focus()
+    fireEvent.keyDown(alphaAction, { key: 'ArrowDown' })
+    expect(document.activeElement).toBe(alphaAction)
+    fireEvent.pointerDown(beta)
+    expect(document.activeElement).toBe(beta)
+    expect(beta.tabIndex).toBe(0)
+  })
+
+  it('keeps empty containers roleless and selects the current row as the flat and search entry', () => {
+    const sessions = sessionState([
+      summary('needle-a', 2, { displayTitle: 'Needle Alpha' }),
+      summary('needle-b', 1, { displayTitle: 'Needle Beta' }),
+    ], { current: sid('needle-b') })
+    const b = mount()
+    expect(screen.queryByRole('tree')).toBeNull()
+
+    rerender(b, { useSessions: hook(sessions) })
+    b.store.actions.setGroupBy('flat')
+    rerender(b, {})
+    const flatRows = screen.getAllByRole('treeitem')
+    expect(flatRows.map(row => row.tabIndex)).toEqual([-1, 0])
+    expect(flatRows.map(row => row.getAttribute('aria-level'))).toEqual(['1', '1'])
+    flatRows[1]!.focus()
+    fireEvent.keyDown(flatRows[1]!, { key: 'ArrowUp' })
+    expect(document.activeElement).toBe(flatRows[0])
+
+    fireEvent.change(screen.getByLabelText('搜索会话…'), { target: { value: 'needle' } })
+    const searchRows = screen.getAllByRole('treeitem')
+    expect(searchRows.map(row => row.tabIndex)).toEqual([-1, 0])
+    expect(searchRows.map(row => row.getAttribute('aria-level'))).toEqual(['1', '1'])
+    searchRows[1]!.focus()
+    fireEvent.keyDown(searchRows[1]!, { key: 'Home' })
+    expect(document.activeElement).toBe(searchRows[0])
   })
 
   it('persists flat-list drag order locally and applies Last updated within that account', async () => {
@@ -194,7 +272,7 @@ describe('WorkspaceBrowser', () => {
       insertSessionBefore,
     })
     fireEvent.click(screen.getByRole('button', { name: '视图选项' }))
-    fireEvent.click(screen.getByRole('menuitem', { name: '单列表' }))
+    fireEvent.click(screen.getByRole('menuitemradio', { name: '单列表' }))
     await waitFor(() => {
       expect(b.store.getSnapshot().sessionOrderByAccount[FLAT_SESSION_ORDER_KEY])
         .toEqual(['one', 'two', 'three'])
@@ -213,14 +291,14 @@ describe('WorkspaceBrowser', () => {
     expect(insertSessionBefore).not.toHaveBeenCalled()
 
     fireEvent.click(screen.getByRole('button', { name: '视图选项' }))
-    fireEvent.click(screen.getByRole('menuitem', { name: '最近更新' }))
+    fireEvent.click(screen.getByRole('menuitemradio', { name: '最近更新' }))
     await waitFor(() => {
       expect(b.store.getSnapshot().sessionOrderByAccount[FLAT_SESSION_ORDER_KEY])
         .toEqual(['one', 'two', 'three'])
     })
 
     fireEvent.click(screen.getByRole('button', { name: '视图选项' }))
-    fireEvent.click(screen.getByRole('menuitem', { name: '手动排序' }))
+    fireEvent.click(screen.getByRole('menuitemradio', { name: '手动排序' }))
     fireEvent.dragStart(one, { dataTransfer: dragData() })
     fireDrag(three, 'drop', 180)
     b.view.unmount()
@@ -355,7 +433,7 @@ describe('WorkspaceBrowser', () => {
     })
     fireEvent.click(screen.getByText('alpha'))
     fireEvent.click(screen.getByRole('button', { name: '视图选项' }))
-    fireEvent.click(screen.getByRole('menuitem', { name: '最近更新' }))
+    fireEvent.click(screen.getByRole('menuitemradio', { name: '最近更新' }))
     await waitFor(() => {
       const rows = screen.getAllByRole('treeitem').slice(1)
       expect(rows[0]?.textContent).toContain('one')
@@ -371,7 +449,7 @@ describe('WorkspaceBrowser', () => {
     expect(b.store.getSnapshot().sessionOrderByAccount.alpha).toEqual(['two', 'one'])
 
     fireEvent.click(screen.getByRole('button', { name: '视图选项' }))
-    fireEvent.click(screen.getByRole('menuitem', { name: '手动排序' }))
+    fireEvent.click(screen.getByRole('menuitemradio', { name: '手动排序' }))
     expect(screen.getAllByRole('treeitem').slice(1)[0]?.textContent).toContain('two')
 
     // User activity updates the timestamp baseline in Manual mode without
@@ -386,7 +464,7 @@ describe('WorkspaceBrowser', () => {
 
     // Entering Last updated performs one complete recency sort.
     fireEvent.click(screen.getByRole('button', { name: '视图选项' }))
-    fireEvent.click(screen.getByRole('menuitem', { name: '最近更新' }))
+    fireEvent.click(screen.getByRole('menuitemradio', { name: '最近更新' }))
     await waitFor(() => {
       expect(b.store.getSnapshot().sessionOrderByAccount.alpha).toEqual(['one', 'two'])
       expect(screen.getAllByRole('treeitem').slice(1)[0]?.textContent).toContain('one')
@@ -426,7 +504,7 @@ describe('WorkspaceBrowser', () => {
     rerender(b, { useWorkspaces: hook(workspaceState([workspace('alpha', ['kept-s', 'gone-s'])], [sid('gone-s')])) })
     expect(screen.queryByText('gone-s')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: '视图选项' }))
-    fireEvent.click(screen.getByRole('menuitem', { name: '单列表' }))
+    fireEvent.click(screen.getByRole('menuitemradio', { name: '单列表' }))
     expect(screen.getByText('kept-s')).toBeTruthy()
     expect(screen.queryByText('gone-s')).toBeNull()
   })
@@ -864,6 +942,35 @@ describe('WorkspaceBrowser', () => {
     }
   })
 
+  it('hides collapsed search and restores focus only for explicit dismissal', () => {
+    mount()
+    const searchButton = screen.getByRole('button', { name: '搜索会话' })
+    const input = screen.getByLabelText('搜索会话…')
+    expect(input.getAttribute('aria-hidden')).toBe('true')
+    expect(input.getAttribute('tabindex')).toBe('-1')
+
+    fireEvent.click(searchButton)
+    expect(document.activeElement).toBe(input)
+    expect(input.hasAttribute('aria-hidden')).toBe(false)
+    expect(fireEvent.keyDown(input, { key: 'Escape' })).toBe(false)
+    expect(document.activeElement).toBe(searchButton)
+    expect(input.getAttribute('aria-hidden')).toBe('true')
+
+    fireEvent.click(searchButton)
+    fireEvent.click(screen.getByRole('button', { name: '清除搜索' }))
+    expect(document.activeElement).toBe(searchButton)
+
+    const external = document.createElement('button')
+    external.textContent = 'outside'
+    document.body.append(external)
+    fireEvent.click(searchButton)
+    external.focus()
+    fireEvent.click(external)
+    expect(document.activeElement).toBe(external)
+    expect(searchButton.getAttribute('aria-expanded')).toBe('false')
+    external.remove()
+  })
+
   it('keeps the rail-opened search expanded when the initiating click reaches document', () => {
     vi.useFakeTimers()
     try {
@@ -894,7 +1001,7 @@ describe('WorkspaceBrowser', () => {
     // Adding is the header's only action, so the gesture IS that action: no
     // one-row popover, and existing workspaces stay in the tree below.
     expect(screen.queryByRole('menu')).toBeNull()
-    expect(screen.queryByRole('menuitem', { name: 'alpha' })).toBeNull()
+    expect(screen.queryByRole('menuitemradio', { name: 'alpha' })).toBeNull()
     expect(screen.getByTestId('directory-flow')).toBeTruthy()
   })
 
@@ -1048,7 +1155,7 @@ describe('WorkspaceBrowser', () => {
     expect(insertSessionBefore).not.toHaveBeenCalled()
 
     fireEvent.click(screen.getByRole('button', { name: '视图选项' }))
-    fireEvent.click(screen.getByRole('menuitem', { name: '最近更新' }))
+    fireEvent.click(screen.getByRole('menuitemradio', { name: '最近更新' }))
     await waitFor(() => {
       expect(b.store.getSnapshot().sessionOrderByAccount[UNGROUPED_KEY]).toEqual(['one', 'two', 'three'])
     })

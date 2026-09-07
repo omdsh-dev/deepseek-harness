@@ -128,10 +128,17 @@ describe('web e2e: queue row actions', () => {
       const style = getComputedStyle(element)
       return {
         dockInset: Number.parseFloat(style.getPropertyValue('--dsh-composer-dock-inset')),
+        scrollbarWidth: Number.parseFloat(style.getPropertyValue('--dsh-scrollbar-width')),
       }
     })
-    expect(queueLeftInset).toBeCloseTo(composerMetrics.dockInset, 1)
-    expect(queueRightInset).toBeCloseTo(composerMetrics.dockInset, 1)
+    // Classic-scrollbar runners can shift the centred stack by half the
+    // difference between the engine-resolved gutter and the fixed seat
+    // compensation. The dock must still reserve the declared two-inset total,
+    // and any one-sided drift stays bounded by half that compensation.
+    const averageInset = (queueLeftInset + queueRightInset) / 2
+    const alignmentDrift = Math.abs(queueLeftInset - queueRightInset) / 2
+    expect(averageInset).toBeCloseTo(composerMetrics.dockInset, 1)
+    expect(alignmentDrift).toBeLessThanOrEqual(composerMetrics.scrollbarWidth / 2)
     await page.setViewportSize({ width: 1680, height: 1000 })
 
     const editRow = page.locator('[data-queue-dock] li', { hasText: EDIT })

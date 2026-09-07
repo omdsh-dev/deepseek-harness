@@ -403,7 +403,8 @@ describe('web e2e: navigation & panes over a rich seeded session', () => {
     await page.locator('[data-sample="bash"] ~ div [data-terminal] [class*="_copyButton_"]').first().click()
     await expect.poll(() => frame.getAttribute('data-details-collapsed'), { timeout: 5_000 }).toBe('true')
     // Read summaries are host-open file links; they also must not open details.
-    const fileLink = page.locator('[data-variant="read"] button').first()
+    const fileLink = page.locator('[data-variant="read"]').first()
+      .getByRole('button', { name: /^Open file / })
     await fileLink.waitFor({ timeout: 10_000 })
     const openPath = vi.spyOn(scaffold.ctx.sessionController, 'openWorkspacePath')
       .mockResolvedValue({ opened: true })

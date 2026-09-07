@@ -148,7 +148,8 @@ function TurnMaxTokensItem({ t }: {
 
 /** Right-aligned bubble shared by user and steering rows. */
 function UserStyleBubble({
-  content, renderMessageImages, actions, pending = false, echo = false, referenceLabels = [], previewImages, t,
+  content, renderMessageImages, actions, pending = false, echo = false, article = false,
+  referenceLabels = [], previewImages, reveal = 'always', t,
 }: {
   content: readonly unknown[]
   renderMessageImages: ChatNodeOwnerProps['renderMessageImages']
@@ -158,10 +159,14 @@ function UserStyleBubble({
   pending?: boolean
   /** Whether this is a local submission echo (invisible marker; the echo renders exactly like its durable replacement). */
   echo?: boolean
+  /** Flow-tail rows do not cross ChatNodeSeat, so they own their article boundary here. */
+  article?: boolean
   /** Exact session mention labels associated by the adjacent recall node. */
   referenceLabels?: readonly string[]
   /** Local submission-echo previews replacing the content-derived image group. */
   previewImages?: readonly MessageImageSource[]
+  /** Whole actions-row visibility: earlier rows reveal on hover, the latest stays shown. */
+  reveal?: 'always' | 'hover'
   t: ChatViewSlotProps['t']
 }): ReactNode {
   const { text, images: contentImages, rest } = contentParts(content)
@@ -173,6 +178,9 @@ function UserStyleBubble({
       className={css.userRow}
       data-pending-steering={pending || undefined}
       data-submission-echo={echo || undefined}
+      data-actions-reveal={reveal}
+      role={article ? 'article' : undefined}
+      aria-label={article ? t('message.user') : undefined}
     >
       <div className={css.userStack}>
         {renderMessageImages({ images, align: 'end' })}
@@ -207,6 +215,7 @@ export function PendingSteeringBubble({ content, renderMessageImages, t }: {
       content={content}
       renderMessageImages={renderMessageImages}
       pending
+      article
       t={t}
       actions={text => (
         <MessageIconActions
@@ -255,6 +264,7 @@ export function PendingSubmissionBubble({ submission, renderMessageImages, t }: 
       renderMessageImages={renderMessageImages}
       pending={submission.placement === 'steering'}
       echo
+      article
       t={t}
       actions={text => (
         <MessageIconActions

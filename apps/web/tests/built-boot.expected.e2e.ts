@@ -109,8 +109,13 @@ it('boots the built plugin graph and renders a fixture session end to end', asyn
   // ContextMeter reaches its composition panel instead of only the occupancy
   // fallback path.
   const contextTrigger = await screen.findByRole('button', { name: /of context used/ })
+  contextTrigger.focus()
   fireEvent.click(contextTrigger)
-  const contextPanel = await screen.findByRole('dialog', { name: 'of context used' })
+  const contextPanel = await screen.findByRole('region', { name: 'of context used' })
+  expect(document.activeElement).toBe(contextTrigger)
+  expect(contextTrigger.getAttribute('aria-controls')).toBe(contextPanel.id)
+  expect(contextTrigger.hasAttribute('aria-haspopup')).toBe(false)
+  expect(contextTrigger.getAttribute('aria-expanded')).toBe('true')
   within(contextPanel).getByText('System prompt')
   within(contextPanel).getByText('Tools')
   within(contextPanel).getByText('Messages')

@@ -11,7 +11,7 @@
  * resizes are driven through the ResizeObserver stub.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { act, cleanup, render } from '@testing-library/react'
+import { act, cleanup, fireEvent, render } from '@testing-library/react'
 import { useSyncExternalStore } from 'react'
 import { AppFrame } from '@deepseek-ai/dsh-client-ui-layout/src/client/AppFrame.tsx'
 import type { AppFrameProps } from '@deepseek-ai/dsh-client-ui-layout/src/client/AppFrame.tsx'
@@ -100,7 +100,14 @@ function mountFrame() {
       useSessionPendingInteraction={useSessionPendingInteraction}
       useWorkspaces={((sel: (s: WorkspaceSnapshot) => unknown) => sel(workspaceState)) as never}
       SessionProvider={SessionProviderStub}
-      t={key => key === 'brand.localBuild' ? 'DSH Local Build' : key}
+      t={key => (({
+        'brand.localBuild': 'DSH Local Build',
+        'layout.application': 'DSH application',
+        'layout.sidebar': 'Sidebar',
+        'layout.details': 'Details',
+        'layout.collapsed': 'Collapsed',
+        'layout.widthPixels': 'width pixels',
+      }) as Record<string, string>)[key] ?? key}
     />
   )
   const utils = render(element())
@@ -194,11 +201,14 @@ describe('AppFrame', () => {
     // No current session: the session-maybe conversation shell owns the New
     // Session view itself — the center column renders it unconditionally.
     selectedSession.current = undefined
-    const { slotCalls, getByTestId, queryByTestId } = mountFrame()
+    const { frame, slotCalls, getByTestId, queryByTestId } = mountFrame()
     expect(getByTestId('center-content')).toBeTruthy()
     expect(slotCalls.map(c => c.key)).toContain('conversation')
     expect(queryByTestId('details-content')).toBeNull()
     expect(slotCalls.map(c => c.key)).toContain('details')
+    const detailsSplitter = frame.querySelector<HTMLElement>('[role="separator"][aria-label="Details"]')!
+    expect(detailsSplitter.getAttribute('aria-hidden')).toBe('true')
+    expect(detailsSplitter.tabIndex).toBe(-1)
   })
 
   it('renders both column occupants before baselines settle (no loading gate)', () => {
@@ -282,11 +292,17 @@ describe('AppFrame', () => {
     expect(instance.getSnapshot().details).toBe(320)
   })
 
-  it('details column stays mounted at zero width', () => {
-    const { frame, getByTestId } = mountFrame()
+  it('owns named shell landmarks and keeps the closed mounted details pane inert', () => {
+    const { frame, getByTestId, getByRole } = mountFrame()
     expect(tracks(frame)).toEqual([280, 0])
     expect(getByTestId('details-content')).toBeTruthy()
     expect(frame.hasAttribute('data-details-collapsed')).toBe(true)
+    expect(frame.querySelector('nav[aria-label="Sidebar"]')).not.toBeNull()
+    expect(frame.querySelector('main')).not.toBeNull()
+    expect(getByRole('heading', { level: 1, name: 'DSH application' })).toBeTruthy()
+    const details = frame.querySelector<HTMLElement>('aside[aria-label="Details"]')!
+    expect(details.getAttribute('aria-hidden')).toBe('true')
+    expect(details.inert).toBe(true)
   })
 
   it('closed sidebar keeps its compact rail with mounted slot content and collapsed owner props', () => {
@@ -310,26 +326,62 @@ describe('AppFrame', () => {
     expect(tracks(frame)).toEqual([280, 360])
   })
 
-  it('drag handles disappear for collapsed columns', () => {
-    const { frame, instance } = mountFrame()
-    expect(frame.querySelectorAll('[class*="handle"]')).toHaveLength(1)
-    act(() => { instance.actions.openDetails() })
-    expect(frame.querySelectorAll('[class*="handle"]')).toHaveLength(2)
-    act(() => { instance.actions.closeDetails() })
-    expect(frame.querySelectorAll('[class*="handle"]')).toHaveLength(1)
-    act(() => { instance.actions.toggleSidebar() })
-    expect(frame.querySelectorAll('[class*="handle"]')).toHaveLength(0)
+  it('exposes both splitters with pane relationships, range state, and complete keyboard operation', () => {
+    const { frame, instance, getByRole } = mountFrame()
+    const sidebar = getByRole('separator', { name: 'Sidebar' })
+    const details = getByRole('separator', { name: 'Details' })
+    expect(sidebar.getAttribute('aria-controls')).toBe('dsh-sidebar-pane')
+    expect(sidebar.getAttribute('aria-orientation')).toBe('vertical')
+    expect(sidebar.getAttribute('aria-valuemin')).toBe(`${SIDEBAR_COLLAPSED}`)
+    expect(sidebar.getAttribute('aria-valuemax')).toBe('420')
+    expect(sidebar.getAttribute('aria-valuenow')).toBe('280')
+    expect(details.getAttribute('aria-controls')).toBe('dsh-details-pane')
+    expect(details.getAttribute('aria-valuenow')).toBe('0')
+
+    sidebar.focus()
+    fireEvent.keyDown(sidebar, { key: 'ArrowRight' })
+    expect(instance.getSnapshot().sidebar).toBe(290)
+    fireEvent.keyDown(sidebar, { key: 'ArrowLeft' })
+    expect(instance.getSnapshot().sidebar).toBe(280)
+    fireEvent.keyDown(sidebar, { key: 'End' })
+    expect(instance.getSnapshot().sidebar).toBe(420)
+    fireEvent.keyDown(sidebar, { key: 'Home' })
+    expect(tracks(frame)[0]).toBe(SIDEBAR_COLLAPSED)
+    expect(sidebar.getAttribute('aria-valuetext')).toBe('Collapsed')
+    expect(document.activeElement).toBe(sidebar)
+    fireEvent.keyDown(sidebar, { key: 'Enter' })
+    expect(tracks(frame)[0]).toBe(280)
+
+    details.focus()
+    fireEvent.keyDown(details, { key: 'Enter' })
+    expect(tracks(frame)[1]).toBe(360)
+    expect(frame.querySelector<HTMLElement>('#dsh-details-pane')!.inert).toBe(false)
+    expect(document.activeElement).toBe(details)
+    fireEvent.keyDown(details, { key: 'ArrowLeft' })
+    expect(instance.getSnapshot().details).toBe(370)
+    fireEvent.keyDown(details, { key: 'ArrowRight' })
+    expect(instance.getSnapshot().details).toBe(360)
+    fireEvent.keyDown(details, { key: 'Home' })
+    expect(tracks(frame)[1]).toBe(0)
+    expect(frame.querySelector<HTMLElement>('#dsh-details-pane')!.inert).toBe(true)
+    fireEvent.keyDown(details, { key: 'End' })
+    expect(instance.getSnapshot().details).toBe(520)
   })
 })
 
 describe('AppFrame — narrow-viewport auto-collapse', () => {
-  it('mounts collapsed below the breakpoint with no sidebar handle', () => {
+  it('mounts collapsed below the breakpoint with a restorable sidebar splitter and disabled details splitter', () => {
     frameWidth = 980
-    const { frame, slotCalls } = mountFrame()
+    const { frame, slotCalls, getByRole } = mountFrame()
     expect(tracks(frame)).toEqual([SIDEBAR_COLLAPSED, 0])
     expect(frame.hasAttribute('data-sidebar-collapsed')).toBe(true)
     expect(slotCalls.filter(c => c.key === 'sidebar').at(-1)!.props).toEqual({ collapsed: true, width: SIDEBAR_COLLAPSED })
-    expect(frame.querySelectorAll('[class*="handle"]')).toHaveLength(0)
+    const sidebar = getByRole('separator', { name: 'Sidebar' })
+    const details = frame.querySelector<HTMLElement>('[role="separator"][aria-label="Details"]')!
+    expect(sidebar.getAttribute('data-collapsed')).toBe('true')
+    expect(sidebar.tabIndex).toBe(0)
+    expect(details.getAttribute('aria-disabled')).toBe('true')
+    expect(details.tabIndex).toBe(-1)
   })
 
   it('narrow toggle re-expands over the squeezed center and back', () => {
@@ -338,7 +390,7 @@ describe('AppFrame — narrow-viewport auto-collapse', () => {
     act(() => { instance.actions.toggleSidebar() })
     expect(tracks(frame)).toEqual([280, 0])
     expect(frame.hasAttribute('data-sidebar-collapsed')).toBe(false)
-    expect(frame.querySelectorAll('[class*="handle"]')).toHaveLength(1)
+    expect(frame.querySelectorAll('[class*="handle"]')).toHaveLength(2)
     act(() => { instance.actions.toggleSidebar() })
     expect(tracks(frame)).toEqual([SIDEBAR_COLLAPSED, 0])
   })

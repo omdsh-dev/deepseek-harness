@@ -69,7 +69,10 @@ export function apply(ctx: ClientContext): void {
       inject: (sessionId): PopupSelectInjected => {
         const actx = sessions.scope(sessionId)
         if (actx === undefined) throw new Error(`ui-commands: session "${String(sessionId)}" resolved no scope`)
-        return { popup: command.popupFor(actx) }
+        return {
+          popup: command.popupFor(actx),
+          bindComposerFocus: focus => command.bindComposerFocus(sessionId, focus),
+        }
       },
     }, PopupSelectView))
   })

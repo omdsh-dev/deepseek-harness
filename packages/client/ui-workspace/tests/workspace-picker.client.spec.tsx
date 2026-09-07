@@ -107,7 +107,7 @@ function mount(
     renderPicker(items),
   )
   return {
-    view, onPick, onClose, createWorkspace, probe, occupancy,
+    view, onPick, onClose, createWorkspace, probe, occupancy, anchorRef,
     rerenderItems: (nextItems: readonly WorkspaceView[]) => { view.rerender(renderPicker(nextItems)) },
   }
 }
@@ -119,7 +119,7 @@ function chooseAdd(): void {
 describe('WorkspacePicker', () => {
   it('lists same-title Workspaces separately and forwards the selected id', () => {
     const b = mount([workspace('alpha', 'Shared'), workspace('beta', 'Shared')])
-    const entries = screen.getAllByRole('menuitem', { name: 'Shared' })
+    const entries = screen.getAllByRole('menuitemradio', { name: 'Shared' })
     expect(entries).toHaveLength(2)
     fireEvent.click(entries[1]!)
     expect(b.onPick).toHaveBeenCalledWith(wid('beta'))
@@ -162,15 +162,21 @@ describe('WorkspacePicker', () => {
 
   it('reports a non-Error adoption failure in the folder-error surface', async () => {
     const b = mount([workspace('alpha', 'Alpha')], vi.fn(async () => { throw 'permission denied' }))
+    document.body.append(b.anchorRef.current)
     chooseAdd()
     await act(async () => { b.probe.owner!.onPicked('/one/project') })
     await waitFor(() => {
       expect(screen.getByRole('dialog', { name: '无法打开文件夹' })).toBeTruthy()
     })
-    expect(screen.getByRole('alert').textContent).toBe('permission denied')
+    const dialog = screen.getByRole('dialog', { name: '无法打开文件夹' })
+    const alert = screen.getByRole('alert')
+    expect(alert.textContent).toBe('permission denied')
+    expect(dialog.getAttribute('aria-describedby')).toBe(alert.id)
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: '取消' }))
     expect(b.probe.owner!.open).toBe(false)
     fireEvent.click(screen.getByRole('button', { name: '重新选择' }))
     expect(b.probe.owner!.open).toBe(true)
+    expect(document.activeElement).toBe(b.anchorRef.current)
     expect(b.onPick).not.toHaveBeenCalled()
   })
 
@@ -182,11 +188,11 @@ describe('WorkspacePicker', () => {
     chooseAdd()
     // The flow is open but nothing is picked yet: a chooser pending on the
     // host display must already block concurrent workspace actions.
-    expect(screen.getByRole<HTMLButtonElement>('menuitem', { name: 'Alpha' }).disabled).toBe(true)
+    expect(screen.getByRole<HTMLButtonElement>('menuitemradio', { name: 'Alpha' }).disabled).toBe(true)
     expect(screen.getByRole<HTMLButtonElement>('menuitem', { name: '添加工作区…' }).disabled).toBe(true)
     act(() => { b.probe.owner!.onPicked('/tmp/project') })
     expect(b.probe.owner!.busy).toBe(true)
-    expect(screen.getByRole<HTMLButtonElement>('menuitem', { name: 'Alpha' }).disabled).toBe(true)
+    expect(screen.getByRole<HTMLButtonElement>('menuitemradio', { name: 'Alpha' }).disabled).toBe(true)
     expect(screen.getByRole<HTMLButtonElement>('menuitem', { name: '添加工作区…' }).disabled).toBe(true)
     await act(async () => { resolve(created); await pending })
     expect(b.probe.owner!.busy).toBe(false)
@@ -203,10 +209,12 @@ describe('WorkspacePicker', () => {
 
   it('closes the folder-error surface when the user cancels', () => {
     const b = mount([workspace('alpha', 'Alpha')])
+    document.body.append(b.anchorRef.current)
     chooseAdd()
     act(() => { b.probe.owner!.onError('no chooser installed') })
     fireEvent.click(screen.getByRole('button', { name: '取消' }))
     expect(screen.queryByRole('dialog')).toBeNull()
+    expect(document.activeElement).toBe(b.anchorRef.current)
   })
 
   it('waits to show its menu until an optional anchor is available', () => {
@@ -272,7 +280,7 @@ describe('WorkspacePicker', () => {
 
   it('hides the add entry while the directory-flow hole is empty', () => {
     mount([workspace('alpha', 'Alpha')], vi.fn(), occupancySource(false))
-    expect(screen.getByRole('menuitem', { name: 'Alpha' })).toBeTruthy()
+    expect(screen.getByRole('menuitemradio', { name: 'Alpha' })).toBeTruthy()
     expect(screen.queryByRole('menuitem', { name: '添加工作区…' })).toBeNull()
   })
 
@@ -295,7 +303,7 @@ describe('WorkspacePicker', () => {
     expect(screen.getByRole<HTMLButtonElement>('button', { name: '重新选择' }).disabled).toBe(true)
     // Cancel stays the way out, and the menu actions are usable again.
     fireEvent.click(screen.getByRole('button', { name: '取消' }))
-    expect(screen.getByRole<HTMLButtonElement>('menuitem', { name: 'Alpha' }).disabled).toBe(false)
+    expect(screen.getByRole<HTMLButtonElement>('menuitemradio', { name: 'Alpha' }).disabled).toBe(false)
   })
 
   it('withdraws an open flow when its occupant unloads, re-enabling the menu actions', () => {
@@ -306,7 +314,7 @@ describe('WorkspacePicker', () => {
     // cancel, so the owner withdraws and the actions come back.
     act(() => { b.occupancy.flip(false) })
     expect(b.probe.owner!.open).toBe(false)
-    expect(screen.getByRole<HTMLButtonElement>('menuitem', { name: 'Alpha' }).disabled).toBe(false)
+    expect(screen.getByRole<HTMLButtonElement>('menuitemradio', { name: 'Alpha' }).disabled).toBe(false)
     expect(screen.queryByRole('menuitem', { name: '添加工作区…' })).toBeNull()
   })
 })

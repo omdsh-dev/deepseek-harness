@@ -47,6 +47,10 @@
     "test:web:refresh": "npm run build && DSH_SNAPSHOT=refresh vitest run --config vitest.web.config.ts",
     "test:web:built": "vitest run --config vitest.web.config.ts",
     "test:web:ci": "tsx scripts/run-web-snapshots.ts",
+    "test:web:accessibility": "pnpm run build && pnpm run test:web:accessibility:built",
+    "test:web:accessibility:built": "tsx scripts/run-web-accessibility.ts",
+    "test:web:accessibility:evidence": "pnpm run build && pnpm run test:web:accessibility:evidence:built",
+    "test:web:accessibility:evidence:built": "tsx scripts/web-accessibility-evidence.ts",
     "test:web:perf": "npm run build && npm run test:web:perf:built",
     "test:web:perf:built": "DSH_SNAPSHOT=replay vitest run --config vitest.web.perf.config.ts",
     "test:web:stress": "npm run build && vitest run --config vitest.web-stress.config.ts",
@@ -191,6 +195,7 @@
     "tsdown": "^0.22.2",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3",
+    "unrun": "^0.3.1",
     "vite-tsconfig-paths": "^6.1.1",
     "vitest": "^4.1.8"
   }

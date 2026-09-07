@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it, vi, type MockInstance } from 'vitest'
 import {
   cliGateOptions,
+  collectDescendants,
   defaultConcurrency,
   formatGateResultReason,
   gatesForMode,
@@ -889,6 +890,18 @@ describe('process-table parsing', () => {
 
   it('drops blank and malformed lines', () => {
     expect(parsePidPpidLines('  123   1\n\ncommand not found\n999 abc\n')).toEqual([[123, 1]])
+  })
+
+  it('walks a very wide process tree without argument-spread overflow', () => {
+    const rows: Array<[number, number]> = Array.from({ length: 150_000 }, (_, index) => [index + 2, 1])
+    const descendants = collectDescendants(1, rows)
+    expect(descendants).toHaveLength(rows.length)
+    expect(descendants.at(0)).toBe(2)
+    expect(descendants.at(-1)).toBe(150_001)
+  })
+
+  it('deduplicates malformed cycles instead of walking forever', () => {
+    expect(collectDescendants(1, [[2, 1], [3, 2], [2, 3], [1, 3]])).toEqual([2, 3])
   })
 })
 

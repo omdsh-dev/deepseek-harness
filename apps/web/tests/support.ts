@@ -53,9 +53,17 @@ export async function expandTurnProcesses(page: Page): Promise<void> {
  * @param target - descendant whose owning Turn process should open.
  */
 export async function expandOwningTurnProcess(page: Page, target: Locator): Promise<void> {
-  const turn = await target.evaluate(element => element.closest<HTMLElement>('[data-chat-turn]')?.dataset.chatTurn)
-  if (turn === undefined || await target.isVisible()) return
-  const control = page.locator(`[data-turn-process="${turn}"]`)
+  const owner = await target.evaluate((element) => {
+    const seat = element.closest<HTMLElement>('[data-chat-turn]')
+    return {
+      turn: seat?.dataset.chatTurn,
+      hidden: seat?.hasAttribute('data-turn-process-hidden') ?? false,
+    }
+  })
+  // `hidden="until-found"` retains a rendered box for browser find, so
+  // Playwright's geometric `isVisible()` is not a reliable disclosure test.
+  if (owner.turn === undefined || !owner.hidden) return
+  const control = page.locator(`[data-turn-process="${owner.turn}"]`)
   await control.waitFor({ state: 'visible', timeout: 10_000 })
   if (await control.getAttribute('aria-expanded') !== 'true') await control.click()
 }
