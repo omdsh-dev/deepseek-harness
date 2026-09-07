@@ -10,6 +10,7 @@ import { en } from '../src/client/locales.ts'
 afterEach(() => {
   cleanup()
   vi.useRealTimers()
+  vi.unstubAllGlobals()
 })
 
 type Row = { id: string; order: number; label: string }
@@ -253,6 +254,32 @@ describe('SettingsPanel navigation', () => {
     expect(screen.getByRole('button', { name: 'General' }).getAttribute('aria-current')).toBe('true')
     expect(screen.getByRole('button', { name: 'Models' }).getAttribute('aria-current')).toBeNull()
     expect(screen.getByTestId('section-general')).toBeTruthy()
+  })
+
+  it('scrolls newly focused section content only while it retains focus', () => {
+    const frames: FrameRequestCallback[] = []
+    vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
+      frames.push(callback)
+      return frames.length
+    })
+    mount()
+    openPanel()
+    const section = screen.getByTestId('section-general')
+    const target = document.createElement('button')
+    target.textContent = 'Section control'
+    const scrollIntoView = vi.fn()
+    target.scrollIntoView = scrollIntoView
+    section.append(target)
+
+    target.focus()
+    frames.shift()?.(0)
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' })
+
+    screen.getByRole('button', { name: 'Close' }).focus()
+    target.focus()
+    screen.getByRole('button', { name: 'Close' }).focus()
+    frames.shift()?.(0)
+    expect(scrollIntoView).toHaveBeenCalledOnce()
   })
 
   it('gives every section a nav glyph, distinct for the ids the shell knows', () => {

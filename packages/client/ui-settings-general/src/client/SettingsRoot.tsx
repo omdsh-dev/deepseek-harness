@@ -89,7 +89,7 @@ function SettingsPanel({ rows, renderSlot, activeId, onSelect, onClose }: PanelP
           onFocusCapture={(event) => {
             const target = event.target
             requestAnimationFrame(() => {
-              if (target instanceof HTMLElement && target.matches(':focus')) {
+              if (target.matches(':focus')) {
                 target.scrollIntoView({ block: 'nearest', inline: 'nearest' })
               }
             })
