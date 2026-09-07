@@ -173,6 +173,111 @@ describe('TrajectoryTable', () => {
     expect(screen.getByText('20.0 tok/s')).toBeTruthy()
   })
 
+  it('exposes one ledger row tab stop and moves through events without repeated Tab presses', () => {
+    render(<TrajectoryTable turns={TURNS} {...FOLD_PROPS} />)
+    const table = screen.getByRole('table', { name: 'Trajectory events' })
+    const rows = screen.getAllByRole('row') as HTMLTableRowElement[]
+    const [assistant, firstTool, secondTool] = rows
+    if (assistant === undefined || firstTool === undefined || secondTool === undefined) {
+      throw new Error('expected three trajectory rows')
+    }
+
+    expect(table.getAttribute('aria-describedby')).toBe('trajectory-events-keyboard-instructions')
+    expect(screen.getByText(/Use Up and Down Arrow/)).toBeTruthy()
+    expect(rows.filter(row => row.tabIndex === 0)).toEqual([assistant])
+
+    assistant.focus()
+    fireEvent.keyDown(assistant, { key: 'ArrowRight' })
+    const request = screen.getByRole('button', { name: 'Request #1' })
+    expect(document.activeElement).toBe(request)
+    expect(request.tabIndex).toBe(-1)
+    fireEvent.keyDown(request, { key: 'Escape' })
+    expect(document.activeElement).toBe(assistant)
+
+    fireEvent.keyDown(assistant, { key: 'ArrowDown' })
+    expect(document.activeElement).toBe(firstTool)
+    expect(rows.filter(row => row.tabIndex === 0)).toEqual([firstTool])
+    fireEvent.keyDown(firstTool, { key: 'End' })
+    expect(document.activeElement).toBe(secondTool)
+    fireEvent.keyDown(secondTool, { key: 'Home' })
+    expect(document.activeElement).toBe(assistant)
+    fireEvent.keyDown(assistant, { key: ' ' })
+    expect(assistant.getAttribute('aria-selected')).toBe('true')
+    expect(screen.getByRole('complementary', { name: 'Event details' })).toBeTruthy()
+  })
+
+  it('operates Event details as one wrapped keyboard tab stop', () => {
+    render(<TrajectoryTable turns={TURNS} {...FOLD_PROPS} />)
+    fireEvent.click(screen.getByRole('row', { name: /ASSISTANT/ }))
+    const tablist = screen.getByRole('tablist', { name: 'Event details' })
+    const summary = screen.getByRole('tab', { name: 'Summary' })
+    const preview = screen.getByRole('tab', { name: 'Preview' })
+    const raw = screen.getByRole('tab', { name: 'Raw' })
+
+    expect(tablist.querySelectorAll('[role="tab"][tabindex="0"]')).toHaveLength(1)
+    expect(summary.tabIndex).toBe(0)
+    expect(screen.getByRole('tabpanel', { name: 'Summary' }).tabIndex).toBe(0)
+    summary.focus()
+    fireEvent.keyDown(summary, { key: 'ArrowRight' })
+    expect(document.activeElement).toBe(preview)
+    expect(preview.getAttribute('aria-selected')).toBe('true')
+    expect(screen.getByRole('tabpanel', { name: 'Preview' })).toBeTruthy()
+    fireEvent.keyDown(preview, { key: 'End' })
+    expect(document.activeElement).toBe(raw)
+    expect(raw.getAttribute('aria-selected')).toBe('true')
+    fireEvent.keyDown(raw, { key: 'ArrowRight' })
+    expect(document.activeElement).toBe(summary)
+    fireEvent.keyDown(summary, { key: 'End' })
+    fireEvent.keyDown(raw, { key: 'Home' })
+    expect(document.activeElement).toBe(summary)
+    expect(summary.getAttribute('aria-selected')).toBe('true')
+  })
+
+  it('exposes the details splitter value and supports the complete keyboard range', () => {
+    render(<TrajectoryTable turns={TURNS} {...FOLD_PROPS} />)
+    fireEvent.click(screen.getByRole('row', { name: /ASSISTANT/ }))
+    const separator = screen.getByRole('separator', { name: 'Resize event details' })
+    const details = separator.parentElement
+    const split = details?.parentElement
+    if (details === null || details === undefined || split === null || split === undefined) {
+      throw new Error('expected the event details split')
+    }
+    const rect = (width: number): DOMRect => ({
+      bottom: 0, height: 0, left: 0, right: width, top: 0, width, x: 0, y: 0,
+      toJSON: () => ({}),
+    })
+    vi.spyOn(split, 'getBoundingClientRect').mockImplementation(() => rect(1_200))
+    let clientWidth = 440
+    Object.defineProperty(details, 'clientWidth', {
+      configurable: true,
+      get: () => clientWidth,
+    })
+    vi.spyOn(details, 'getBoundingClientRect').mockImplementation(() => {
+      const inlineWidth = Number.parseFloat(details.style.width)
+      return rect(Number.isNaN(inlineWidth) ? 440 : inlineWidth)
+    })
+
+    expect(separator.getAttribute('aria-controls')).toBe('trajectory-detail-panel')
+    expect(separator.getAttribute('aria-valuemin')).toBe('320')
+    expect(separator.getAttribute('aria-valuemax')).toBe('720')
+    expect(separator.getAttribute('aria-valuenow')).toBe('440')
+    expect(separator.getAttribute('aria-valuetext')).toBe('440 pixels')
+
+    separator.focus()
+    fireEvent.keyDown(separator, { key: 'ArrowLeft' })
+    expect(separator.getAttribute('aria-valuenow')).toBe('456')
+    clientWidth = 0
+    fireEvent.keyDown(separator, { key: 'ArrowRight' })
+    expect(separator.getAttribute('aria-valuenow')).toBe('440')
+    fireEvent.keyDown(separator, { key: 'Home' })
+    expect(separator.getAttribute('aria-valuenow')).toBe('320')
+    fireEvent.keyDown(separator, { key: 'End' })
+    expect(separator.getAttribute('aria-valuenow')).toBe('720')
+    fireEvent.keyDown(separator, { key: 'Enter' })
+    expect(separator.getAttribute('aria-valuenow')).toBe('440')
+    expect(document.activeElement).toBe(separator)
+  })
+
   it('shows a tool record Duration as exact milliseconds', () => {
     const turns: readonly TrajectoryTurnModel[] = [{
       turn: 1,

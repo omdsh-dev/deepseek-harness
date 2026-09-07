@@ -42,6 +42,7 @@ import {
   type ResumeSessionResponse,
   type SetSessionConfigOptionRequest,
   type SetSessionConfigOptionResponse,
+  type SessionConfigOption,
   type SessionNotification,
   type Stream,
 } from '@agentclientprotocol/sdk'
@@ -221,17 +222,38 @@ export function apply(ctx: Context, config: AcpConfig): void {
         await record.close('connection closed during session/new')
         throw internalError('connection closed during session/new')
       }
-      sessions.set(sessionId, record)
+      let topologyRevision = 0
+      const stopTopologyProbe = ctx.on('llm/adapters-updated', () => { topologyRevision += 1 })
       try {
-        const configOptions = await record.configOptions(signal)
+        const stableConfigOptions = async (): Promise<SessionConfigOption[]> => {
+          for (;;) {
+            const revision = topologyRevision
+            const options = await record.configOptions(signal)
+            if (revision === topologyRevision) return options
+          }
+        }
+        // Validate discovery before materializing an otherwise empty session,
+        // preserving rollback when the configured route is unusable.
+        let configOptions = await stableConfigOptions()
+        const optionRevision = topologyRevision
         assertOpen()
         await persistence.ensureMaterialized(record.agent.session)
         assertOpen()
+        // Materialization may finish activating a provider. Re-read only when
+        // that actually happened, and converge if another synchronous commit
+        // lands during discovery.
+        if (optionRevision !== topologyRevision) configOptions = await stableConfigOptions()
+        // Do not publish the record until the response carries both its id and
+        // final option snapshot. A topology event during activation must be
+        // folded into this response, never emitted as a notification for a
+        // session id the client has not received yet.
+        sessions.set(sessionId, record)
         return { sessionId, configOptions }
       } catch (error: unknown) {
-        sessions.delete(sessionId)
         await record.close('session/new activation failed')
         throw error
+      } finally {
+        stopTopologyProbe()
       }
     },
 
@@ -277,11 +299,14 @@ export function apply(ctx: Context, config: AcpConfig): void {
           await record.close('connection closed during session/resume')
           throw internalError('connection closed during session/resume')
         }
-        sessions.set(sessionId, record)
         try {
-          return { configOptions: await record.configOptions(signal) }
+          const configOptions = await record.configOptions(signal)
+          assertOpen()
+          // `activating` reserves the id while discovery runs; publish only
+          // after the resume response owns the current option snapshot.
+          sessions.set(sessionId, record)
+          return { configOptions }
         } catch (error: unknown) {
-          sessions.delete(sessionId)
           await record.close('session/resume option discovery failed')
           throw error
         }

@@ -191,11 +191,27 @@
   background: var(--dsw-alias-state-business-primary);
 }
 
+.tab:focus-visible {
+  outline: 2px solid var(--dsw-alias-state-business-primary);
+  outline-offset: 3px;
+}
+
 .viewArea {
   display: flex;
   flex: 1;
   flex-direction: column;
   min-height: 0;
+}
+
+.viewPanel {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.viewPanel[hidden] {
+  display: none;
 }
 
 /* Width handles: 40px col-resize strips beside the transcript, absolute in

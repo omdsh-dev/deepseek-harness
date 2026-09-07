@@ -22,8 +22,10 @@ const PATTERNS = [
   'docs/**/*.md',
   'packages/*/*.md',
   'packages/*/*/*.md',
-  'snapshots/**/system-prompt.expected.md',
-  'packages/**/system-prompt.expected.md',
+  // Node 24.3 fs.globSync can re-descend a literal basename after `**` as
+  // `file.md/file.md`; exact extglob `@(s)` avoids that literal traversal.
+  'snapshots/**/@(s)ystem-prompt.expected.md',
+  'packages/**/@(s)ystem-prompt.expected.md',
   'AGENTS.md',
   'packages/AGENTS.md',
   'snapshots/AGENTS.md',

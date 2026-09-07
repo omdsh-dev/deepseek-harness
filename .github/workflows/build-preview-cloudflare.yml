@@ -32,6 +32,9 @@ env:
 
 jobs:
   preview:
+    # Forks do not inherit the upstream larger runner or deployment secrets.
+    # Keep the check explicit and neutral instead of leaving it queued forever.
+    if: github.repository_owner == 'deepseek-harness'
     runs-on: dsh-ubuntu-24-04-16core
     name: cloudflare pages preview
     steps:

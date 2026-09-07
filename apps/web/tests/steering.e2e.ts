@@ -124,11 +124,16 @@ describe('web e2e: mid-turn steering lands durably and visibly', () => {
     // A timeout while the Queue row remains means strict steer lost to a
     // closing window (`steer-unavailable`); inspect replay pacing first.
     await pendingSteering.waitFor({ timeout: 10_000 })
+    expect(await pendingSteering.getAttribute('role')).toBe('article')
+    expect(await pendingSteering.getAttribute('aria-label')).toBe('User message')
 
     // The blocked composer keeps steering pending long enough to observe the
     // Host-authoritative mirror before the loop admits it durably.
     const composer = page.locator('[data-question-key]')
     await composer.waitFor({ timeout: MODE === 'record' ? 120_000 : 30_000 })
+    const liveAnnouncements = page.locator('[data-chat-announcer]')
+    await expect.poll(() => liveAnnouncements.textContent(), { timeout: 10_000 })
+      .toContain('A question needs your answer.')
 
     if (MODE !== 'record') {
       expect(await page.getByText(STEER, { exact: true }).count()).toBe(1)
@@ -138,12 +143,26 @@ describe('web e2e: mid-turn steering lands durably and visibly', () => {
       await compareOrRefreshGolden(MID_EXPECTED, snapshot, MODE)
     }
 
+    const radioGroup = composer.getByRole('radiogroup', { name: 'Ready to continue?' })
+    const yes = radioGroup.getByRole('radio', { name: 'Yes' })
+    const no = radioGroup.getByRole('radio', { name: 'No' })
+    expect(await radioGroup.locator('[role="radio"][tabindex="0"]').count()).toBe(1)
+    await yes.focus()
+    await yes.press('ArrowRight')
+    expect(await no.evaluate(element => document.activeElement === element)).toBe(true)
+    expect(await no.getAttribute('aria-checked')).toBe('true')
+    expect(await composer.count()).toBe(1)
+    await no.press('Home')
+    expect(await yes.evaluate(element => document.activeElement === element)).toBe(true)
+    expect(await yes.getAttribute('aria-checked')).toBe('true')
+
     // Answer the composer; the tool result closes the step, the loop drains
     // the steer as user/message, and the steered continuation runs the
     // final model call.
-    await composer.getByRole('radio', { name: 'Yes' }).click()
-    await composer.getByRole('radio', { name: 'Yes' }).press('Enter')
+    await yes.press('Enter')
     await settled
+    await expect.poll(() => liveAnnouncements.textContent(), { timeout: 10_000 })
+      .toContain('Response completed.')
 
     if (MODE === 'record') {
       const sessionId = await settled
@@ -235,6 +254,8 @@ describe('web e2e: composer shortcut steers directly', () => {
     await composer.waitFor({ timeout: 30_000 })
     const pendingSteering = page.locator('[data-pending-steering]').filter({ hasText: STEER })
     await pendingSteering.waitFor({ timeout: 10_000 })
+    expect(await pendingSteering.getAttribute('role')).toBe('article')
+    expect(await pendingSteering.getAttribute('aria-label')).toBe('User message')
     await composer.getByRole('radio', { name: 'Yes' }).click()
     await composer.getByRole('radio', { name: 'Yes' }).press('Enter')
     await settled
@@ -278,7 +299,7 @@ describe('web e2e: composer shortcut follows the swapped busy behavior', () => {
     await page.getByRole('button', { name: 'Settings', exact: true }).click()
     const dialog = page.getByRole('dialog', { name: 'Settings' })
     await dialog.getByRole('button', { name: 'Queue' }).click()
-    await page.getByRole('menuitem', { name: 'Steer' }).click()
+    await page.getByRole('menuitemradio', { name: 'Steer' }).click()
     await dialog.getByRole('button', { name: 'Steer' }).waitFor({ timeout: 10_000 })
     await page.keyboard.press('Escape')
 

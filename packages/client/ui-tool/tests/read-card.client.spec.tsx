@@ -230,7 +230,7 @@ describe('ReadRow keyed toolview', () => {
   it('the path summary opens the file through the host', () => {
     const openFile = vi.fn()
     const view = render(<ReadRow {...{ ...rowProps(settled()), openFile }} />)
-    fireEvent.click(view.getByRole('button', { name: 'src/a.ts' }))
+    fireEvent.click(view.getByRole('button', { name: '打开文件 src/a.ts' }))
     // The row derives the file path from args; the chat view resolves it against
     // the cwd before this callback opens it, so the arg path is what arrives.
     expect(openFile).toHaveBeenCalledWith('src/a.ts')

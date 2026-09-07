@@ -1,5 +1,5 @@
 import {
-  useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent,
+  useEffect, useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent,
 } from 'react'
 import { createPortal } from 'react-dom'
 import {
@@ -45,6 +45,8 @@ interface CatalogRowsProps {
   refresh: (parentSessionId: SessionId) => void
   toggleBranch: (childSessionId: SessionId) => void
   closeCatalog: () => void
+  tabStopId: SessionId | null
+  onClaimTabStop: (childSessionId: SessionId) => void
 }
 
 function diagnosticReason(
@@ -238,7 +240,7 @@ function CatalogLoadingRows({
 /** Render one catalog level and recurse only through explicitly expanded rows. */
 function CatalogRows({
   parentSessionId, currentSessionId, catalog, catalogs, summaries, expanded, level, now,
-  openChild, refresh, toggleBranch, closeCatalog, t,
+  openChild, refresh, toggleBranch, closeCatalog, tabStopId, onClaimTabStop, t,
 }: CatalogRowsProps & { t: TranslateNS<typeof NS> }) {
   const emptyLoading = catalog.state === 'loading' && catalog.entries.length === 0
   const reserveDisclosure = catalog.entries.some(
@@ -339,6 +341,25 @@ function CatalogRows({
             event.preventDefault()
             event.stopPropagation()
             toggleBranch(entry.id)
+          } else if (event.key === 'ArrowRight' && !knownLeaf && isExpanded) {
+            const firstChild = event.currentTarget.parentElement?.querySelector<HTMLElement>(
+              ':scope > [role="group"] [role="treeitem"]:not([aria-disabled="true"])',
+            )
+            if (firstChild !== null && firstChild !== undefined) {
+              event.preventDefault()
+              event.stopPropagation()
+              firstChild.focus()
+            }
+          } else if (event.key === 'ArrowLeft') {
+            const group = event.currentTarget.parentElement?.parentElement
+            const parent = group?.getAttribute('role') === 'group'
+              ? group.parentElement?.querySelector<HTMLElement>(':scope > [role="treeitem"]')
+              : undefined
+            if (parent !== null && parent !== undefined) {
+              event.preventDefault()
+              event.stopPropagation()
+              parent.focus()
+            }
           }
         }
         const toggle = (event: MouseEvent<HTMLButtonElement>): void => {
@@ -351,13 +372,15 @@ function CatalogRows({
           <div key={entry.id} className={css.node}>
             <div
               role="treeitem"
-              tabIndex={0}
+              tabIndex={entry.id === tabStopId ? 0 : -1}
+              data-treeitem-id={entry.id}
               aria-level={level}
               aria-current={isCurrent || undefined}
               aria-label={[label, secondary, metrics].filter(value => value !== '').join(' ')}
               {...knownLeaf ? {} : { 'aria-expanded': isExpanded }}
               className={css.row}
               onClick={open}
+              onFocus={() => { onClaimTabStop(entry.id) }}
               onKeyDown={handleKey}
             >
               {knownLeaf
@@ -423,6 +446,8 @@ function CatalogRows({
                       refresh={refresh}
                       toggleBranch={toggleBranch}
                       closeCatalog={closeCatalog}
+                      tabStopId={tabStopId}
+                      onClaimTabStop={onClaimTabStop}
                       t={t}
                     />
                   )}
@@ -492,12 +517,20 @@ function CatalogDropdown({
   const [menuPosition, setMenuPosition] = useState<CSSProperties>()
   const [now, setNow] = useState(() => Date.now())
   const [expanded, setExpanded] = useState<ReadonlySet<SessionId>>(() => new Set())
+  const [tabStopId, setTabStopId] = useState<SessionId | null>(() => (
+    currentSessionId
+    ?? catalog?.entries.find(
+      (entry): entry is Extract<CatalogEntry, { kind: 'child' }> => entry.kind === 'child',
+    )?.id
+    ?? null
+  ))
   const rootRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const hoverOpenTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const hoverCloseTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const observedCatalogs = useRef(new Set<SessionId>())
+  const treeId = useId()
   const setCatalogOpenRef = useRef(setCatalogOpen)
   setCatalogOpenRef.current = setCatalogOpen
   const currentEntry = currentSessionId === undefined
@@ -655,6 +688,21 @@ function CatalogDropdown({
     return () => { clearInterval(timer) }
   }, [open, descendants.runningCount])
 
+  // Keep exactly one visible enabled row in the page Tab sequence when a
+  // refresh or branch collapse removes the row that last held focus.
+  useEffect(() => {
+    if (!open) return
+    const items = treeItems(menuRef.current)
+    if (items.length === 0) return
+    const currentIsVisible = items.some(item => item.dataset['treeitemId'] === tabStopId)
+    if (!currentIsVisible) {
+      // CatalogRows authors data-treeitem-id on every enabled row returned by
+      // treeItems; the non-empty guard above therefore guarantees this id.
+      const first = items[0] as HTMLElement
+      setTabStopId(first.dataset['treeitemId'] as SessionId)
+    }
+  }, [open, tabStopId, expanded, presentedCatalog, catalogs])
+
   useEffect(() => () => {
     cancelHoverOpen()
     cancelHoverClose()
@@ -728,6 +776,7 @@ function CatalogDropdown({
           : css.trigger}
         aria-haspopup="tree"
         aria-expanded={open}
+        aria-controls={treeId}
         aria-label={variant === 'switcher'
           ? t('switcher.aria', { title: switcherDisplayTitle })
           : t(
@@ -735,17 +784,19 @@ function CatalogDropdown({
             { count: descendants.runningCount > 0 ? descendants.runningCount : descendantCount },
           )}
         onClick={openTitle === undefined
-          ? undefined
+          ? () => { changeOpen(!open) }
           : () => {
             cancelHoverOpen()
             if (open) changeOpen(false)
             openTitle()
           }}
         onKeyDown={(event) => {
-          if (event.key !== 'ArrowDown') return
+          if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
           event.preventDefault()
           if (!open) changeOpen(true)
-          queueMicrotask(() => { focusAt(0) })
+          queueMicrotask(() => {
+            focusAt(event.key === 'ArrowDown' ? 0 : treeItems(menuRef.current).length - 1)
+          })
         }}
       >
         {variant === 'switcher'
@@ -767,6 +818,7 @@ function CatalogDropdown({
       {open && createPortal((
         <div
           ref={menuRef}
+          id={treeId}
           className={css.menu}
           style={menuPosition}
           role="tree"
@@ -787,6 +839,8 @@ function CatalogDropdown({
             refresh={refresh}
             toggleBranch={toggleBranch}
             closeCatalog={() => { changeOpen(false) }}
+            tabStopId={tabStopId}
+            onClaimTabStop={setTabStopId}
             t={t}
           />
         </div>

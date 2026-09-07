@@ -41,7 +41,7 @@ export function LanguageRow({ t, setLocale, useStore }: LanguageRowComponentProp
       <Menu
         open={open}
         onClose={() => { setOpen(false) }}
-        items={options.map(o => ({ id: o.id, label: o.label }))}
+        items={options.map(o => ({ id: o.id, label: o.label, selection: 'radio' as const }))}
         selectedId={active}
         onSelect={(id) => {
           setLocale(id)

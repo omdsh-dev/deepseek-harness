@@ -10,7 +10,7 @@
 |---|---|
 | `dsh --profile <name>` | 启动位于 `$DSH_HOME/profiles/<name>` 的指定 profile。 |
 | `dsh --profile acp` | 通过 ACP stdio 为自动化 client 提供服务，直至断开连接。 |
-| `dsh --profile headless "job"` | 运行一个全新的持久化会话，打印最终答案并退出。 |
+| `dsh --profile headless "job"` | 运行一个全新的持久化会话，打印最终答案并退出；`--accessibility` 选择稳定的读屏输出。 |
 | `dsh --profile sdk` | 通过 JSON-RPC stdio 为 SDK client 提供服务，直至关闭或断开连接。 |
 | `dsh --profile sdk-minimal` | 以独立极简 agent 配置树为 SDK client 提供服务。 |
 | `dsh web` | `--profile web` 的别名。 |
@@ -26,6 +26,8 @@
 dsh --profile web --port 8080       # --port belongs to the web app
 dsh --profile tui --resume <id>     # example, assuming the tui profile is installed; --resume belongs to the terminal app
 dsh --profile headless "run the tests"
+dsh --profile headless --accessibility "run the tests"
+dsh --profile headless --output-format json "run the tests"
 dsh --profile web --help            # the web app's flags, not the launcher's
 dsh --help                          # the launcher's own help
 ```

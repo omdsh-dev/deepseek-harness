@@ -15,7 +15,7 @@ import clsx from 'clsx'
 import {
   ConnectionIndicator,
   IconAgentPresetOutline16, IconCloseOutline16, IconDataOutline16,
-  IconPersonalizationOutline16, IconSettingsOutline16,
+  IconPersonalizationOutline16, IconSettingsOutline16, Modal,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { ConnectionIndicatorState } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { SettingsRootComponentProps, SettingsSectionRow } from './shell-contract.ts'
@@ -40,9 +40,9 @@ type PanelProps = {
 }
 
 /**
- * The modal layer: full-viewport mask + centered panel. Close paths: the
- * header button, a mask click, and document-level Escape (mounted only while
- * open, so the listener lifetime is the panel's).
+ * The modal layer: full-viewport mask + centered panel. The shared Modal owns
+ * focus containment, background inertness, trigger restoration, mask click,
+ * and Escape; this component owns the settings navigation and close control.
  */
 function SettingsPanel({ rows, renderSlot, activeId, onSelect, onClose }: PanelProps) {
   // Entries can unmount underneath the requested id, so the render-time
@@ -50,53 +50,55 @@ function SettingsPanel({ rows, renderSlot, activeId, onSelect, onClose }: PanelP
   const active = rows.find(r => r.id === activeId)?.id ?? rows[0]?.id
   const titleId = useId()
 
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', onKeyDown)
-    return () => { document.removeEventListener('keydown', onKeyDown) }
-  }, [onClose])
-
-  // Entering the dialog focuses the close button; the root restores its trigger on close.
-  const closeButton = useRef<HTMLButtonElement | null>(null)
-  useEffect(() => { closeButton.current?.focus() }, [])
-
   return (
-    <div className={css.overlay} role="presentation">
-      <div className={css.mask} aria-hidden="true" onClick={onClose} />
-      <div className={css.panel} role="dialog" aria-modal="true" aria-labelledby={titleId}>
-        <nav className={css.nav}>
-          <div className={css.navTitle} id={titleId}>{renderSlot('settings.header', {})}</div>
-          <div className={css.navList}>
-            {rows.map(row => (
-              <button
-                key={row.id}
-                type="button"
-                className={clsx(css.navCell, row.id === active && css.active)}
-                aria-current={row.id === active ? 'true' : undefined}
-                onClick={() => { onSelect(row.id) }}
-              >
-                {navIcon(row.id)}
-                <span className={css.navLabel}>{row.label}</span>
-              </button>
-            ))}
-          </div>
-        </nav>
-        <div className={css.content}>
-          <div className={css.header}>
-            <div className={css.actions}>{renderSlot('settings.action', {})}</div>
-            <button ref={closeButton} type="button" className={css.close} onClick={onClose}>
-              <IconCloseOutline16 size={14} />
-              <span className={css.hiddenLabel}>{renderSlot('settings.close', {})}</span>
+    <Modal
+      open
+      onClose={onClose}
+      title=""
+      labelledBy={titleId}
+      headless
+      className={clsx(css.panel)}
+    >
+      <nav className={css.nav}>
+        <div className={css.navTitle} id={titleId}>{renderSlot('settings.header', {})}</div>
+        <div className={css.navList}>
+          {rows.map(row => (
+            <button
+              key={row.id}
+              type="button"
+              className={clsx(css.navCell, row.id === active && css.active)}
+              aria-current={row.id === active ? 'true' : undefined}
+              onClick={() => { onSelect(row.id) }}
+            >
+              {navIcon(row.id)}
+              <span className={css.navLabel}>{row.label}</span>
             </button>
-          </div>
-          <div className={css.options}>
-            {active !== undefined && renderSlot('settings.section', { close: onClose }, { only: active })}
-          </div>
+          ))}
+        </div>
+      </nav>
+      <div className={css.content}>
+        <div className={css.header}>
+          <div className={css.actions}>{renderSlot('settings.action', {})}</div>
+          <button autoFocus type="button" className={css.close} onClick={onClose}>
+            <IconCloseOutline16 size={14} />
+            <span className={css.hiddenLabel}>{renderSlot('settings.close', {})}</span>
+          </button>
+        </div>
+        <div
+          className={css.options}
+          onFocusCapture={(event) => {
+            const target = event.target
+            requestAnimationFrame(() => {
+              if (target instanceof HTMLElement && target.matches(':focus')) {
+                target.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+              }
+            })
+          }}
+        >
+          {active !== undefined && renderSlot('settings.section', { close: onClose }, { only: active })}
         </div>
       </div>
-    </div>
+    </Modal>
   )
 }
 
@@ -184,6 +186,7 @@ export function SettingsRoot(props: SettingsRootComponentProps) {
           ref={triggerButton}
           type="button"
           className={clsx(css.trigger, !wide && css.rail)}
+          aria-label={wide ? undefined : t('trigger')}
           aria-haspopup="dialog"
           aria-expanded={open}
           onClick={() => { setOpen(true) }}

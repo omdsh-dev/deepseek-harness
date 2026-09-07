@@ -1,4 +1,5 @@
-- banner:
+- main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy":
     - button "Reply with a one-sentence description" [disabled]
   - img
@@ -6,31 +7,35 @@
   - button "Session log":
     - text: Session log
     - img
-  - tablist:
+  - tablist "Session views":
     - tab "Chat" [selected]
     - tab "Trajectory"
-- button "System prompt":
-  - img
-  - img
-  - text: System prompt
-- text: Reply with a one-sentence description of event sourcing, then stop. {{clock}}
-- button "Copy":
-  - img
-- button "Context injection @deepseek-ai/dsh-system-prompt":
-  - img
-  - img
-  - text: Context injection @deepseek-ai/dsh-system-prompt
-- group:
-  - status: Retried model request (2/2) · {{duration}}
-- status:
-  - text: This turn failedupstream 503
-  - code: SERVER
-- textbox "Message or run a task... / commands, @ files or sessions"
-- button "Commands":
-  - img
-- 'button "Access mode, current: Workspace Write"': Workspace Write
-- button "Select model, current DeepSeek-V4-Flash":
-  - text: DeepSeek-V4-Flash
-  - img
-- button "Send message" [disabled]
-- text: 1 turns · 1 steps
+  - tabpanel "Chat":
+    - text: Response failed.
+    - log "Conversation transcript":
+      - button "System prompt":
+        - img
+        - img
+        - text: System prompt
+      - article "User message":
+        - text: Reply with a one-sentence description of event sourcing, then stop. {{clock}}
+        - button "Copy":
+          - img
+      - button "Context injection @deepseek-ai/dsh-system-prompt":
+        - img
+        - img
+        - text: Context injection @deepseek-ai/dsh-system-prompt
+      - group:
+        - status: Retried model request (2/2) · {{duration}}
+      - status:
+        - text: This turn failedupstream 503
+        - code: SERVER
+  - textbox "Message or run a task... / commands, @ files or sessions"
+  - button "Commands":
+    - img
+  - 'button "Access mode, current: Workspace Write"': Workspace Write
+  - button "Select model, current DeepSeek-V4-Flash":
+    - text: DeepSeek-V4-Flash
+    - img
+  - button "Send message" [disabled]
+  - text: 1 turns · 1 steps

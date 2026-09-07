@@ -338,9 +338,9 @@ export interface LaunchOptions {
   /** Uploading mode for the mounted telemetry row. Defaults to `FULL`. */
   telemetryMode?: 'FULL' | 'FEEDBACK_ONLY'
   /**
-   * Browse through a trusted non-loopback hostname that the browser resolves
-   * to loopback (for example `*.localhost`). The test server stays bound to
-   * 127.0.0.1; a non-resolving authority fails before Host trust is exercised.
+   * Browse through a trusted non-loopback hostname that the browser maps to
+   * loopback (for example `*.localhost`). The test server and scaffold's token
+   * exchange stay on 127.0.0.1 while preserving this HTTP Host authority.
    */
   remoteAuthority?: string
   /** Reuse an existing harness home so a second Host can verify user settings across origins. */
@@ -704,7 +704,16 @@ export async function launchWebScaffold(options: LaunchOptions = {}): Promise<We
     }
     baseUrl = `http://${browserHost}:${String(port)}`
     authenticatedUrl = ctx.connection.authenticatedUrl(baseUrl)
-    const login = await fetch(authenticatedUrl, { redirect: 'manual' })
+    const loginUrl = new URL(authenticatedUrl)
+    const loginHeaders = new Headers()
+    if (options.remoteAuthority !== undefined) {
+      // Node's resolver does not consistently implement wildcard .localhost
+      // across supported hosts. Connect to the bound loopback address while
+      // preserving the exact authority whose trust policy this lane verifies.
+      loginUrl.hostname = '127.0.0.1'
+      loginHeaders.set('host', `${options.remoteAuthority}:${String(port)}`)
+    }
+    const login = await fetch(loginUrl, { redirect: 'manual', headers: loginHeaders })
     const setCookie = login.headers.get('set-cookie')
     if (login.status !== 303 || login.headers.get('location') !== '/' || setCookie === null) {
       throw new Error('web e2e scaffold: browser token exchange did not return its session cookie')

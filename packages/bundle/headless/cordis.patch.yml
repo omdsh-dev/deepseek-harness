@@ -28,3 +28,5 @@
       inject: [headlessStartup]
       config:
         task: !!js ctx.headlessStartup.task
+        accessibility: !!js ctx.headlessStartup.accessibility
+        outputFormat: !!js ctx.headlessStartup.outputFormat

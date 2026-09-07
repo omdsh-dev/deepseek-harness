@@ -1,6 +1,6 @@
 /** Strict per-session header/body content inserted into the resident conversation layout. */
 
-import { useEffect } from 'react'
+import { useEffect, type KeyboardEvent } from 'react'
 import clsx from 'clsx'
 import type { SessionListState, SessionSummary } from '@deepseek-ai/dsh-api-session-controller/client'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
@@ -21,6 +21,14 @@ interface Breadcrumb {
   readonly id: SessionId
   readonly displayTitle: string
   readonly subagent: boolean
+}
+
+function conversationViewPanelId(sessionId: SessionId, viewId: string): string {
+  return `dsh-conversation-view-panel-${encodeURIComponent(sessionId)}-${encodeURIComponent(viewId)}`
+}
+
+function conversationViewTabId(sessionId: SessionId, viewId: string): string {
+  return `dsh-conversation-view-tab-${encodeURIComponent(sessionId)}-${encodeURIComponent(viewId)}`
 }
 
 function deriveAncestry(list: SessionListState, id: SessionId): readonly Breadcrumb[] {
@@ -67,6 +75,36 @@ export function ConversationSessionHeader({
   const session = useSession(s => s)
   const conversation = useConversation(s => s)
   const hideChrome = session.blank && conversationPhase(session, conversation) === 'blank'
+
+  const handleTabKeyDown = (
+    event: KeyboardEvent<HTMLButtonElement>,
+    currentIndex: number,
+  ): void => {
+    let nextIndex: number | undefined
+    switch (event.key) {
+      case 'ArrowLeft':
+        nextIndex = (currentIndex - 1 + tabs.length) % tabs.length
+        break
+      case 'ArrowRight':
+        nextIndex = (currentIndex + 1) % tabs.length
+        break
+      case 'Home':
+        nextIndex = 0
+        break
+      case 'End':
+        nextIndex = tabs.length - 1
+        break
+      default:
+        return
+    }
+    const next = tabs.at(nextIndex)
+    const tablist = event.currentTarget.parentElement
+    const target = tablist?.querySelectorAll<HTMLButtonElement>('[role="tab"]').item(nextIndex)
+    if (next === undefined || target === undefined) return
+    event.preventDefault()
+    target.focus()
+    selectView(next.id)
+  }
 
   return (
     <header
@@ -135,15 +173,19 @@ export function ConversationSessionHeader({
             </div>
           </div>
           {tabs.length > 1 && (
-            <div className={css.tabs} role="tablist">
-              {tabs.map(viewTab => (
+            <div className={css.tabs} role="tablist" aria-label={t('session.views')}>
+              {tabs.map((viewTab, index) => (
                 <button
                   key={viewTab.id}
+                  id={conversationViewTabId(sessionId, viewTab.id)}
                   type="button"
                   role="tab"
                   aria-selected={viewTab.id === active?.id}
+                  aria-controls={conversationViewPanelId(sessionId, viewTab.id)}
+                  tabIndex={viewTab.id === active?.id ? 0 : -1}
                   className={clsx(css.tab, viewTab.id === active?.id && css.tabActive)}
                   onClick={() => { selectView(viewTab.id) }}
+                  onKeyDown={(event) => { handleTabKeyDown(event, index) }}
                 >
                   {viewTab.label}
                 </button>
@@ -163,7 +205,7 @@ export function ConversationSessionHeader({
  * @returns the active view area, or null while the Session remains blank.
  */
 export function ConversationSession({
-  useSession, useConversation, useConversationViews, useInput, inputActions, useStore, actions,
+  sessionId, useSession, useConversation, useConversationViews, useInput, inputActions, useStore, actions,
   renderSlot, bindDraftMirror, openView,
 }: ConversationSessionProps) {
   const tabs = useConversationViews(value => value)
@@ -184,13 +226,37 @@ export function ConversationSession({
   }, [inputActions])
 
   if (session.blank && conversationPhase(session, conversation) === 'blank') return null
+  const activeView = active === undefined
+    ? null
+    : renderSlot('conversation.view', {
+      viewRequest,
+      openView,
+      completeViewRequest: actions.completeViewRequest,
+    }, { only: active.id })
   return (
     <div className={css.viewArea}>
-      {active !== undefined && renderSlot('conversation.view', {
-        viewRequest,
-        openView,
-        completeViewRequest: actions.completeViewRequest,
-      }, { only: active.id })}
+      {tabs.length > 1
+        ? tabs.map((viewTab) => {
+          const selected = viewTab.id === active?.id
+          return (
+            <div
+              key={viewTab.id}
+              id={conversationViewPanelId(sessionId, viewTab.id)}
+              className={css.viewPanel}
+              role="tabpanel"
+              aria-labelledby={conversationViewTabId(sessionId, viewTab.id)}
+              tabIndex={0}
+              hidden={!selected}
+            >
+              {selected && activeView}
+            </div>
+          )
+        })
+        : active !== undefined && (
+          <div className={css.viewPanel} role="region" aria-label={active.label}>
+            {activeView}
+          </div>
+        )}
     </div>
   )
 }

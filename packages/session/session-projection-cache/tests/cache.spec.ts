@@ -209,7 +209,8 @@ describe('SessionProjectionCache write policy', () => {
       session = inner.sessions.create(SessionId('detach'))
     }, { inject: ['sessions'] }))
     if (session === undefined) throw new Error('session was not created')
-    mark(session, ['live'])
+    const detachedSession = session
+    mark(detachedSession, ['live'])
     await owner.dispose()
     const detached = session
     await vi.waitFor(async () => {

@@ -6,6 +6,15 @@ import { pathToFileURL } from 'node:url'
 
 import config from './config.json' with { type: 'json' }
 
+// Read-only PR policy should follow the repository running the workflow. This
+// preserves the checked-in upstream defaults for local use while making forks
+// validate their own pull requests instead of querying the upstream PR number.
+const runtimeRepository = process.env.GITHUB_REPOSITORY?.split('/')
+if (runtimeRepository?.length === 2 && runtimeRepository.every(Boolean)) {
+  config.organization = runtimeRepository[0]
+  config.repository = runtimeRepository[1]
+}
+
 const API_VERSION = '2026-03-10'
 const BODY_LIMIT = 50
 const AUDIT_MARKER = '<!-- dsh-issue-policy -->'

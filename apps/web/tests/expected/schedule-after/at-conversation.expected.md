@@ -1,1 +1,2 @@
-- paragraph: "Reminder: Review the release window."
+- article "Assistant response":
+  - paragraph: "Reminder: Review the release window."
