@@ -4,7 +4,7 @@
  * control.
  */
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { SnapshotStore } from '@deepseek-ai/dsh-client-store'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import {
@@ -43,6 +43,8 @@ export function PermissionRow({ load, select, usePermission, t }: PermissionRowP
   const [open, setOpen] = useState(false)
   const [confirmingFullAccess, setConfirmingFullAccess] = useState(false)
   const [acknowledged, setAcknowledged] = useState(false)
+  const selectorRef = useRef<HTMLButtonElement>(null)
+  const restoreAfterSaveRef = useRef(false)
 
   useEffect(() => {
     void load()
@@ -55,6 +57,26 @@ export function PermissionRow({ load, select, usePermission, t }: PermissionRowP
     setConfirmingFullAccess(false)
   }, [state.status, state.writable])
 
+  const restoreSelectorWhenReady = useCallback((): void => {
+    queueMicrotask(() => {
+      if (!restoreAfterSaveRef.current) return
+      const selector = selectorRef.current
+      if (selector?.isConnected !== true || selector.disabled) return
+      restoreAfterSaveRef.current = false
+      selector.focus()
+    })
+  }, [])
+
+  useEffect(() => {
+    if (!restoreAfterSaveRef.current) return
+    if (!state.writable || state.status === 'unavailable') {
+      restoreAfterSaveRef.current = false
+      return
+    }
+    if (state.status === 'loading' || state.status === 'saving') return
+    restoreSelectorWhenReady()
+  }, [restoreSelectorWhenReady, state.status, state.writable])
+
   if (state.status === 'unavailable') return null
   const selected = state.options.find(option => option.id === state.currentValue)
   const busy = state.status === 'loading' || state.status === 'saving' || confirmingFullAccess
@@ -62,6 +84,11 @@ export function PermissionRow({ load, select, usePermission, t }: PermissionRowP
     displayPermissionPreset(option.id, option.label, t)
   const label = selected !== undefined ? optionLabel(selected) : (busy ? t('loading') : t('unavailable'))
   const description: string = state.error ?? t('description')
+
+  const selectAndRestore = (id: string): void => {
+    restoreAfterSaveRef.current = true
+    void select(id).then(restoreSelectorWhenReady, restoreSelectorWhenReady)
+  }
 
   return (
     <>
@@ -73,22 +100,30 @@ export function PermissionRow({ load, select, usePermission, t }: PermissionRowP
         <Menu
           open={open}
           onClose={() => { setOpen(false) }}
-          items={state.options.map(option => ({ id: option.id, label: optionLabel(option) }))}
+          items={state.options.map(option => ({
+            id: option.id,
+            label: optionLabel(option),
+            selection: 'radio' as const,
+          }))}
           selectedId={state.currentValue}
           onSelect={(id) => {
             setOpen(false)
             if (id === state.currentValue) return
+            // The portaled menu row is transient. Give the shared Modal a
+            // connected invoker and restore this durable owner after saving.
+            selectorRef.current?.focus()
             if (id === FULL_ACCESS_PRESET) {
               setAcknowledged(false)
               setConfirmingFullAccess(true)
               return
             }
-            void select(id)
+            selectAndRestore(id)
           }}
           align="end"
           portal
           anchor={(
             <button
+              ref={selectorRef}
               type="button"
               className={css.selector}
               aria-haspopup="menu"
@@ -120,7 +155,7 @@ export function PermissionRow({ load, select, usePermission, t }: PermissionRowP
         onConfirm={() => {
           setAcknowledged(false)
           setConfirmingFullAccess(false)
-          void select(FULL_ACCESS_PRESET)
+          selectAndRestore(FULL_ACCESS_PRESET)
         }}
       />
     </>

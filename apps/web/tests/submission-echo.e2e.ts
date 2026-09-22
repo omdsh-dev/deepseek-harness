@@ -49,6 +49,8 @@ it('paints the submission echo on the send keystroke and swaps it for the durabl
   // already cleared, editable, and free of the rail.
   const echo = document.querySelector<HTMLElement>('[data-submission-echo]')
   if (echo === null) throw new Error('submission echo missing on the send keystroke')
+  expect(echo.getAttribute('role')).toBe('article')
+  expect(echo.getAttribute('aria-label')).toBe('User message')
   expect(echo.textContent).toContain('回显这条消息')
   expect(echo.querySelector('img')?.getAttribute('src')?.split(':')[0]).toBe('blob')
   expect(composer.textContent).toBe('')

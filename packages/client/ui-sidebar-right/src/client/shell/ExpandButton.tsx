@@ -19,6 +19,7 @@ import type { PropsLocale, PropsRuntime, PropsStore } from '@deepseek-ai/dsh-cli
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type { createSidebarRightStore } from '../stores.ts'
 import css from './ExpandButton.module.css'
+import { transferSidebarFocus } from './focus.ts'
 
 /** The button's props: the header corner seat, the shared store, and copy. */
 export type ExpandButtonProps =
@@ -38,8 +39,14 @@ export function ExpandButton({ sessionId, useStore, actions, t }: ExpandButtonPr
         type="button"
         className={css.button}
         aria-label={t('chrome.expandAria')}
+        aria-expanded={false}
+        aria-controls="dsh-rightbar-pane"
         data-sidebar-right-expand
-        onClick={() => { actions.setExpanded(sessionId, true) }}
+        data-sidebar-right-session={sessionId}
+        onClick={(event) => {
+          actions.setExpanded(sessionId, true)
+          transferSidebarFocus(event.currentTarget, true)
+        }}
       >
         <IconPanelLeftOutline16 className={css.icon} />
       </button>

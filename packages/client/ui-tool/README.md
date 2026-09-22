@@ -25,7 +25,7 @@ English | [中文](README.zh.md)
 <a id="use-this-package"></a>
 ## Use this package
 
-Tool calls appear in the conversation as cards: a root call tree with its nested subcalls, each atomic call rendered by its owning view. Users see running, successful, failed, and interrupted states that come only from the frozen call/result slice, and can open files or inspect calls through the Host callbacks.
+Tool calls appear in the conversation as cards: a root call tree with its nested subcalls, each atomic call rendered by its owning view. Users see running, successful, failed, and interrupted states that come only from the frozen call/result slice, and can open files or inspect calls through the Host callbacks. Generic and Bash rows expose localized text for all four lifecycle states rather than relying on shimmer, color, or a status dot, and every expandable row names a stable controlled panel through `aria-controls`; the Chat owner separately announces root-call transitions without replaying history or narrating nested dispatch noise. A file row exposes separate named buttons for expanding details and opening the path, while pointer activation over the remaining row still expands it; no open-file button is nested inside the disclosure control.
 
 ### Registering a business tool view
 

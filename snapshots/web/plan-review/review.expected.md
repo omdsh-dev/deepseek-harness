@@ -36,7 +36,7 @@
     - listitem:
       - strong: No tests or config changes
       - text: unless they already exist and directly validate the flag's presence.
-  - status
+  - alert
   - button "Chat about it":
     - img
     - text: Chat about it

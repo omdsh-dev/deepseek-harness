@@ -24,6 +24,7 @@
   "exclude": [
     "tests/scaffold.ts",
     "tests/scaffold-generation.spec.ts",
+    "tests/*.accessibility.ts",
     "tests/scaffold-hermetic.e2e.ts",
     "tests/startup-rpc-budget.e2e.ts",
     "tests/minimal-preset.snapshot.ts",

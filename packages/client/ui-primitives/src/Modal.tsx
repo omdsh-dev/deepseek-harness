@@ -1,14 +1,76 @@
-import { useEffect } from 'react'
-import type { ReactNode } from 'react'
+import { useEffect, useId, useRef } from 'react'
+import type { ReactNode, RefObject } from 'react'
 import { createPortal } from 'react-dom'
 import clsx from 'clsx'
 import { IconCloseOutline16 } from './icons/index.tsx'
 import css from './Modal.module.css'
 
+const FOCUSABLE_SELECTOR = [
+  'a[href]',
+  'area[href]',
+  'button:not([disabled])',
+  'input:not([disabled]):not([type="hidden"])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  '[contenteditable="true"]',
+  '[tabindex]:not([tabindex="-1"])',
+].join(',')
+
+interface ActiveDialog {
+  element: HTMLElement
+  previousInert: boolean
+}
+
+const dialogStack: ActiveDialog[] = []
+let inertRoot: { element: HTMLElement; previous: boolean } | null = null
+
+function focusableElements(dialog: HTMLElement): HTMLElement[] {
+  return [...dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)].filter(element =>
+    !element.hidden
+    && element.getAttribute('aria-hidden') !== 'true'
+    && element.closest('[inert]') === null)
+}
+
+function topDialog(): HTMLElement | undefined {
+  return dialogStack.at(-1)?.element
+}
+
+function syncDialogInertness(): void {
+  const top = dialogStack.at(-1)
+  for (const entry of dialogStack) entry.element.inert = entry === top ? entry.previousInert : true
+}
+
+function activateDialog(dialog: HTMLElement): () => void {
+  if (dialogStack.length === 0) {
+    const appRoot = document.getElementById('root')
+    if (appRoot !== null) {
+      inertRoot = { element: appRoot, previous: appRoot.inert }
+      appRoot.inert = true
+    }
+  }
+  const entry = { element: dialog, previousInert: dialog.inert }
+  dialogStack.push(entry)
+  syncDialogInertness()
+  return () => {
+    const index = dialogStack.lastIndexOf(entry)
+    /* v8 ignore else -- every cleanup closes the dialog registered by this activation. */
+    if (index >= 0) dialogStack.splice(index, 1)
+    dialog.inert = entry.previousInert
+    syncDialogInertness()
+    if (dialogStack.length !== 0 || inertRoot === null) return
+    inertRoot.element.inert = inertRoot.previous
+    inertRoot = null
+  }
+}
+
 interface ModalBaseProps {
   open: boolean
   onClose: () => void
   title: string
+  labelledBy?: string
+  describedBy?: string
+  initialFocusRef?: RefObject<HTMLElement | null> | undefined
+  restoreFocusRef?: RefObject<HTMLElement | null> | undefined
   description?: string
   children?: ReactNode
   footer?: ReactNode
@@ -26,6 +88,12 @@ type ModalProps = ModalBaseProps & (
  * @param props.open - whether the dialog is showing.
  * @param props.onClose - Escape or mask click.
  * @param props.title - dialog heading (aria-label in every mode).
+ * @param props.labelledBy - optional id of a visible heading that replaces the aria-label.
+ * @param props.describedBy - optional id of visible supporting content; the
+ * built-in description receives a generated id when this is omitted.
+ * @param props.initialFocusRef - optional contained target focused when the dialog opens.
+ * @param props.restoreFocusRef - optional durable target focused when the dialog closes;
+ * falls back to the connected opening control when absent or disconnected.
  * @param props.closeLabel - localized accessible close-button label.
  * @param props.description - optional supporting sentence under the title.
  * @param props.children - body (inputs, etc.).
@@ -36,27 +104,104 @@ type ModalProps = ModalBaseProps & (
  * @returns null when closed; otherwise the overlay tree.
  */
 export function Modal({
-  open, onClose, title, closeLabel, description, children, footer, className, contentClassName, headless = false,
+  open, onClose, title, labelledBy, describedBy, initialFocusRef, restoreFocusRef, closeLabel, description, children,
+  footer, className, contentClassName, headless = false,
 }: ModalProps) {
+  const generatedDescriptionId = useId()
+  const descriptionId = describedBy
+    ?? (description !== undefined && description !== '' ? generatedDescriptionId : undefined)
+  const dialogRef = useRef<HTMLDivElement | null>(null)
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
+  const openingInvokerRef = useRef<HTMLElement | null>(null)
+  if (!open) openingInvokerRef.current = null
+  else if (dialogRef.current === null && openingInvokerRef.current === null
+    && typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) {
+    openingInvokerRef.current = document.activeElement
+  }
+
   useEffect(() => {
     if (!open) return
+    const dialog = dialogRef.current
+    /* v8 ignore next -- open always renders and attaches the dialog before effects run. */
+    if (dialog === null) return
+    const opener = openingInvokerRef.current
+    const deactivate = activateDialog(dialog)
+    const requestedInitial = initialFocusRef?.current ?? null
+    const explicitInitial = requestedInitial !== null && dialog.contains(requestedInitial)
+      ? requestedInitial
+      : null
+    const current = document.activeElement instanceof HTMLElement && dialog.contains(document.activeElement)
+      ? document.activeElement
+      : null
+    const initial = explicitInitial
+      ?? current
+      ?? dialog.querySelector<HTMLElement>('[autofocus]')
+      ?? focusableElements(dialog)[0]
+      ?? dialog
+    initial.focus()
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (topDialog() !== dialog) return
+      // Nested composites (for example a portaled Menu) own their consumed
+      // Escape/Tab before the dialog's outer dismissal and focus boundary.
+      if (e.defaultPrevented) return
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        onCloseRef.current()
+        return
+      }
+      if (e.key !== 'Tab') return
+      const items = focusableElements(dialog)
+      const first = items[0]
+      const last = items.at(-1)
+      if (first === undefined || last === undefined) {
+        e.preventDefault()
+        dialog.focus()
+        return
+      }
+      const active = document.activeElement
+      const activeIndex = items.findIndex(item => item === active)
+      if (activeIndex < 0) {
+        e.preventDefault()
+        ;(e.shiftKey ? last : first).focus()
+        return
+      }
+      if (e.shiftKey ? activeIndex === 0 : activeIndex === items.length - 1) {
+        e.preventDefault()
+        ;(e.shiftKey ? last : first).focus()
+      }
     }
     document.addEventListener('keydown', onKeyDown)
-    return () => { document.removeEventListener('keydown', onKeyDown) }
-  }, [open, onClose])
+    return () => {
+      document.removeEventListener('keydown', onKeyDown)
+      deactivate()
+      const explicitRestore = restoreFocusRef?.current ?? null
+      if (explicitRestore?.isConnected === true) explicitRestore.focus()
+      else if (opener?.isConnected === true) opener.focus()
+    }
+  }, [initialFocusRef, open, restoreFocusRef])
 
   if (!open) return null
 
   return createPortal((
     <div className={css.root} role="presentation">
-      <div className={css.mask} aria-hidden="true" onClick={onClose} />
       <div
+        className={css.mask}
+        aria-hidden="true"
+        onClick={() => {
+          const dialog = dialogRef.current
+          if (dialog !== null && topDialog() === dialog) onClose()
+        }}
+      />
+      <div
+        ref={dialogRef}
         className={clsx(css.dialog, className)}
         role="dialog"
         aria-modal="true"
-        aria-label={title}
+        aria-label={labelledBy === undefined ? title : undefined}
+        aria-labelledby={labelledBy}
+        aria-describedby={descriptionId}
+        tabIndex={-1}
       >
         {headless
           ? children
@@ -70,7 +215,7 @@ export function Modal({
                   </button>
                 </div>
                 {description !== undefined && description !== '' && (
-                  <p className={css.description}>{description}</p>
+                  <p id={generatedDescriptionId} className={css.description}>{description}</p>
                 )}
                 {children !== undefined && <div className={css.body}>{children}</div>}
               </div>

@@ -1,4 +1,5 @@
-- banner:
+- main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy":
     - button "Ask a research subagent to"
     - text: /
@@ -9,12 +10,15 @@
     - img
   - button "Open right sidebar":
     - img
-  - tablist:
+  - tablist "Session views":
     - tab "Chat" [selected]
     - tab "Trajectory"
-- text: Give one concrete event sourcing example. {{clock}}
-- button "Copy":
-  - img
-- status:
-  - strong: This subagent is read-only for now
-  - text: The parent session is offline; reopen it to continue sending messages.
+  - tabpanel "Chat":
+    - log "Conversation transcript":
+      - article "User message":
+        - text: Give one concrete event sourcing example. {{clock}}
+        - button "Copy":
+          - img
+  - status:
+    - strong: This subagent is read-only for now
+    - text: The parent session is offline; reopen it to continue sending messages.

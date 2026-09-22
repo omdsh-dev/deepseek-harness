@@ -29,7 +29,7 @@ kind: "package-reference"
 
 ### 浏览目录
 
-行显示 mode、`running`/`inactive` 活动状态与由日志支撑的可选 title；尾随列在上行显示提供方的持久化 token 用量总计，在下行显示活跃轮次耗时。键盘导航：ArrowRight/ArrowLeft 展开和折叠分支；ArrowUp/ArrowDown、Home、End 与 Escape 用于导航或关闭树。没有 label 的 one-shot 行回退到其会话 id；损坏、不受支持或不可用的行仍保持可读但禁用。
+行显示 mode、`running`/`inactive` 活动状态与由日志支撑的可选 title；尾随列在上行显示提供方的持久化 token 用量总计，在下行显示活跃轮次耗时。数量触发器支持单击、Enter 或空格激活，并通过控件关系与展开状态让辅助技术识别对应树；ArrowDown 与 ArrowUp 分别从首个和末个可用行打开。页面 Tab 序列中始终只有一个可用行。ArrowUp/ArrowDown、Home 与 End 在可见行间移动；ArrowRight 展开分支后进入首个可用子项，ArrowLeft 折叠分支或返回父项；Escape 关闭树并把焦点恢复到触发器。没有 label 的 one-shot 行回退到其会话 id；损坏、不受支持或不可用的行仍保持可读但禁用。
 
 ### 续接对话
 

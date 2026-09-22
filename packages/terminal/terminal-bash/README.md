@@ -96,7 +96,7 @@ One backend serves both dialects: bash and pwsh share the same session machinery
 
 ### Readiness model
 
-Three bounded tiers settle a send: exact stdin-wait evidence from the subprocess provider (Linux only), the verified private prompt marker with an exact printable tail, and output silence (`inferred_idle`); an absolute timeout always bounds the wait. Pwsh startup uses one deadline across its complete setup loop, so an `inferred_idle` follow-up does not restart the bound. Evidence collected before the provider write is discarded at the write boundary, a stdin wait that predates the write is not post-write readiness, and unknown foreground state is never a positive exact-idle signal.
+Three bounded tiers settle a send: exact stdin-wait evidence from the subprocess provider (Linux only), the verified private prompt marker with an exact printable tail, and output silence (`inferred_idle`); an absolute timeout always bounds the wait. Pwsh startup uses one deadline across its complete setup loop, so an `inferred_idle` follow-up does not restart the bound. Evidence collected before the provider write is discarded at the write boundary. A send that writes input accepts the same process group's exact stdin wait only after polling observes it leave that wait or post-submission output proves the fast command crossed the unsampled transition; a pre-write wait alone is never readiness. Unknown foreground state is never a positive exact-idle signal.
 
 ### Send cancellation and teardown
 

@@ -2,6 +2,7 @@
  * Controlled risk acknowledgement dialog shared by product surfaces that
  * must gate a sensitive action behind an explicit checkbox.
  */
+import { useId } from 'react'
 import { Button } from './Button.tsx'
 import { IconWarningOutline16 } from './icons/index.tsx'
 import { Modal } from './Modal.tsx'
@@ -40,11 +41,13 @@ export function RiskConfirmation({
   onCancel,
   onConfirm,
 }: RiskConfirmationProps) {
+  const descriptionId = useId()
   return (
     <Modal
       open={open}
       onClose={onCancel}
       title={title}
+      describedBy={descriptionId}
       closeLabel={closeLabel}
       className={css.confirmation ?? ''}
       contentClassName={css.confirmationContent ?? ''}
@@ -65,8 +68,10 @@ export function RiskConfirmation({
       )}
     >
       <div className={css.warning}>
-        <IconWarningOutline16 size={18} className={css.warningIcon} />
-        <p>{description}</p>
+        <span aria-hidden="true" className={css.warningIcon}>
+          <IconWarningOutline16 size={18} />
+        </span>
+        <p id={descriptionId}>{description}</p>
       </div>
       <label className={css.acknowledgement}>
         <input

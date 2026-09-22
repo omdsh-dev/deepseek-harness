@@ -43,6 +43,13 @@
   background: var(--dsw-alias-interactive-bg-hover);
 }
 
+.projectRow:focus-visible,
+.sessionRow:focus-visible,
+.searchResultRow:focus-visible {
+  outline: 2px solid var(--dsw-alias-state-business-primary);
+  outline-offset: -2px;
+}
+
 .searchResultHeading {
   display: flex;
   align-items: center;
@@ -147,8 +154,10 @@
 
 /* Project leading slot: folder by default, expand arrow on row hover. */
 .projectRow .chevron { display: none; }
-.projectRow:hover .chevron { display: inline-flex; }
-.projectRow:hover .folder { display: none; }
+.projectRow:hover .chevron,
+.projectRow:focus-within .chevron { display: inline-flex; }
+.projectRow:hover .folder,
+.projectRow:focus-within .folder { display: none; }
 
 /* Expand arrow (filled triangle): points right closed, rotates to point down open. */
 .arrow {
@@ -239,12 +248,15 @@
 
 .projectRow:hover .rowActions,
 .sessionRow:hover .rowActions,
+.projectRow:focus-within .rowActions,
+.sessionRow:focus-within .rowActions,
 .projectRow.menuOpen .rowActions,
 .sessionRow.menuOpen .rowActions {
   display: inline-flex;
 }
 
 .sessionRow:hover .time,
+.sessionRow:focus-within .time,
 .sessionRow.menuOpen .time {
   display: none;
 }
@@ -353,6 +365,11 @@
   color: var(--dsw-alias-label-primary);
 }
 
+.iconButton:focus-visible {
+  outline: 2px solid var(--dsw-alias-state-business-primary);
+  outline-offset: 2px;
+}
+
 /* Chevrons ride the caption grey (#ADB2B8); the folder glyph stays one step
    darker (tertiary, #81858C) per the cell spec. */
 .chevron {
@@ -364,5 +381,14 @@
   .arrow {
     animation: none;
     transition: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .projectRow:focus-visible,
+  .sessionRow:focus-visible,
+  .searchResultRow:focus-visible,
+  .iconButton:focus-visible {
+    outline-color: CanvasText;
   }
 }

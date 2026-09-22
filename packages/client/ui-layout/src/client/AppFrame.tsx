@@ -19,7 +19,10 @@ import type { ReactNode } from 'react'
 import type {
   PropsLocale, PropsRenderSlots, PropsRuntime, PropsStore,
 } from '@deepseek-ai/dsh-client-ui-slots'
-import { computeColumns, RIGHTBAR_DEFAULT_RATIO, SIDEBAR_AUTO_COLLAPSE, SIDEBAR_DEFAULT } from './columns.ts'
+import {
+  CENTER_MIN, computeColumns, RIGHTBAR_DEFAULT_RATIO, RIGHTBAR_MAX_RATIO, RIGHTBAR_MIN,
+  SIDEBAR_AUTO_COLLAPSE, SIDEBAR_COLLAPSED, SIDEBAR_DEFAULT, SIDEBAR_MAX, SIDEBAR_MIN,
+} from './columns.ts'
 import { DocumentTitle } from './DocumentTitle.tsx'
 import type { createLayoutStore } from './stores.ts'
 import css from './AppFrame.module.css'
@@ -33,7 +36,7 @@ export type AppFrameProps =
 
 /** Center column grid item (session-body building block). */
 function CenterColumn(props: { children?: ReactNode }) {
-  return <div className={css.centerCol}>{props.children}</div>
+  return <main className={css.centerCol}>{props.children}</main>
 }
 
 /** Subscribe to the main key without subscribing the column frame to each panel id. */
@@ -47,15 +50,39 @@ function MainPanel({ usePanelInfo, renderSlot }: Pick<PropsRuntime<'root'>, 'use
  * occupant's panel is positioned against the column's right edge, which never
  * moves, so it can hang over the centre when there is no track.
  */
-function RightbarColumn(props: { children?: ReactNode }) {
-  return <div className={css.rightbarCol} data-rightbar-col>{props.children}</div>
+function RightbarColumn(props: { label: string; shown: boolean; children?: ReactNode }) {
+  const paneRef = useRef<HTMLElement | null>(null)
+  useLayoutEffect(() => {
+    const pane = paneRef.current
+    if (pane !== null) pane.inert = !props.shown
+  }, [props.shown])
+  return (
+    <aside ref={paneRef} id="dsh-rightbar-pane" aria-label={props.label} aria-hidden={!props.shown || undefined}
+      className={css.rightbarCol} data-rightbar-col>
+      {props.children}
+    </aside>
+  )
 }
 
 /**
  * One drag handle: pointer capture, rAF-throttled dx reports against the drag-start origin.
  * `side` keys the hover-reveal CSS to the owning column.
  */
-function DragHandle(props: { side: 'sidebar' | 'rightbar'; left: number; onStart: () => void; onDrag: (dx: number) => void; onEnd: () => void }) {
+function DragHandle(props: {
+  side: 'sidebar' | 'rightbar'
+  left: number
+  label: string
+  value: number
+  valueText: string
+  min: number
+  max: number
+  collapsed?: boolean
+  onSet: (value: number) => void
+  onReset: () => void
+  onStart: () => void
+  onDrag: (dx: number) => void
+  onEnd: () => void
+}) {
   const [dragging, setDragging] = useState(false)
   const origin = useRef(0)
   const latest = useRef(0)
@@ -76,15 +103,16 @@ function DragHandle(props: { side: 'sidebar' | 'rightbar'; left: number; onStart
   useEffect(() => endDrag, [endDrag])
 
   const onPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    if (e.button !== 0 || capture.current !== null) return
+    if (e.button !== 0 || capture.current !== null || props.collapsed === true) return
     e.preventDefault()
+    e.currentTarget.focus()
     e.currentTarget.setPointerCapture(e.pointerId)
     capture.current = { element: e.currentTarget, id: e.pointerId }
     origin.current = e.clientX
     latest.current = e.clientX
     callbacks.current.onStart()
     setDragging(true)
-  }, [])
+  }, [props.collapsed])
   const onPointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     if (capture.current?.id !== e.pointerId) return
     latest.current = e.clientX
@@ -105,14 +133,33 @@ function DragHandle(props: { side: 'sidebar' | 'rightbar'; left: number; onStart
   return (
     <div
       className={css.handle}
+      role="separator"
+      tabIndex={0}
+      aria-label={props.label}
+      aria-orientation="vertical"
+      aria-controls={`dsh-${props.side}-pane`}
+      aria-valuemin={props.min}
+      aria-valuemax={props.max}
+      aria-valuenow={props.value}
+      aria-valuetext={props.valueText}
       style={{ left: props.left }}
       data-side={props.side}
+      data-collapsed={props.collapsed || undefined}
       data-dragging={dragging || undefined}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerCancel}
       onLostPointerCapture={onPointerCancel}
+      onKeyDown={(event) => {
+        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End', 'Enter'].includes(event.key)) return
+        event.preventDefault()
+        if (event.key === 'Enter') { props.onReset(); return }
+        const direction = props.side === 'sidebar' ? 1 : -1
+        const delta = (event.key === 'ArrowRight' ? 1 : -1) * direction * (event.shiftKey ? 50 : 10)
+        const value = event.key === 'Home' ? props.min : event.key === 'End' ? props.max : props.value + delta
+        props.onSet(Math.min(props.max, Math.max(props.min, value)))
+      }}
     />
   )
 }
@@ -198,6 +245,8 @@ export function AppFrame({
     <MainPanel usePanelInfo={usePanelInfo} renderSlot={renderSlot} />
   ), [usePanelInfo, renderSlot])
   const overlays = useMemo(() => renderSlot('shell.overlay', {}), [renderSlot])
+  const sidebarLabel = t('layout.sidebar')
+  const rightbarLabel = t('layout.rightbar')
 
   return (
     <div
@@ -218,22 +267,39 @@ export function AppFrame({
         useSessions={useSessions}
         usePanelInfo={usePanelInfo}
       />
-      <div className={css.sidebarCol}>
+      <nav id="dsh-sidebar-pane" aria-label={sidebarLabel} className={css.sidebarCol}>
         {sidebar}
-      </div>
+      </nav>
       <>
-        <CenterColumn>{main}</CenterColumn>
-        <RightbarColumn>
+        <CenterColumn>
+          <h1 className={css.visuallyHidden}>{t('layout.application')}</h1>
+          {main}
+        </CenterColumn>
+        <RightbarColumn label={rightbarLabel} shown={layoutInfo.rightbarShown}>
           {renderSlot('rightbar', { width: normal.rightbar, viewportWidth: viewport, canShow: normal.rightbar > 0 })}
         </RightbarColumn>
       </>
       <div className={css.overlayLayer} data-shell-overlay>
         {overlays}
       </div>
-      {/* The collapsed rail is fixed-width: no resize handle while closed. */}
-      {!sidebarCollapsed && <DragHandle side="sidebar" left={cols.sidebar} onStart={onSidebarStart} onDrag={onSidebarDrag} onEnd={onDragEnd} />}
+      <DragHandle side="sidebar" left={cols.sidebar} label={sidebarLabel}
+        value={cols.sidebar} min={SIDEBAR_COLLAPSED} max={SIDEBAR_MAX} collapsed={sidebarCollapsed}
+        valueText={sidebarCollapsed ? t('layout.collapsed') : t('layout.widthPixels', { value: cols.sidebar })}
+        onSet={(width) => {
+          if (width <= SIDEBAR_COLLAPSED) { if (!sidebarCollapsed) actions.toggleSidebar(); return }
+          if (sidebarCollapsed) actions.toggleSidebar()
+          actions.setSidebar(Math.max(SIDEBAR_MIN, width))
+        }}
+        onReset={() => { actions.toggleSidebar() }}
+        onStart={onSidebarStart} onDrag={onSidebarDrag} onEnd={onDragEnd} />
       {layoutInfo.rightbarShown && !layoutInfo.rightbarFullscreen && normal.rightbar > 0 && (
-        <DragHandle side="rightbar" left={viewport - normal.rightbar} onStart={onRightbarStart} onDrag={onRightbarDrag} onEnd={onDragEnd} />
+        <DragHandle side="rightbar" left={viewport - normal.rightbar} label={rightbarLabel}
+          value={normal.rightbar} min={RIGHTBAR_MIN}
+          max={Math.min(viewport * RIGHTBAR_MAX_RATIO, viewport - cols.sidebar - CENTER_MIN)}
+          valueText={t('layout.widthPixels', { value: normal.rightbar })}
+          onSet={(width) => { actions.setRightbar(width) }}
+          onReset={() => { actions.setRightbar(viewport * RIGHTBAR_DEFAULT_RATIO) }}
+          onStart={onRightbarStart} onDrag={onRightbarDrag} onEnd={onDragEnd} />
       )}
     </div>
   )

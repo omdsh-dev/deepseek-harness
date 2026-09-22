@@ -35,6 +35,10 @@ A contribution is a client-owned command — a host-name collision fails loud. A
 
 When the composer submits with images or generic files, only a host command declaring `input.attachments` proceeds. Every other command route throws the localized `attachmentsUnsupported` refusal, rendered as a transient toast while the draft and attachment cards stay in place. Handler errors preserve the same draft state for retry.
 
+### Popup selection accessibility
+
+A `popupSelect` moves focus into its search combobox and exposes the filtered picker through a stable `aria-controls` relationship to a named listbox. Arrow Up and Arrow Down keep DOM focus in the search field while `aria-activedescendant` and `aria-selected` identify the same highlighted option; Enter selects it, Escape returns to the exact session composer that owns the popup, and loading, applying, empty, and error states are announced without turning every option into a Tab stop. The overlay registers that session-local focus route through `CommandUiRuntime.bindComposerFocus`; it never searches globally for an arbitrary composer.
+
 -----
 
 <a id="understand-the-implementation"></a>

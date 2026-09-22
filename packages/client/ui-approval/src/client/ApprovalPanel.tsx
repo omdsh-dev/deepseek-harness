@@ -23,13 +23,18 @@ function ApprovalFlow({ pending, detail, t }: {
   t: ApprovalComposerProps['t']
 }) {
   const [answered, setAnswered] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const answer = (outcome: 'allowed-once' | 'rejected'): void => {
     setAnswered(true)
-    void pending.answer(outcome).catch(() => { setAnswered(false) })
+    setError(null)
+    void pending.answer(outcome).catch((cause: unknown) => {
+      setAnswered(false)
+      setError(cause instanceof Error ? cause.message : String(cause))
+    })
   }
   return (
     <div className={css.root} data-approval-key={pending.key}>
-      <div className={css.card}>
+      <div className={css.card} aria-busy={answered || undefined}>
         <div className={css.strip}><span className={css.dot} />{t('waiting')}</div>
         <div
           className={css.body}
@@ -41,6 +46,9 @@ function ApprovalFlow({ pending, detail, t }: {
           <div className={css.headline}>{pending.reason ?? t('escalation', { toolName: pending.toolName })}</div>
           {detail !== null && <div className={css.command}>{detail}</div>}
         </div>
+        {error === null
+          ? null
+          : <div className={css.feedback} role="alert" aria-atomic="true">{error}</div>}
         <div className={css.actionRow}>
           <Button variant="outline" className={css.reject} disabled={answered} onClick={() => { answer('rejected') }}>
             {t('reject')}

@@ -14,6 +14,7 @@ File-mention providers receive the viewed Session ID with the closing-turn owner
 
 ## Table of Contents
 
+- [Accessible transcript](#accessible-transcript)
 - [System prompt row](#system-prompt-row)
 - [Turn token usage](#turn-token-usage)
 - [Completed-turn footer](#completed-turn-footer)
@@ -24,6 +25,11 @@ File-mention providers receive the viewed Session ID with the closing-turn owner
 - [Dev Note](#dev-note)
 
 -----
+
+<a id="accessible-transcript"></a>
+## Accessible transcript
+
+The transcript is a named, non-live log. Visible human and Assistant messages are navigable articles. One polite live region announces durable response, root-tool, approval, question, and plan-review transitions; history loading, token chunks, elapsed-time updates, and unchanged state remain silent.
 
 <a id="system-prompt-row"></a>
 ## System prompt row

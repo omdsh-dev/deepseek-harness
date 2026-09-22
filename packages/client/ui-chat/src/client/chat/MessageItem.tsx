@@ -155,7 +155,7 @@ function TurnMaxTokensItem({ t }: {
 
 /** Right-aligned bubble shared by user and steering rows. */
 function UserStyleBubble({
-  content, renderMessageImages, actions, pending = false, echo = false, referenceLabels = [], skillNames = [],
+  content, renderMessageImages, actions, pending = false, echo = false, article = false, referenceLabels = [], skillNames = [],
   previewAttachments, t,
 }: {
   content: readonly unknown[]
@@ -166,6 +166,8 @@ function UserStyleBubble({
   pending?: boolean
   /** Whether this is a local submission echo (invisible marker; the echo renders exactly like its durable replacement). */
   echo?: boolean
+  /** Flow-tail rows do not cross ChatNodeSeat, so they own their article boundary here. */
+  article?: boolean
   /** Exact session mention labels associated by the adjacent recall node. */
   referenceLabels?: readonly string[]
   /** Skill names the step's `skill-invocation` injections loaded for this message. */
@@ -184,6 +186,8 @@ function UserStyleBubble({
       className={css.userRow}
       data-pending-steering={pending || undefined}
       data-submission-echo={echo || undefined}
+      role={article ? 'article' : undefined}
+      aria-label={article ? t('message.user') : undefined}
     >
       <div className={css.userStack}>
         {attachments.length > 0 && (
@@ -243,6 +247,7 @@ export function PendingSteeringBubble({ content, renderMessageImages, t }: {
       content={content}
       renderMessageImages={renderMessageImages}
       pending
+      article
       t={t}
       actions={text => (
         <MessageIconActions
@@ -296,6 +301,7 @@ export function PendingSubmissionBubble({ submission, renderMessageImages, t }: 
       renderMessageImages={renderMessageImages}
       pending={submission.placement === 'steering'}
       echo
+      article
       t={t}
       actions={text => (
         <MessageIconActions

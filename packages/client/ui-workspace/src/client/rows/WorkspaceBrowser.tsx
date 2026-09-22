@@ -26,6 +26,7 @@ import {
   deriveFlat, deriveGroups, deriveSearchResults, owningGroupKey, UNGROUPED_KEY,
 } from '../tree.ts'
 import { ProjectRowItem, SearchResultItem, SessionNodeItem } from './Rows.tsx'
+import { useTreeKeyboardNavigation } from './tree-navigation.ts'
 import { FLAT_SESSION_ORDER_KEY } from '../stores.ts'
 import { WorkspacePickFlow } from '../WorkspacePicker.tsx'
 import css from './WorkspaceBrowser.module.css'
@@ -177,12 +178,12 @@ function ViewOptionsMenu({ groupBy, orderBy, onGroupPick, onOrderPick, t }: {
       onClose={() => { setOpen(false) }}
       items={[
         { type: 'label' as const, id: 'group-by', text: t('groupBy.label') },
-        { id: 'workspace', label: t('groupBy.workspace') },
-        { id: 'flat', label: t('groupBy.flat') },
+        { id: 'workspace', label: t('groupBy.workspace'), selection: 'radio' as const },
+        { id: 'flat', label: t('groupBy.flat'), selection: 'radio' as const },
         { type: 'separator' as const, id: 'order-by-separator' },
         { type: 'label' as const, id: 'order-by', text: t('orderBy.label') },
-        { id: 'manual', label: t('orderBy.manual') },
-        { id: 'updated', label: t('orderBy.updated') },
+        { id: 'manual', label: t('orderBy.manual'), selection: 'radio' as const },
+        { id: 'updated', label: t('orderBy.updated'), selection: 'radio' as const },
       ]}
       selectedIds={[groupBy, orderBy]}
       onSelect={(id) => {
@@ -283,6 +284,7 @@ function SessionTree({
   revealSessionId, onSessionRevealed,
 }: SessionTreeProps) {
   const panelActive = usePanelInfo(info => info.activePanelId !== null)
+  const treeNavigation = useTreeKeyboardNavigation()
   const list = useSessions(s => s)
   const pendingInteractions = useSessionPendingInteraction(s => s)
   const current = panelActive ? undefined : list.current
@@ -454,8 +456,9 @@ function SessionTree({
       {workspaceDropAtListStart && <span className={css.listTopDropIndicator} aria-hidden="true" />}
       <div
         className={clsx(css.list, workspaceDropAtListStart && css.listTopDropActive)}
-        role="tree"
-        aria-label={t('section.sessions')}
+        role={groups.length === 0 ? undefined : 'tree'}
+        aria-label={groups.length === 0 ? undefined : t('section.sessions')}
+        {...treeNavigation}
       >
         {groups.length === 0 && (
           <div className={css.empty}>{t('empty.none')}</div>
@@ -643,6 +646,7 @@ function FlatList({
   | 't'
 >) {
   const panelActive = usePanelInfo(info => info.activePanelId !== null)
+  const treeNavigation = useTreeKeyboardNavigation()
   const list = useSessions(s => s)
   const pendingInteractions = useSessionPendingInteraction(s => s)
   const baseRows = useMemo(
@@ -699,7 +703,12 @@ function FlatList({
   const now = Date.now()
   return (
     <div className={clsx(css.treeBody, css.wide)}>
-      <div className={clsx(css.list, css.flatList)} role="tree" aria-label={t('section.sessions')}>
+      <div
+        className={clsx(css.list, css.flatList)}
+        role={rows.length === 0 ? undefined : 'tree'}
+        aria-label={rows.length === 0 ? undefined : t('section.sessions')}
+        {...treeNavigation}
+      >
         {rows.length === 0 && (
           <div className={css.empty}>{t('empty.none')}</div>
         )}
@@ -775,6 +784,7 @@ function SearchResults({
   resultLimit: number
 }) {
   const panelActive = usePanelInfo(info => info.activePanelId !== null)
+  const treeNavigation = useTreeKeyboardNavigation()
   const list = useSessions(s => s)
   const pendingInteractions = useSessionPendingInteraction(s => s)
   const currentRemote = remote.query === query
@@ -798,7 +808,12 @@ function SearchResults({
   return (
     <div className={clsx(css.treeBody, css.wide)}>
       <div className={css.list}>
-        <div className={css.searchTree} role="tree" aria-label={t('search.results.aria')}>
+        <div
+          className={css.searchTree}
+          role={results.items.length === 0 ? undefined : 'tree'}
+          aria-label={results.items.length === 0 ? undefined : t('search.results.aria')}
+          {...treeNavigation}
+        >
           {results.items.map(result => (
             <SearchResultItem
               key={result.id}
@@ -922,7 +937,9 @@ export function WorkspaceBrowser({
     hasMore: false,
   })
   const searchRoot = useRef<HTMLDivElement | null>(null)
+  const searchButton = useRef<HTMLButtonElement | null>(null)
   const searchInput = useRef<HTMLInputElement | null>(null)
+  const restoreSearchFocus = useRef(false)
   // Section-header ＋ opens the picker menu (same popover in wide and rail
   // states; the menu anchors on this button).
   const [wsPickerOpen, setWsPickerOpen] = useState(false)
@@ -960,6 +977,12 @@ export function WorkspaceBrowser({
     searchInput.current?.focus({ preventScroll: true })
   }, [wide, searchExpanded, searchOnExpand])
 
+  useEffect(() => {
+    if (!wide || searchExpanded || !restoreSearchFocus.current) return
+    restoreSearchFocus.current = false
+    searchButton.current?.focus({ preventScroll: true })
+  }, [wide, searchExpanded])
+
   // Outside-click dismissal stays off while the rail gesture is in flight
   // (searchOnExpand): the rail click flips the shell wide and mounts this
   // listener during its own dispatch, then keeps bubbling to document with
@@ -971,6 +994,7 @@ export function WorkspaceBrowser({
       if (!(event.target instanceof Node) || searchRoot.current?.contains(event.target) === true) return
       searchInput.current?.blur()
       if (normalizedQuery !== '') return
+      restoreSearchFocus.current = false
       setSearchExpanded(false)
     }
     document.addEventListener('click', onClick)
@@ -1135,12 +1159,16 @@ export function WorkspaceBrowser({
               className={clsx(css.search, searchExpanded && css.searchExpanded)}
               onClick={() => {
                 setWsPickerOpen(false)
-                setSearchExpanded(true)
-                searchInput.current?.focus()
+                if (searchExpanded) {
+                  searchInput.current?.focus()
+                } else {
+                  setSearchExpanded(true)
+                }
               }}
             >
               <Tooltip label={t('search')} side="bottom" delayMs={500} disabled={searchExpanded}>
                 <button
+                  ref={searchButton}
                   type="button"
                   className={css.searchButton}
                   aria-label={t('search.sessions.aria')}
@@ -1157,6 +1185,8 @@ export function WorkspaceBrowser({
                 ref={searchInput}
                 className={css.searchInput}
                 type="text"
+                aria-label={t('search.placeholder')}
+                aria-hidden={searchExpanded ? undefined : true}
                 placeholder={t('search.placeholder')}
                 maxLength={SEARCH_QUERY_MAX_CODE_UNITS}
                 value={query}
@@ -1164,6 +1194,8 @@ export function WorkspaceBrowser({
                 onChange={(e) => { setQuery(sanitizeSearchQuery(e.target.value)) }}
                 onKeyDown={(e) => {
                   if (e.key !== 'Escape') return
+                  e.preventDefault()
+                  restoreSearchFocus.current = true
                   setQuery('')
                   setSearchExpanded(false)
                 }}
@@ -1175,6 +1207,7 @@ export function WorkspaceBrowser({
                   aria-label={t('search.clear')}
                   onClick={(e) => {
                     e.stopPropagation()
+                    restoreSearchFocus.current = true
                     setQuery('')
                     setSearchExpanded(false)
                   }}

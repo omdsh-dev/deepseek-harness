@@ -67,6 +67,7 @@ export function ModelSelect(
   const menuRef = useRef<HTMLDivElement | null>(null)
   const [menuPos, setMenuPos] = useState<CSSProperties | null>(null)
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([])
+  const focusIntentRef = useRef<'first' | 'last' | 'selected' | number>('first')
   const id = useId()
 
   const choices = useMemo(() => state.groups.flatMap(group =>
@@ -156,13 +157,40 @@ export function ModelSelect(
     }
   }, [open, pane, state])
   /* jscpd:ignore-end */
+  // A menu button has one sequential Tab stop. Opening or changing panes
+  // moves focus into the composite; every menu item remains programmatically
+  // focusable while Tab exits the menu instead of walking every row.
+  useEffect(() => {
+    if (!open || menuPos === null) return
+    const active = document.activeElement
+    if (active instanceof Node && menuRef.current?.contains(active)) return
+    const items = itemRefs.current.filter(item => item !== null)
+    if (items.length === 0) {
+      menuRef.current?.focus()
+      return
+    }
+    const intent = focusIntentRef.current
+    let target = 0
+    if (intent === 'last') target = items.length - 1
+    else if (intent === 'selected') {
+      const selected = items.findIndex(item => item.getAttribute('aria-checked') === 'true')
+      target = selected === -1 ? 0 : selected
+    } else if (typeof intent === 'number') target = Math.min(intent, items.length - 1)
+    items[target]?.focus()
+  }, [open, menuPos, pane, state.status, state.groups, effortChoices])
 
   if (!available) return null
 
-  const show = (): void => {
+  const show = (edge: 'first' | 'last' = 'first'): void => {
+    focusIntentRef.current = edge
     setPane('root')
     setOpen(true)
     reload()
+  }
+
+  const showPane = (next: Exclude<Pane, 'root'>): void => {
+    focusIntentRef.current = 'selected'
+    setPane(next)
   }
 
   const close = (restoreFocus = false): void => {
@@ -175,15 +203,30 @@ export function ModelSelect(
     const items = itemRefs.current.filter(item => item !== null)
     if (items.length === 0) return
     const active = items.findIndex(item => item === document.activeElement)
-    const next = (Math.max(active, 0) + offset + items.length) % items.length
+    const next = active === -1
+      ? (offset > 0 ? 0 : items.length - 1)
+      : (active + offset + items.length) % items.length
     items[next]?.focus()
   }
 
+  const moveToEdge = (edge: 'first' | 'last'): void => {
+    const items = itemRefs.current.filter(item => item !== null)
+    items[edge === 'first' ? 0 : items.length - 1]?.focus()
+  }
+
   const onRootKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
+    if (!open && event.target === triggerRef.current && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+      event.preventDefault()
+      show(event.key === 'ArrowDown' ? 'first' : 'last')
+      return
+    }
     if (event.key === 'Escape' && open) {
       event.preventDefault()
       // Escape backs out of a drilled pane first, then closes.
-      if (pane !== 'root') setPane('root')
+      if (pane !== 'root') {
+        focusIntentRef.current = pane === 'effort' ? 1 : 0
+        setPane('root')
+      }
       else close(true)
       return
     }
@@ -191,6 +234,28 @@ export function ModelSelect(
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault()
       moveFocus(event.key === 'ArrowDown' ? 1 : -1)
+      return
+    }
+    if (event.key === 'Home' || event.key === 'End') {
+      event.preventDefault()
+      moveToEdge(event.key === 'Home' ? 'first' : 'last')
+      return
+    }
+    if (event.key === 'ArrowLeft' && pane !== 'root') {
+      event.preventDefault()
+      focusIntentRef.current = pane === 'effort' ? 1 : 0
+      setPane('root')
+      return
+    }
+    if (event.key === 'ArrowRight' && pane === 'root') {
+      const item = event.target instanceof Element
+        ? event.target.closest<HTMLButtonElement>('[data-pane-target]')
+        : null
+      const target = item?.dataset.paneTarget
+      if (target === 'model' || target === 'effort') {
+        event.preventDefault()
+        showPane(target)
+      }
     }
   }
 
@@ -294,18 +359,37 @@ export function ModelSelect(
           className={css.menu}
           style={menuPos ?? MEASURE_STYLE}
           role="menu"
+          tabIndex={-1}
           aria-label={t('menu.aria')}
           aria-busy={state.status === 'loading' || busy}
         >
           {pane === 'root' && (
             <>
-              <button ref={itemRef()} type="button" role="menuitem" className={css.cell} onClick={() => { setPane('model') }}>
+              <button
+                ref={itemRef()}
+                type="button"
+                role="menuitem"
+                aria-haspopup="menu"
+                tabIndex={-1}
+                data-pane-target="model"
+                className={css.cell}
+                onClick={() => { showPane('model') }}
+              >
                 <span className={css.cellLabel}>{t('menu.model')}</span>
                 <span className={css.cellValue}>{modelLabel}</span>
                 <IconChevronRightOutline14 className={css.cellChevron} />
               </button>
               {reasoning !== undefined && (
-                <button ref={itemRef()} type="button" role="menuitem" className={css.cell} onClick={() => { setPane('effort') }}>
+                <button
+                  ref={itemRef()}
+                  type="button"
+                  role="menuitem"
+                  aria-haspopup="menu"
+                  tabIndex={-1}
+                  data-pane-target="effort"
+                  className={css.cell}
+                  onClick={() => { showPane('effort') }}
+                >
                   <span className={css.cellLabel}>{t('menu.effort')}</span>
                   <span className={css.cellValue}>{effortLabel}</span>
                   <IconChevronRightOutline14 className={css.cellChevron} />
@@ -317,16 +401,16 @@ export function ModelSelect(
           {pane === 'model' && (
             <>
               {state.status === 'loading' && (
-                <div className={css.status}>{t('status.loading')}</div>
+                <div className={css.status} role="status">{t('status.loading')}</div>
               )}
               {state.error !== null && lastActionRef.current === 'load' && (
-                <div className={css.error}>
+                <div className={css.error} role="alert">
                   <span>{t('error.action', { message: state.error })}</span>
                   <button type="button" className={css.retry} onClick={reload}>{t('retry')}</button>
                 </div>
               )}
               {state.failures.map(failure => (
-                <div className={css.warning} key={failure.id}>
+                <div className={css.warning} role="status" key={failure.id}>
                   <span>{t('warning.groupLoad', { name: failure.name, message: failure.message })}</span>
                   <button type="button" className={css.retry} onClick={reload}>{t('retry')}</button>
                 </div>
@@ -344,6 +428,7 @@ export function ModelSelect(
                             ref={itemRef()}
                             type="button"
                             role="menuitemradio"
+                            tabIndex={-1}
                             aria-checked={selected}
                             className={clsx(css.option, selected && css.selected)}
                             key={model.id}
@@ -365,7 +450,7 @@ export function ModelSelect(
                 })}
               </div>
               {state.status === 'ready' && choices.length === 0 && (
-                <div className={css.empty}>{t('empty.models')}</div>
+                <div className={css.empty} role="status">{t('empty.models')}</div>
               )}
             </>
           )}
@@ -373,18 +458,19 @@ export function ModelSelect(
           {pane === 'effort' && (
             <>
               {state.error !== null && lastActionRef.current === 'load' && (
-                <div className={css.error}>
+                <div className={css.error} role="alert">
                   <span>{t('error.action', { message: state.error })}</span>
                   <button type="button" className={css.retry} onClick={reload}>{t('action.reload')}</button>
                 </div>
               )}
               {effortChoices.length === 0
-                ? <div className={css.empty}>{t('empty.efforts')}</div>
+                ? <div className={css.empty} role="status">{t('empty.efforts')}</div>
                 : effortChoices.map(level => (
                   <button
                     ref={itemRef()}
                     type="button"
                     role="menuitemradio"
+                    tabIndex={-1}
                     aria-checked={effectiveEffort === level.effort}
                     className={clsx(css.option, effectiveEffort === level.effort && css.selected)}
                     key={level.key}

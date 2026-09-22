@@ -4,7 +4,7 @@
  * Renders nothing until a provider reports both pressure and a route
  * capacity. */
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import type { UseProjection } from '@deepseek-ai/dsh-api-session-controller/client'
 // Type-only: the `contextPressure` / `contextBreakdown` projection key merges.
 import type {} from '@deepseek-ai/dsh-token-meter/client'
@@ -55,6 +55,7 @@ export interface ContextMeterProps {
 export function ContextMeter({ useProjection, t }: ContextMeterProps) {
   const pressure = useProjection('contextPressure')
   const breakdown = useProjection('contextBreakdown')
+  const panelId = useId()
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLSpanElement | null>(null)
   const context = contextOccupancy(pressure)
@@ -110,8 +111,8 @@ export function ContextMeter({ useProjection, t }: ContextMeterProps) {
           type="button"
           className={css.trigger}
           aria-label={t('context.aria', { percent: reading })}
-          aria-haspopup="dialog"
           aria-expanded={open}
+          aria-controls={panelId}
           onClick={() => { setOpen(!open) }}
         >
           <svg viewBox="0 0 14 14" width="14" height="14" aria-hidden>
@@ -128,7 +129,7 @@ export function ContextMeter({ useProjection, t }: ContextMeterProps) {
         </button>
       </Tooltip>
       {open && (
-        <div className={css.panel} role="dialog" aria-label={t('context.used')}>
+        <div id={panelId} className={css.panel} role="region" aria-label={t('context.used')}>
           <div className={css.header}>
             {/* Empty sides collapse through `.headline:empty` so the locale that
                 needs no leading (or trailing) text spends no header gap. */}

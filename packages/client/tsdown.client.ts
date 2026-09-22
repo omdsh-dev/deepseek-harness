@@ -12,7 +12,6 @@ import { readFile } from 'node:fs/promises'
 import { existsSync, globSync, readFileSync } from 'node:fs'
 import { isBuiltin } from 'node:module'
 import { basename, dirname, isAbsolute, relative, resolve as resolvePath, sep } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import type { UserConfig } from 'tsdown'
 import { transform } from 'lightningcss'
 import { optionalStringArray } from './modules/src/client/manifest.ts'
@@ -77,7 +76,10 @@ const GENERATED_REMOTE = /^@deepseek-ai\/dsh-[a-z0-9]+(?:-[a-z0-9]+)*\/remote$/
  */
 const SKIP_WORKSPACE_BUILD: UserConfig = { entry: '' }
 
-const REPOSITORY_ROOT = fileURLToPath(new URL('../..', import.meta.url))
+// Workspace builds always start at the repository root. Use that stable
+// identity instead of import.meta.url: config loaders such as unrun compile
+// this shared preset into a cache directory before evaluating child configs.
+const REPOSITORY_ROOT = process.cwd()
 
 /** Rebase a physical lib-relative source onto a browser URL that mirrors the repository directories. */
 function browserSourcePath(source: string, sourcemapPath: string): string {

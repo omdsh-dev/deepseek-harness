@@ -244,7 +244,7 @@ describe('ReadRow keyed toolview', () => {
   it('the path summary opens the file at the line the call started from', () => {
     const openFile = vi.fn()
     const view = render(<ReadRow {...{ ...rowProps(settled()), openFile }} />)
-    fireEvent.click(view.getByRole('button', { name: 'src/a.ts' }))
+    fireEvent.click(view.getByRole('button', { name: '打开文件 src/a.ts' }))
     // The row derives the file path and the `offset` line from args; the chat
     // view resolves the path against the cwd before this callback opens it, so
     // the arg path is what arrives.

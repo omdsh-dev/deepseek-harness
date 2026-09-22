@@ -1,0 +1,142 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DSH core non-AT browser evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "protocol",
+    "evidence",
+    "result",
+    "generatedAt",
+    "standards",
+    "dsh",
+    "environment",
+    "scope",
+    "engines",
+    "limitations"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://raw.githubusercontent.com/omdsh-dev/dsh-accessibility/main/CORE-BROWSER-EVIDENCE.schema.json"
+    },
+    "protocol": { "const": "dsh-non-at-browser/1.0.0-draft" },
+    "evidence": { "const": "dsh-core-browser-non-at" },
+    "result": { "enum": ["pass", "partial"] },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "standards": {
+      "type": "array",
+      "minItems": 5,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "dsh": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["package", "version", "revision", "dirty"],
+      "properties": {
+        "package": { "const": "@deepseek-ai/dsh-root" },
+        "version": { "type": "string", "minLength": 1 },
+        "revision": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "dirty": { "const": false }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["os", "osRelease", "architecture", "node"],
+      "properties": {
+        "os": { "type": "string", "minLength": 1 },
+        "osRelease": { "type": "string", "minLength": 1 },
+        "architecture": { "type": "string", "minLength": 1 },
+        "node": { "type": "string", "pattern": "^v[0-9]+" }
+      }
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["suite", "viewports", "coreTasks"],
+      "properties": {
+        "suite": { "const": "dsh-core-p0-web" },
+        "viewports": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["width", "classification"],
+            "properties": {
+              "width": { "enum": [640, 320] },
+              "classification": { "enum": ["200%-equivalent", "400%-equivalent"] }
+            }
+          }
+        },
+        "coreTasks": {
+          "type": "array",
+          "minItems": 9,
+          "maxItems": 9,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "checks"],
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "checks": {
+                "type": "array",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": { "type": "string", "minLength": 1 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "engines": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["engine", "engineVersion", "testProcess", "checks"],
+        "properties": {
+          "engine": { "enum": ["chromium", "firefox", "webkit"] },
+          "engineVersion": { "type": "string", "minLength": 1 },
+          "testProcess": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["success", "total", "passed", "notRun", "failed"],
+            "properties": {
+              "success": { "const": true },
+              "total": { "type": "integer", "minimum": 14 },
+              "passed": { "type": "integer", "minimum": 13 },
+              "notRun": { "type": "integer", "minimum": 0 },
+              "failed": { "const": 0 }
+            }
+          },
+          "checks": {
+            "type": "array",
+            "minItems": 14,
+            "maxItems": 14,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["id", "status"],
+              "properties": {
+                "id": { "type": "string", "minLength": 1 },
+                "status": { "enum": ["passed", "not-run"] }
+              }
+            }
+          }
+        }
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "minItems": 5,
+      "items": { "type": "string", "minLength": 1 }
+    }
+  }
+}

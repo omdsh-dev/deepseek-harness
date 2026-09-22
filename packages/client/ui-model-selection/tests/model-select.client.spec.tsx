@@ -53,6 +53,69 @@ function state(overrides: Partial<ModelDirectoryState> = {}): ModelDirectoryStat
 afterEach(cleanup)
 
 describe('ModelSelect reasoning effort', () => {
+  it('implements one menu-button Tab stop with edge opening, roving keys, pane entry, and focus return', async () => {
+    const groups = [{
+      id: 'deepseek-official',
+      name: 'DeepSeek',
+      models: [
+        { id: 'deepseek-v4-flash', name: 'DeepSeek-V4-Flash', reasoning },
+        { id: 'deepseek-v4-pro', name: 'DeepSeek-V4-Pro' },
+      ],
+    }]
+    const directory = createSnapshotStore<ModelDirectoryState>(state({ groups }))
+    render(<ModelSelect
+      locked={false}
+      available
+      directory={directory}
+      load={vi.fn()}
+      select={vi.fn().mockResolvedValue(true)}
+      t={t}
+    />)
+
+    const trigger = screen.getByRole('button', { name: /选择模型，当前/ })
+    trigger.focus()
+    fireEvent.keyDown(trigger, { key: 'ArrowDown' })
+    const rootItems = await screen.findAllByRole('menuitem')
+    await waitFor(() => { expect(document.activeElement).toBe(rootItems[0]) })
+    expect(rootItems.every(item => item.getAttribute('tabindex') === '-1')).toBe(true)
+    expect(rootItems.every(item => item.getAttribute('aria-haspopup') === 'menu')).toBe(true)
+
+    fireEvent.keyDown(rootItems[0]!, { key: 'End' })
+    expect(document.activeElement).toBe(rootItems[1])
+    fireEvent.keyDown(rootItems[1]!, { key: 'Home' })
+    expect(document.activeElement).toBe(rootItems[0])
+    fireEvent.keyDown(rootItems[0]!, { key: 'ArrowRight' })
+
+    let choices = await screen.findAllByRole('menuitemradio')
+    await waitFor(() => { expect(document.activeElement).toBe(choices[0]) })
+    expect(choices[0]!.getAttribute('aria-checked')).toBe('true')
+    fireEvent.keyDown(choices[0]!, { key: 'ArrowDown' })
+    expect(document.activeElement).toBe(choices[1])
+    fireEvent.keyDown(choices[1]!, { key: 'ArrowLeft' })
+
+    const returnedRoot = await screen.findAllByRole('menuitem')
+    await waitFor(() => { expect(document.activeElement).toBe(returnedRoot[0]) })
+    fireEvent.keyDown(returnedRoot[0]!, { key: 'End' })
+    fireEvent.keyDown(returnedRoot[1]!, { key: 'ArrowRight' })
+    choices = await screen.findAllByRole('menuitemradio')
+    const selectedEffort = choices.find(item => item.getAttribute('aria-checked') === 'true')
+    await waitFor(() => { expect(document.activeElement).toBe(selectedEffort) })
+
+    fireEvent.keyDown(selectedEffort!, { key: 'Escape' })
+    const effortParent = await screen.findAllByRole('menuitem')
+    await waitFor(() => { expect(document.activeElement).toBe(effortParent[1]) })
+    fireEvent.keyDown(effortParent[1]!, { key: 'Escape' })
+    await waitFor(() => {
+      expect(screen.queryByRole('menu')).toBeNull()
+      expect(document.activeElement).toBe(trigger)
+    })
+
+    trigger.focus()
+    fireEvent.keyDown(trigger, { key: 'ArrowUp' })
+    const edgeItems = await screen.findAllByRole('menuitem')
+    await waitFor(() => { expect(document.activeElement).toBe(edgeItems.at(-1)) })
+  })
+
   it('renders effort names without descriptions and submits the effort as part of the session selection', async () => {
     const directory = createSnapshotStore<ModelDirectoryState>(state())
     const select = vi.fn(async (selection: ModelSelection) => {

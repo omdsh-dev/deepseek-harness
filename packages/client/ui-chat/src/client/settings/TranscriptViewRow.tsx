@@ -67,7 +67,7 @@ export function TranscriptViewRow({ useTranscriptView, setTranscriptView, t }: T
       <Menu
         open={open}
         onClose={closeMenu}
-        items={OPTIONS.map(option => ({ id: option.id, label: t(option.label) }))}
+        items={OPTIONS.map(option => ({ id: option.id, label: t(option.label), selection: 'radio' as const }))}
         selectedId={mode}
         onSelect={selectMode}
         align="end"

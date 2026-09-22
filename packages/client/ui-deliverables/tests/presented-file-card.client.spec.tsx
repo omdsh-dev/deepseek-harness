@@ -84,7 +84,7 @@ it('localizes reveal failures and accurately reports a directory-only action', (
 })
 
 
-it('supports keyboard selection and returns focus to the trigger on Escape', () => {
+it('supports keyboard selection and returns focus to the trigger on Escape', async () => {
   const view = render(<PresentedFileCard {...props()} />)
   const trigger = view.getByRole('button', { name: 'More file actions for out/report.pdf' })
   fireEvent.click(trigger)
@@ -101,7 +101,7 @@ it('supports keyboard selection and returns focus to the trigger on Escape', () 
   fireEvent.keyDown(document.activeElement!, { key: 'Home' })
   expect(document.activeElement).toBe(items[0])
   fireEvent.keyDown(document.activeElement!, { key: 'Escape' })
-  expect(document.activeElement).toBe(trigger)
+  await vi.waitFor(() => { expect(document.activeElement).toBe(trigger) })
 })
 
 

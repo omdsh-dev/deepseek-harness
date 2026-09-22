@@ -14,6 +14,7 @@ kind: "package-reference"
 
 ## 目录
 
+- [无障碍消息流](#accessible-transcript)
 - [系统提示词行](#system-prompt-row)
 - [轮次 token 用量](#turn-token-usage)
 - [已完成轮次的页脚](#completed-turn-footer)
@@ -24,6 +25,11 @@ kind: "package-reference"
 - [开发备注](#dev-note)
 
 -----
+
+<a id="accessible-transcript"></a>
+## 无障碍消息流
+
+消息流是具名、非实时的 log。可见的人工消息和 Assistant 消息是可导航的 article。一个 polite live region 播报持久回答、根工具、审批、问题及计划评审的状态变化；历史加载、token 分片、耗时更新和未变化状态保持静默。
 
 <a id="system-prompt-row"></a>
 ## 系统提示词行

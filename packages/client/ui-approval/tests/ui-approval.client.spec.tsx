@@ -364,9 +364,27 @@ describe('ApprovalPanel', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Allow once' }))
     expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Allow once' }).disabled).toBe(true)
+    expect(screen.getByText('Waiting').closest('[aria-busy="true"]')).toBeTruthy()
     await waitFor(() => {
       expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Allow once' }).disabled).toBe(false)
     })
+    expect(screen.getByRole('alert').textContent).toBe('transport closed')
+    pending.abort(new Error('test cleanup'))
+    await pending.result.catch(() => {})
+  })
+
+  it('announces a non-Error rejection without leaving the panel busy', async () => {
+    const pending = new PendingApproval(id('s1'), { toolName: 'bash' })
+    vi.spyOn(pending, 'answer').mockRejectedValue('transport unavailable')
+    render(<ApprovalPanel {...panelProps(pending)} />)
+
+    const card = screen.getByText('Waiting').closest('[data-approval-key]')?.firstElementChild
+    expect(card?.hasAttribute('aria-busy')).toBe(false)
+    fireEvent.click(screen.getByRole('button', { name: 'Reject' }))
+    await waitFor(() => {
+      expect(screen.getByRole('alert').textContent).toBe('transport unavailable')
+    })
+    expect(card?.hasAttribute('aria-busy')).toBe(false)
     pending.abort(new Error('test cleanup'))
     await pending.result.catch(() => {})
   })

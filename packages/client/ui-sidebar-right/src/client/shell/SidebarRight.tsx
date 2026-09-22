@@ -29,6 +29,7 @@
  */
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import type { ReactNode, RefObject } from 'react'
+import { transferSidebarFocus } from './focus.ts'
 import { createPortal } from 'react-dom'
 import { IconPanelLeftOutline16, Tooltip } from '@deepseek-ai/dsh-client-ui-primitives'
 import type {
@@ -273,8 +274,14 @@ function PanelChrome({ sessionId, fullscreen, autoFullscreen, actions, t }: Pick
           type="button"
           className={css.iconButton}
           aria-label={t('chrome.collapseAria')}
+          aria-expanded={true}
+          aria-controls="dsh-rightbar-pane"
           data-sidebar-right-toggle
-          onClick={() => { actions.toggleExpanded(sessionId) }}
+          data-sidebar-right-session={sessionId}
+          onClick={(event) => {
+            actions.toggleExpanded(sessionId)
+            transferSidebarFocus(event.currentTarget, false)
+          }}
         >
           <IconPanelLeftOutline16 className={css.collapseGlyph} />
         </button>
