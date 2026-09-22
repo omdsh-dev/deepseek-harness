@@ -52,6 +52,8 @@ The panel has no header row. Its two controls — the presentation switch and th
 <a id="the-expand-button"></a>
 ## The expand button
 
+Explicit expansion focuses the same Session's collapse control; collapse returns focus to its new expand control. A newer dialog or navigation focus owner is preserved. Both controls expose their expanded state and relationship to the frame's right pane.
+
 While the panel is hidden, one button in the conversation header's corner seat (`conversation.session.header.corner`, past the utilities' right edge and level with the Session log control) is the way back in. Its glyph is the left sidebar's collapse icon mirrored. It shares the panel's store (the slot runtime allows one handle across two same-scope seats); while the panel is shown it renders nothing, and the corner seat collapses with it. A collapsed Sidebar therefore costs the conversation nothing: no rail, no width, and the transcript's scrollbar stays at the column's edge. Without a session there is no button and no panel.
 
 The panel takes the conversation's ground colour and content font sizes rather than a raised layer of its own: it is a column of the page, not a card over it.

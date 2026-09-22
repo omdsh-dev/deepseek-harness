@@ -1,49 +1,60 @@
-- banner:
+- main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy": Use the read tool twice
   - button "More actions"
   - button "Open right sidebar"
-  - tablist:
+  - tablist "Session views":
     - tab "Chat" [selected]
     - tab "Trajectory"
-- navigation "Turn navigation":
-  - button "Jump to turn 1"
-  - button "Jump to turn 2"
-  - button "Jump to turn 3"
-- text: "Use the read tool twice in one assistant message: read a.txt and b.txt. Then reply with the single word DONE and stop. {{clock}}"
-- button "Copy"
-- tooltip "Copy"
-- status: Stopped
-- button "Stopped" [disabled] [expanded]
-- button "Analysis completed"
-- paragraph: I will read both files before answering.
-- button "Read files"
-- button "Copy"
-- button "Good response"
-- button "Bad response"
-- button "Branch into a new conversation" [disabled]
-- text: Available only on the last message of a completed turn {{clock}} Now give the final answer. {{clock}}
-- button "Copy"
-- status: Worked
-- button "Took {{duration}}" [disabled]
-- paragraph: DONE
-- button "Copy"
-- button "Good response"
-- button "Bad response"
-- button "Branch into a new conversation"
-- text: {{clock}} Keep this later input in the original conversation. {{clock}}
-- button "Copy"
-- status: Worked
-- button "Took {{duration}}" [disabled]
-- paragraph: ORIGINAL ONLY
-- button "Copy"
-- button "Good response"
-- button "Bad response"
-- button "Branch into a new conversation"
-- text: {{clock}}
-- textbox "Message or run a task, / commands, @ files or sessions"
-- button "Add files or run commands"
-- 'button "Access mode, current: Workspace Write"': Workspace Write
-- button "Select model, current DeepSeek-V4-Flash": DeepSeek-V4-Flash
-- button "Send message" [disabled]
-- button "3 turns 4 steps · {{throughput}} tok/s": 3 turns 4 steps{{throughput}} tok/s
-- button "7.9K tok · Cache hit 98%": 7.9K tokCache hit 98%
+  - tabpanel "Chat":
+    - navigation "Turn navigation":
+      - button "Jump to turn 1"
+      - button "Jump to turn 2"
+      - button "Jump to turn 3"
+    - log "Conversation transcript":
+      - article "User message":
+        - text: "Use the read tool twice in one assistant message: read a.txt and b.txt. Then reply with the single word DONE and stop. {{clock}}"
+        - button "Copy"
+        - tooltip "Copy"
+      - status: Stopped
+      - button "Stopped" [disabled] [expanded]
+      - button "Analysis completed"
+      - article "Assistant response":
+        - paragraph: I will read both files before answering.
+      - button "Read files"
+      - button "Copy"
+      - button "Good response"
+      - button "Bad response"
+      - button "Branch into a new conversation" [disabled]
+      - text: Available only on the last message of a completed turn {{clock}}
+      - article "User message":
+        - text: Now give the final answer. {{clock}}
+        - button "Copy"
+      - status: Worked
+      - button "Took {{duration}}" [disabled]
+      - article "Assistant response":
+        - paragraph: DONE
+      - button "Copy"
+      - button "Good response"
+      - button "Bad response"
+      - button "Branch into a new conversation"
+      - text: {{clock}}
+      - article "User message":
+        - text: Keep this later input in the original conversation. {{clock}}
+        - button "Copy"
+      - status: Worked
+      - button "Took {{duration}}" [disabled]
+      - article "Assistant response":
+        - paragraph: ORIGINAL ONLY
+      - button "Copy"
+      - button "Good response"
+      - button "Bad response"
+      - button "Branch into a new conversation"
+      - text: {{clock}}
+  - textbox "Message or run a task, / commands, @ files or sessions"
+  - button "Add files or run commands"
+  - 'button "Access mode, current: Workspace Write"': Workspace Write
+  - button "Select model, current DeepSeek-V4-Flash": DeepSeek-V4-Flash
+  - button "Send message" [disabled]
+  - button "3 turns 4 steps · {{throughput}} tok/s": 3 turns 4 steps{{throughput}} tok/s
+  - button "7.9K tok · Cache hit 98%": 7.9K tokCache hit 98%

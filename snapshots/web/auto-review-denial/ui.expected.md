@@ -1,118 +1,131 @@
 ## Collapsed
 
-- banner:
+- main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy": {{workspace}}
   - button "More actions"
   - button "Open right sidebar"
-  - tablist:
+  - tablist "Session views":
     - tab "Chat" [selected]
     - tab "Trajectory"
-- text: Inspect the protected operation, but do not run it unless authorized. {{clock}}
-- button "Copy"
-- status: Worked
-- button "Took {{duration}}" [expanded]
-- button "Called tools, ran code, ran commands" [expanded]
-- text: Failed
-- button "Tool call Rejected by Auto review"
-- button "Code Catch an Auto-denied inner call"
-- text: Failed
-- button "Bash Rejected by Auto review"
-- textbox "Message or run a task, / commands, @ files or sessions"
-- button "Add files or run commands"
-- 'button "Access mode, current: Auto review EXP"':
-  - text: Auto review
-  - superscript: EXP
-- button "Select model, current DeepSeek-V4-Flash": DeepSeek-V4-Flash
-- button "Send message" [disabled]
-- button "1 turns 2 steps"
+  - tabpanel "Chat":
+    - log "Conversation transcript":
+      - article "User message":
+        - text: Inspect the protected operation, but do not run it unless authorized. {{clock}}
+        - button "Copy"
+      - status: Worked
+      - button "Took {{duration}}" [expanded]
+      - button "Called tools, ran code, ran commands" [expanded]
+      - text: Failed
+      - button "Tool call Rejected by Auto review"
+      - text: Completed
+      - button "Code Catch an Auto-denied inner call"
+      - text: Failed
+      - button "Bash Rejected by Auto review"
+  - textbox "Message or run a task, / commands, @ files or sessions"
+  - button "Add files or run commands"
+  - 'button "Access mode, current: Auto review EXP"':
+    - text: Auto review
+    - superscript: EXP
+  - button "Select model, current DeepSeek-V4-Flash": DeepSeek-V4-Flash
+  - button "Send message" [disabled]
+  - button "1 turns 2 steps"
 
 ## Expanded
 
-- banner:
+- main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy": {{workspace}}
   - button "More actions"
   - button "Open right sidebar"
-  - tablist:
+  - tablist "Session views":
     - tab "Chat" [selected]
     - tab "Trajectory"
-- text: Inspect the protected operation, but do not run it unless authorized. {{clock}}
-- button "Copy"
-- status: Worked
-- button "Took {{duration}}" [expanded]
-- button "Called tools, ran code, ran commands" [expanded]
-- text: Failed
-- button "Tool call Rejected by Auto review" [expanded]
-- text: "OUT Tool was not executed. Reason: raw reason"
-- button "Inspect"
-- button "Code Catch an Auto-denied inner call"
-- text: Failed
-- button "Bash Rejected by Auto review" [expanded]
-- text: "OUT Tool was not executed. Reason: ptc raw reason"
-- button "Inspect"
-- textbox "Message or run a task, / commands, @ files or sessions"
-- button "Add files or run commands"
-- 'button "Access mode, current: Auto review EXP"':
-  - text: Auto review
-  - superscript: EXP
-- button "Select model, current DeepSeek-V4-Flash": DeepSeek-V4-Flash
-- button "Send message" [disabled]
-- button "1 turns 2 steps"
+  - tabpanel "Chat":
+    - log "Conversation transcript":
+      - article "User message":
+        - text: Inspect the protected operation, but do not run it unless authorized. {{clock}}
+        - button "Copy"
+      - status: Worked
+      - button "Took {{duration}}" [expanded]
+      - button "Called tools, ran code, ran commands" [expanded]
+      - text: Failed
+      - button "Tool call Rejected by Auto review" [expanded]
+      - text: "OUT Tool was not executed. Reason: raw reason"
+      - button "Inspect"
+      - text: Completed
+      - button "Code Catch an Auto-denied inner call"
+      - text: Failed
+      - button "Bash Rejected by Auto review" [expanded]
+      - text: "OUT Tool was not executed. Reason: ptc raw reason"
+      - button "Inspect"
+  - textbox "Message or run a task, / commands, @ files or sessions"
+  - button "Add files or run commands"
+  - 'button "Access mode, current: Auto review EXP"':
+    - text: Auto review
+    - superscript: EXP
+  - button "Select model, current DeepSeek-V4-Flash": DeepSeek-V4-Flash
+  - button "Send message" [disabled]
+  - button "1 turns 2 steps"
 
 ## Trajectory
 
-- banner:
+- main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy": {{workspace}}
   - button "More actions"
   - button "Open right sidebar"
-  - tablist:
+  - tablist "Session views":
     - tab "Chat"
     - tab "Trajectory" [selected]
-- toolbar "Trajectory toolbar":
-  - button "Use actual duration": Duration
-  - button "Collapse turns": Turns
-  - button "Collapse calls": Calls
-  - searchbox "Search trajectory"
-- region "Trajectory timeline"
-- table:
-  - rowgroup:
-    - row "USER, Inspect the protected operation, but do not run it unless authorized.":
-      - cell "Turn 1 USER": USER
-      - cell "Inspect the protected operation, but do not run it unless authorized."
-    - row "Request 1, ASSISTANT, (tool call only)":
-      - 'cell "Request #1 ASSISTANT"':
-        - 'button "Request #1"'
-        - text: ASSISTANT
-      - cell "(tool call only)"
-    - 'row "TOOL, mystery {\"secret\":\"hidden-input\"}"':
-      - cell "TOOL"
-      - 'cell "mystery{\"secret\":\"hidden-input\"} → AUTO_REVIEW_DENIED"'
-    - row "Request 2, ASSISTANT, (tool call only)":
-      - 'cell "Request #2 ASSISTANT"':
-        - 'button "Request #2"'
-        - text: ASSISTANT
-      - cell "(tool call only)"
-    - row "TOOL, run_code Catch an Auto-denied inner call":
-      - cell "TOOL"
-      - cell "run_codeCatch an Auto-denied inner call → denial caught"
-    - 'row "SUBTOOL, bash {\"command\":\"echo hidden-input-ptc\"}" [selected]':
-      - cell "SUBTOOL"
-      - 'cell "bash{\"command\":\"echo hidden-input-ptc\"} → AUTO_REVIEW_DENIED"'
-- complementary "Event details":
-  - separator "Resize event details"
-  - text: SUBTOOL Turn 1 · Step 2
-  - button "Close details"
-  - tablist "Event details":
-    - tab "Summary"
-    - tab "Payload"
-    - tab "Result" [selected]
-    - tab "Schema"
-    - tab "Timing"
-  - tabpanel "Result": "AutoReviewDeniedError: AUTO_REVIEW_DENIED Error: Auto review rejected tool \"bash\"; its body was not executed"
-- textbox "Message or run a task, / commands, @ files or sessions"
-- button "Add files or run commands"
-- 'button "Access mode, current: Auto review EXP"':
-  - text: Auto review
-  - superscript: EXP
-- button "Select model, current DeepSeek-V4-Flash": DeepSeek-V4-Flash
-- button "Send message" [disabled]
-- button "1 turns 2 steps"
+  - tabpanel "Trajectory":
+    - toolbar "Trajectory toolbar":
+      - button "Use actual duration": Duration
+      - button "Collapse turns": Turns
+      - button "Collapse calls": Calls
+      - searchbox "Search trajectory"
+    - region "Trajectory timeline"
+    - table "Trajectory events":
+      - caption: Use Up and Down Arrow, Home, and End to move between events; press Enter or Space to open details. If the row has a request marker, Right Arrow enters it, and Left Arrow or Escape returns to the event.
+      - rowgroup:
+        - row "USER, Inspect the protected operation, but do not run it unless authorized.":
+          - cell "Turn 1 USER": USER
+          - cell "Inspect the protected operation, but do not run it unless authorized."
+        - row "Request 1, ASSISTANT, (tool call only)":
+          - 'cell "Request #1 ASSISTANT"':
+            - 'button "Request #1"'
+            - text: ASSISTANT
+          - cell "(tool call only)"
+        - 'row "TOOL, mystery {\"secret\":\"hidden-input\"}"':
+          - cell "TOOL"
+          - 'cell "mystery{\"secret\":\"hidden-input\"} → AUTO_REVIEW_DENIED"'
+        - row "Request 2, ASSISTANT, (tool call only)":
+          - 'cell "Request #2 ASSISTANT"':
+            - 'button "Request #2"'
+            - text: ASSISTANT
+          - cell "(tool call only)"
+        - row "TOOL, run_code Catch an Auto-denied inner call":
+          - cell "TOOL"
+          - cell "run_codeCatch an Auto-denied inner call → denial caught"
+        - 'row "SUBTOOL, bash {\"command\":\"echo hidden-input-ptc\"}" [selected]':
+          - cell "SUBTOOL"
+          - 'cell "bash{\"command\":\"echo hidden-input-ptc\"} → AUTO_REVIEW_DENIED"'
+    - complementary "Event details":
+      - separator "Resize event details"
+      - text: SUBTOOL Turn 1 · Step 2
+      - button "Close details"
+      - tablist "Event details":
+        - tab "Summary"
+        - tab "Payload"
+        - tab "Result" [selected]
+        - tab "Schema"
+        - tab "Timing"
+      - tabpanel "Result": "AutoReviewDeniedError: AUTO_REVIEW_DENIED Error: Auto review rejected tool \"bash\"; its body was not executed"
+  - textbox "Message or run a task, / commands, @ files or sessions"
+  - button "Add files or run commands"
+  - 'button "Access mode, current: Auto review EXP"':
+    - text: Auto review
+    - superscript: EXP
+  - button "Select model, current DeepSeek-V4-Flash": DeepSeek-V4-Flash
+  - button "Send message" [disabled]
+  - button "1 turns 2 steps"

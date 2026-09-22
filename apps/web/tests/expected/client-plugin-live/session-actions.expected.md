@@ -1,4 +1,4 @@
-- menu:
+- menu "Session actions for Session action extension":
   - menuitem "Pin session"
   - menuitem "Rename"
   - menuitem "Fork session"

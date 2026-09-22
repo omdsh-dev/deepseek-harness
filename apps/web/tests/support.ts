@@ -77,7 +77,7 @@ export async function expandTurnProcesses(page: Page): Promise<void> {
  * @param target - descendant whose outer process disclosures should open.
  */
 export async function expandOwningTurnProcess(page: Page, target: Locator): Promise<void> {
-  if (await target.isVisible()) return
+  if (await target.isVisible() && !(await target.evaluate(element => element.closest('[hidden], [data-turn-process-hidden]') !== null))) return
   const turn = await target.evaluate(element => element.closest<HTMLElement>('[data-chat-turn]')?.dataset.chatTurn)
   if (turn !== undefined) {
     const control = page.locator(`[data-turn-process="${turn}"]`)

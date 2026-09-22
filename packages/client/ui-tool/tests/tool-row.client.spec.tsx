@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { useDisclosure } from '@deepseek-ai/dsh-client-ui-chat/src/client/chat/use-disclosure.ts'
-import { cleanup, fireEvent, render } from '@testing-library/react'
+import { cleanup, fireEvent, render, within } from '@testing-library/react'
 
 import type { RunningToolCall, ToolResultNode } from '@deepseek-ai/dsh-client-ui-chat/client'
 import { makeTranslate } from '@deepseek-ai/dsh-client-test-runtime'
@@ -290,7 +290,12 @@ describe('ToolRow', () => {
 
   it('row click expands: chevron leading, summary kept inline, body in the scrolling card', () => {
     const view = render(<ToolRow {...rowProps} />)
-    fireEvent.click(view.getByRole('button'))
+    const row = view.getByRole('button')
+    const panelId = row.getAttribute('aria-controls')
+    expect(panelId).not.toBeNull()
+    expect(document.getElementById(panelId as string)?.hidden).toBe(true)
+    fireEvent.click(row)
+    expect(document.getElementById(panelId as string)?.hidden).toBe(false)
     expect(view.queryByTestId('tool-icon')).toBeNull()
     expect(view.container.querySelector('svg')).not.toBeNull()
     expect(view.getByText('List files')).toBeTruthy()
@@ -346,15 +351,25 @@ describe('ToolRow', () => {
     const runningView = render(<ToolRow {...rowProps} state="running" />)
     expect(runningView.queryByTestId('tool-icon')).not.toBeNull()
     expect(runningView.container.querySelector('[data-state="running"]')).not.toBeNull()
+    expect(within(runningView.container).getByText('运行中')).toBeTruthy()
     const errorView = render(<ToolRow {...rowProps} state="error" />)
     expect(errorView.container.querySelector('[data-testid="tool-icon"]')).not.toBeNull()
     expect(errorView.container.querySelector('[class*="chevronHover"]')).not.toBeNull()
+    expect(within(errorView.container).getByText('失败')).toBeTruthy()
+  })
+
+  it('exposes completed and stopped lifecycle text to assistive technology', () => {
+    const completed = render(<ToolRow {...rowProps} />)
+    expect(within(completed.container).getByText('已完成')).toBeTruthy()
+    const stopped = render(<ToolRow {...rowProps} state="stopped" />)
+    expect(within(stopped.container).getByText('已停止')).toBeTruthy()
   })
 
   it('non-expandable rows render a passive leading slot and no row button', () => {
     const view = render(<ToolRow {...rowProps} bodyRaw={null} />)
     expect(view.queryByRole('button')).toBeNull()
     expect(view.container.querySelector('[aria-expanded]')).toBeNull()
+    expect(view.container.querySelector('[aria-controls]')).toBeNull()
     expect(view.queryByTestId('tool-icon')).not.toBeNull()
   })
 
@@ -374,20 +389,30 @@ describe('ToolRow', () => {
     const view = render(
       <ToolRow {...rowProps} variant="read" title="Read" summary="src/a.ts" filePath="src/a.ts" onOpenFile={open} />,
     )
-    const row = view.getByRole('button', { name: /Read/ })
-    const path = view.getByText('src/a.ts')
-    for (const key of ['Enter', ' ', 'Tab']) {
-      fireEvent.keyDown(path, { key })
-      expect(row.getAttribute('aria-expanded')).toBe('false')
-    }
+    const row = view.container.querySelector('[data-disclosure-row]')
+    const disclosure = view.getByRole('button', { name: /Read.*src\/a\.ts/ })
+    const fileButton = view.getByRole('button', { name: '打开文件 src/a.ts' })
+    const panelId = disclosure.getAttribute('aria-controls')
+    expect(row?.getAttribute('role')).toBeNull()
+    expect(row?.getAttribute('tabindex')).toBeNull()
+    expect(row?.getAttribute('aria-expanded')).toBeNull()
+    expect(disclosure.tagName).toBe('BUTTON')
+    expect(document.getElementById(panelId as string)?.hidden).toBe(true)
+    expect(view.container.querySelector('[role="button"] button')).toBeNull()
     // Path click opens the file and leaves the row collapsed.
-    fireEvent.click(path)
+    fireEvent.click(fileButton)
     expect(open).toHaveBeenCalledWith('src/a.ts')
-    expect(row.getAttribute('aria-expanded')).toBe('false')
-    // Row click (outside the link) expands the args body.
-    fireEvent.click(row)
-    expect(row.getAttribute('aria-expanded')).toBe('true')
+    expect(disclosure.getAttribute('aria-expanded')).toBe('false')
+    // The separate native button is the keyboard/AT disclosure target.
+    fireEvent.click(disclosure)
+    expect(disclosure.getAttribute('aria-expanded')).toBe('true')
     expect(view.getByText(/"a": 1/)).toBeTruthy()
+    // The pointer target remains the whole plain row, without exposing a
+    // nested pseudo-button to assistive technology.
+    fireEvent.click(row as HTMLElement)
+    expect(disclosure.getAttribute('aria-expanded')).toBe('false')
+    fireEvent.keyDown(fileButton, { key: 'Enter' })
+    expect(disclosure.getAttribute('aria-expanded')).toBe('false')
   })
 
   it('a file path without onOpenFile renders a plain summary on an expandable row', () => {

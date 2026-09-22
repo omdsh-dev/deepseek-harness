@@ -94,12 +94,12 @@ export interface ToolRowProps {
 }
 
 /** Visually hidden run-state label for color-only running and settlement cues. */
-function stateStatus(state: ToolRowState, t: TranslateNS<'conversation'>): string | null {
+function stateStatus(state: ToolRowState, t: TranslateNS<'conversation'>): string {
   switch (state) {
     case 'running': return t('row.running')
+    case 'ok': return t('row.completed')
     case 'error': return t('row.failed')
     case 'stopped': return t('row.stopped')
-    default: return null
   }
 }
 
@@ -188,6 +188,9 @@ export const ToolRow = memo(function ToolRow({
       else onOpenFile(filePath, { line: filePathLine })
     }
     : undefined, [filePath, filePathLine, onOpenFile, settledWithCue])
+  const fileDisclosureLabel = openFile !== undefined
+    ? [title, status, summaryText, suffix].filter(part => part !== null && part !== '').join(' ')
+    : undefined
   // Keep Enter/Space on the focused path link from bubbling to the row's
   // keydown handler, which would preventDefault() the key and toggle expand
   // instead of activating the link — the keyboard analogue of openFile's
@@ -207,6 +210,7 @@ export const ToolRow = memo(function ToolRow({
         <button
           type="button"
           className={css.fileLink}
+          aria-label={t('row.openFile', { path: summaryText })}
           onClick={openFile}
           onKeyDown={fileLinkKeyDown}
         >
@@ -227,7 +231,7 @@ export const ToolRow = memo(function ToolRow({
         <TextShimmer className={clsx(css.summarySuffix, suffix === diffStat && css.diffStat)} active={running}>{suffix}</TextShimmer>
       )}
     </>
-  ), [diffStat, fileLinkKeyDown, openFile, running, state, suffix, summaryText])
+  ), [diffStat, fileLinkKeyDown, openFile, running, state, suffix, summaryText, t])
   const expandedContent = useMemo(() => open ? (
     <div className={clsx(css.bodyWrap, detailsBody !== null && css.detailsBodyWrap)}>
       {askQuestionBody !== null
@@ -333,7 +337,7 @@ export const ToolRow = memo(function ToolRow({
   ])
   return (
     <div className={css.root} data-variant={variant} data-tool={toolName} data-state={state}>
-      {status !== null && <span className={css.visuallyHidden}>{status}</span>}
+      <span className={css.visuallyHidden}>{status}</span>
       <DisclosureRow
         rowClassName={css.row}
         leadingClassName={css.leading}
@@ -342,9 +346,11 @@ export const ToolRow = memo(function ToolRow({
         icon={icon}
         title={title}
         running={running}
+        accessibleLabel={fileDisclosureLabel}
         open={open}
         expandable={expandable}
         expandOnRowClick
+        interactiveCollapsedContent={openFile !== undefined}
         keepContentWhenOpen
         onToggle={toggleExpand}
         collapsedContent={collapsedContent}

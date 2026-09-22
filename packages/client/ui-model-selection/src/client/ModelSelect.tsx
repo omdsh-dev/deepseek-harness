@@ -7,8 +7,8 @@
  * ToggleButton) shows both: model name + effort in the caption tone.
  * While open, ↑/↓ move focus across the rows of the shown pane (wrapping; a
  * step taken while the trigger still holds focus enters at the near end), Tab
- * settles like Enter, and Escape and Shift+Tab leave a drilled pane first and
- * otherwise close back to the trigger. A drilled pane hands focus to the row
+ * closes without selecting and follows native focus order. Escape leaves a
+ * drilled pane first and otherwise closes back to the trigger. A drilled pane hands focus to the row
  * of the value in use, and returning to the root pane hands it back to the
  * cell that opened it. Data and submission ride the SAME per-session
  * ModelDirectory as the /model popup; exact-model reasoning metadata and the
@@ -73,6 +73,7 @@ export function ModelSelect(
   const menuRef = useRef<HTMLDivElement | null>(null)
   const [menuPos, setMenuPos] = useState<CSSProperties | null>(null)
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([])
+  const focusIntentRef = useRef<'first' | 'last' | 'selected' | number>('first')
   const id = useId()
 
   const choices = useMemo(() => state.groups.flatMap(group =>
@@ -128,33 +129,7 @@ export function ModelSelect(
     document.addEventListener('mousedown', closeOutside)
     return () => { document.removeEventListener('mousedown', closeOutside) }
   }, [open])
-
-  // A pane switch unmounts the row that had focus, which drops focus onto the
-  // page body — outside the card's subtree, where its key handling no longer
-  // sees a keystroke. Every switch therefore names where the keyboard lands:
-  // drilling on the pane's current value, coming back on the cell that opened
-  // the pane left.
-  const paneFocus = useRef<'drill' | 'model' | 'effort' | null>(null)
-  useEffect(() => {
-    const intent = paneFocus.current
-    paneFocus.current = null
-    if (!open || intent === null) return
-    if (intent === 'drill') {
-      // The checked row is the value in use; a pane without one opens on its
-      // first row.
-      const checked = menuRef.current?.querySelector<HTMLElement>('[role="menuitemradio"][aria-checked="true"]:not([disabled])')
-      const target = checked ?? itemRefs.current.find(item => item !== null && !item.disabled)
-      // Rows a selection in flight disabled cannot take the keyboard; the
-      // trigger does, so the card's keys still reach the menu.
-      ;(target ?? triggerRef.current)?.focus()
-      return
-    }
-    const cell = itemRefs.current[intent === 'effort' ? 1 : 0]
-    ;(cell !== null && cell !== undefined && !cell.disabled ? cell : triggerRef.current)?.focus()
-  }, [open, pane])
-
-  // Portaled placement (the Menu primitive's portal rules: fixed from the
-  // anchor rect, measured before paint, clamped inside the viewport): above
+  // Portal placement uses the trigger's rect, measured before paint: above
   // the trigger, right edges aligned. Depends on pane and directory state
   // because pane switches and async catalog loads resize the card.
   /* jscpd:ignore-start -- deliberate mirror of ui-primitives useAnchoredPosition:
@@ -186,29 +161,56 @@ export function ModelSelect(
     }
   }, [open, pane, state])
   /* jscpd:ignore-end */
+  // A menu button has one sequential Tab stop. Opening or changing panes
+  // moves focus into the composite; every menu item remains programmatically
+  // focusable while Tab exits the menu instead of walking every row.
+  useEffect(() => {
+    if (!open || menuPos === null) return
+    const active = document.activeElement
+    if (active instanceof Node && menuRef.current?.contains(active)) return
+    const items = itemRefs.current.filter(item => item !== null)
+    if (items.length === 0) {
+      menuRef.current?.focus()
+      return
+    }
+    const intent = focusIntentRef.current
+    let target = 0
+    if (intent === 'last') target = items.length - 1
+    else if (intent === 'selected') {
+      const selected = items.findIndex(item => item.getAttribute('aria-checked') === 'true')
+      target = selected === -1 ? 0 : selected
+    } else if (typeof intent === 'number') target = Math.min(intent, items.length - 1)
+    items[target]?.focus()
+  }, [open, menuPos, pane, state.status, state.groups, effortChoices])
 
   if (!available) return null
 
-  const show = (): void => {
+  const show = (edge: 'first' | 'last' = 'first'): void => {
+    focusIntentRef.current = edge
     setPane('root')
     setOpen(true)
     reload()
   }
 
+  const showPane = (next: Exclude<Pane, 'root'>): void => {
+    focusIntentRef.current = 'selected'
+    setPane(next)
+  }
+
   const close = (restoreFocus = false): void => {
     setOpen(false)
     setPane('root')
-    if (restoreFocus) queueMicrotask(() => { triggerRef.current?.focus() })
+    if (restoreFocus) triggerRef.current?.focus()
   }
 
   const drill = (next: Pane): void => {
-    paneFocus.current = 'drill'
+    focusIntentRef.current = 'selected'
     setPane(next)
   }
 
   /** Leave a drilled pane for the root one, handing the keyboard back to its cell. */
   const back = (from: Exclude<Pane, 'root'>): void => {
-    paneFocus.current = from
+    focusIntentRef.current = from === 'effort' ? 1 : 0
     setPane('root')
   }
 
@@ -216,16 +218,23 @@ export function ModelSelect(
     const items = itemRefs.current.filter(item => item !== null)
     if (items.length === 0) return
     const active = items.findIndex(item => item === document.activeElement)
-    // Focus outside the rows (the trigger, which keeps it while the menu
-    // opens) enters at the end the step comes from: the first row forward,
-    // the last row backward.
     const next = active === -1
       ? (offset > 0 ? 0 : items.length - 1)
       : (active + offset + items.length) % items.length
     items[next]?.focus()
   }
 
+  const moveToEdge = (edge: 'first' | 'last'): void => {
+    const items = itemRefs.current.filter(item => item !== null)
+    items[edge === 'first' ? 0 : items.length - 1]?.focus()
+  }
+
   const onRootKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
+    if (!open && event.target === triggerRef.current && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+      event.preventDefault()
+      show(event.key === 'ArrowDown' ? 'first' : 'last')
+      return
+    }
     if (event.key === 'Escape' && open) {
       event.preventDefault()
       // Escape backs out of a drilled pane first, then closes.
@@ -234,36 +243,39 @@ export function ModelSelect(
       return
     }
     if (!open) return
-    // Tab settles like Enter and Shift+Tab leaves like Escape, so the menu's
-    // keys mean what they mean in the composer. Both are consumed: the card
-    // keeps the browser's focus traversal out while it is open.
+    // Tab leaves the composite without committing a model change. Put focus
+    // on the anchor synchronously so native traversal uses its document order
+    // rather than the portal's position at the end of the page.
     if (event.key === 'Tab') {
-      if (event.shiftKey) {
-        event.preventDefault()
-        if (pane !== 'root') back(pane)
-        else close(true)
-        return
-      }
-      // Settling activates the row the keyboard is on; with focus still on the
-      // trigger, Tab enters the menu at the value in use instead. Any other
-      // control inside the card (a retry button) keeps the browser's traversal,
-      // so the keystroke stays unconsumed there.
-      const focused = document.activeElement
-      const rows = itemRefs.current.filter((item): item is HTMLButtonElement => item !== null)
-      if (focused instanceof HTMLButtonElement && rows.includes(focused)) {
-        event.preventDefault()
-        focused.click()
-        return
-      }
-      if (focused !== triggerRef.current) return
-      event.preventDefault()
-      const checked = menuRef.current?.querySelector<HTMLElement>('[role="menuitemradio"][aria-checked="true"]:not([disabled])')
-      ;(checked ?? rows.find(item => !item.disabled))?.focus()
+      triggerRef.current?.focus()
+      close()
       return
     }
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault()
       moveFocus(event.key === 'ArrowDown' ? 1 : -1)
+      return
+    }
+    if (event.key === 'Home' || event.key === 'End') {
+      event.preventDefault()
+      moveToEdge(event.key === 'Home' ? 'first' : 'last')
+      return
+    }
+    if (event.key === 'ArrowLeft' && pane !== 'root') {
+      event.preventDefault()
+      focusIntentRef.current = pane === 'effort' ? 1 : 0
+      setPane('root')
+      return
+    }
+    if (event.key === 'ArrowRight' && pane === 'root') {
+      const item = event.target instanceof Element
+        ? event.target.closest<HTMLButtonElement>('[data-pane-target]')
+        : null
+      const target = item?.dataset.paneTarget
+      if (target === 'model' || target === 'effort') {
+        event.preventDefault()
+        showPane(target)
+      }
     }
   }
 
@@ -371,18 +383,37 @@ export function ModelSelect(
           className={css.menu}
           style={menuPos ?? MEASURE_STYLE}
           role="menu"
+          tabIndex={-1}
           aria-label={t('menu.aria')}
           aria-busy={state.status === 'loading' || busy}
         >
           {pane === 'root' && (
             <>
-              <button ref={itemRef()} type="button" role="menuitem" className={css.cell} onClick={() => { drill('model') }}>
+              <button
+                ref={itemRef()}
+                type="button"
+                role="menuitem"
+                aria-haspopup="menu"
+                tabIndex={-1}
+                data-pane-target="model"
+                className={css.cell}
+                onClick={() => { drill('model') }}
+              >
                 <span className={css.cellLabel}>{t('menu.model')}</span>
                 <span className={css.cellValue}>{modelLabel}</span>
                 <IconChevronRightOutlineRegular className={css.cellChevron} />
               </button>
               {reasoning !== undefined && (
-                <button ref={itemRef()} type="button" role="menuitem" className={css.cell} onClick={() => { drill('effort') }}>
+                <button
+                  ref={itemRef()}
+                  type="button"
+                  role="menuitem"
+                  aria-haspopup="menu"
+                  tabIndex={-1}
+                  data-pane-target="effort"
+                  className={css.cell}
+                  onClick={() => { drill('effort') }}
+                >
                   <span className={css.cellLabel}>{t('menu.effort')}</span>
                   <span className={css.cellValue}>{effortLabel}</span>
                   <IconChevronRightOutlineRegular className={css.cellChevron} />
@@ -394,16 +425,16 @@ export function ModelSelect(
           {pane === 'model' && (
             <>
               {state.status === 'loading' && (
-                <div className={css.status}>{t('status.loading')}</div>
+                <div className={css.status} role="status">{t('status.loading')}</div>
               )}
               {state.error !== null && lastActionRef.current === 'load' && (
-                <div className={css.error}>
+                <div className={css.error} role="alert">
                   <span>{t('error.action', { message: state.error })}</span>
                   <button type="button" className={css.retry} onClick={reload}>{t('retry')}</button>
                 </div>
               )}
               {state.failures.map(failure => (
-                <div className={css.warning} key={failure.id}>
+                <div className={css.warning} role="status" key={failure.id}>
                   <span>{t('warning.groupLoad', { name: failure.name, message: failure.message })}</span>
                   <button type="button" className={css.retry} onClick={reload}>{t('retry')}</button>
                 </div>
@@ -421,6 +452,7 @@ export function ModelSelect(
                             ref={itemRef()}
                             type="button"
                             role="menuitemradio"
+                            tabIndex={-1}
                             aria-checked={selected}
                             className={clsx(css.option, selected && css.selected)}
                             key={model.id}
@@ -442,7 +474,7 @@ export function ModelSelect(
                 })}
               </div>
               {state.status === 'ready' && choices.length === 0 && (
-                <div className={css.empty}>{t('empty.models')}</div>
+                <div className={css.empty} role="status">{t('empty.models')}</div>
               )}
             </>
           )}
@@ -450,18 +482,19 @@ export function ModelSelect(
           {pane === 'effort' && (
             <>
               {state.error !== null && lastActionRef.current === 'load' && (
-                <div className={css.error}>
+                <div className={css.error} role="alert">
                   <span>{t('error.action', { message: state.error })}</span>
                   <button type="button" className={css.retry} onClick={reload}>{t('action.reload')}</button>
                 </div>
               )}
               {effortChoices.length === 0
-                ? <div className={css.empty}>{t('empty.efforts')}</div>
+                ? <div className={css.empty} role="status">{t('empty.efforts')}</div>
                 : effortChoices.map(level => (
                   <button
                     ref={itemRef()}
                     type="button"
                     role="menuitemradio"
+                    tabIndex={-1}
                     aria-checked={effectiveEffort === level.effort}
                     className={clsx(css.option, effectiveEffort === level.effort && css.selected)}
                     key={level.key}

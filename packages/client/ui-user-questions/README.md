@@ -25,7 +25,7 @@ When an agent asks a question in the Web client, this package replaces the chat 
 <a id="use-this-package"></a>
 ## Use this package
 
-When the agent asks a question, the composer becomes the question surface: answer each question, navigate with the pager, or skip it. Single-select choices advance immediately; Enter continues the flow and submits once every question is answered or skipped, while Shift+Enter breaks a line instead (during IME composition Enter only confirms the input candidate without advancing).
+When the agent asks a question, the composer becomes the question surface: answer each question, navigate with the pager, or skip it. A single-select group has one Tab stop; Arrow keys, Home, and End move and select without leaving the question, while activating a choice advances immediately. Pager, skip, validation recovery, and automatic advance move focus into the destination question. Enter continues the flow and submits once every question is answered or skipped, while Shift+Enter breaks a line instead (during IME composition Enter only confirms the input candidate without advancing).
 
 ### Answering
 

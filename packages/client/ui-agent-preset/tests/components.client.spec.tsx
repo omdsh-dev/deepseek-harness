@@ -208,7 +208,7 @@ describe('a refused switch', () => {
       renderSeat({}, () => Promise.resolve(reason))
 
       fireEvent.click(screen.getByRole('button'))
-      fireEvent.click(screen.getByRole('menuitem', { name: /mine/ }))
+      fireEvent.click(screen.getByRole('menuitemradio', { name: /mine/ }))
 
       // The host refuses a mount discovery reported healthy, so this banner is
       // the only place the cause appears — the chip has already reverted and
@@ -230,7 +230,7 @@ describe('a refused switch', () => {
     const actions = renderSeat()
 
     fireEvent.click(screen.getByRole('button'))
-    fireEvent.click(screen.getByRole('menuitem', { name: /mine/ }))
+    fireEvent.click(screen.getByRole('menuitemradio', { name: /mine/ }))
 
     await waitFor(() => { expect(actions.select).toHaveBeenCalledWith('mine') })
     expect(screen.queryByRole('alert')).toBeNull()

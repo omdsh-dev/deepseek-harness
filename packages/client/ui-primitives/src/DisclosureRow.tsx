@@ -1,4 +1,4 @@
-import { memo, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react'
+import { memo, useId, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react'
 import clsx from 'clsx'
 import { IconChevronDownOutlineRegular, IconChevronUpOutlineRegular } from './icons/index.tsx'
 import { TextShimmer } from './TextShimmer.tsx'
@@ -8,6 +8,8 @@ import css from './DisclosureRow.module.css'
 export interface DisclosureRowProps {
   icon: ReactNode
   title: string
+  /** Stable accessible name for the disclosure control. Defaults to `title`. */
+  accessibleLabel?: string | undefined
   open: boolean
   expandable: boolean
   onToggle: () => void
@@ -15,6 +17,12 @@ export interface DisclosureRowProps {
   running?: boolean | undefined
   /** Makes the complete title row the disclosure target. */
   expandOnRowClick?: boolean | undefined
+  /**
+   * Declares that `collapsedContent` contains its own interactive control.
+   * The row remains a pointer target, while a separate named leading button
+   * owns the disclosure semantics so controls never nest in `role="button"`.
+   */
+  interactiveCollapsedContent?: boolean | undefined
   /** Replaces the collapsed icon with a chevron while the row is hovered. */
   previewChevron?: boolean | undefined
   /** Keeps `collapsedContent` inline while open. */
@@ -37,11 +45,13 @@ export interface DisclosureRowProps {
 export const DisclosureRow = memo(function DisclosureRow({
   icon,
   title,
+  accessibleLabel,
   open,
   expandable,
   onToggle,
   running = false,
   expandOnRowClick = false,
+  interactiveCollapsedContent = false,
   previewChevron = expandable,
   keepContentWhenOpen = false,
   collapsedContent,
@@ -52,13 +62,15 @@ export const DisclosureRow = memo(function DisclosureRow({
   chevronClassName,
   titleClassName,
 }: DisclosureRowProps) {
+  const contentId = useId()
   const rowExpands = expandable && expandOnRowClick
+  const rowOwnsDisclosure = rowExpands && !interactiveCollapsedContent
   const toggleFromLeading = (event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation()
     onToggle()
   }
   const toggleFromKeyboard = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (!rowExpands || (event.key !== 'Enter' && event.key !== ' ')) return
+    if (!rowOwnsDisclosure || (event.key !== 'Enter' && event.key !== ' ')) return
     event.preventDefault()
     onToggle()
   }
@@ -80,17 +92,21 @@ export const DisclosureRow = memo(function DisclosureRow({
         className={clsx(css.row, rowClassName)}
         data-disclosure-row
         data-expandable={rowExpands || undefined}
-        role={rowExpands ? 'button' : undefined}
-        tabIndex={rowExpands ? 0 : undefined}
-        aria-expanded={rowExpands ? open : undefined}
+        role={rowOwnsDisclosure ? 'button' : undefined}
+        tabIndex={rowOwnsDisclosure ? 0 : undefined}
+        aria-label={rowOwnsDisclosure ? accessibleLabel : undefined}
+        aria-expanded={rowOwnsDisclosure ? open : undefined}
+        aria-controls={rowOwnsDisclosure ? contentId : undefined}
         onClick={rowExpands ? onToggle : undefined}
-        onKeyDown={rowExpands ? toggleFromKeyboard : undefined}
+        onKeyDown={rowOwnsDisclosure ? toggleFromKeyboard : undefined}
       >
-        {expandable && !rowExpands ? (
+        {expandable && !rowOwnsDisclosure ? (
           <button
             type="button"
             className={clsx(css.leading, leadingClassName)}
+            aria-label={accessibleLabel ?? title}
             aria-expanded={open}
+            aria-controls={contentId}
             onClick={toggleFromLeading}
           >
             {leading}
@@ -103,7 +119,11 @@ export const DisclosureRow = memo(function DisclosureRow({
         <TextShimmer className={clsx(css.title, titleClassName)} active={running}>{title}</TextShimmer>
         {(keepContentWhenOpen || !open) && collapsedContent}
       </div>
-      {open && children}
+      {expandable ? (
+        <div id={contentId} className={css.content} hidden={!open}>
+          {open && children}
+        </div>
+      ) : open && children}
     </div>
   )
 })

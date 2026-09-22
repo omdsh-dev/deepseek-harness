@@ -1,25 +1,27 @@
-- button "New session"
-- button "Collapse sidebar"
-- button "New session": New Session
-- navigation "Global panels":
-  - button "Plugins"
-- text: Workspaces
-- button "Search sessions"
-- textbox "Search session names"
-- button "View options"
-- button "Add workspace"
-- tree "Sessions":
-  - treeitem "workspace" [expanded]
-  - treeitem "New Session" [selected]
-- button "Settings"
-- banner:
+- navigation "Sidebar":
+  - button "New session"
+  - button "Collapse sidebar"
+  - button "New session": New Session
+  - navigation "Global panels":
+    - button "Plugins"
+  - text: Workspaces
+  - button "Search sessions"
+  - button "View options"
+  - button "Add workspace"
+  - tree "Sessions":
+    - treeitem "workspace" [expanded] [level=1]
+    - treeitem "New Session" [level=2] [selected]
+  - button "Settings"
+- main:
+  - heading "DSH application" [level=1]
   - button "Open right sidebar"
-- text: Into the Unknown Preview
-- button "Choose workspace": workspace
-- button "Standard mode"
-- textbox "Describe what you want to build, / commands, @ files or sessions"
-- button "Add files or run commands"
-- 'button "Access mode, current: Workspace Write"': Workspace Write
-- button "Plan mode on, press to turn off": Plan
-- button "Select model, current DeepSeek-V4-Flash": DeepSeek-V4-Flash
-- button "Send message" [disabled]
+  - text: Into the Unknown Preview
+  - button "Choose workspace": workspace
+  - button "Standard mode"
+  - textbox "Describe what you want to build, / commands, @ files or sessions"
+  - button "Add files or run commands"
+  - 'button "Access mode, current: Workspace Write"': Workspace Write
+  - button "Plan mode on, press to turn off": Plan
+  - button "Select model, current DeepSeek-V4-Flash": DeepSeek-V4-Flash
+  - button "Send message" [disabled]
+- separator "Sidebar"

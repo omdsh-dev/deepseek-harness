@@ -38,6 +38,7 @@ import {
 import { ProjectRowItem, SearchResultItem, SessionNodeItem } from './Rows.tsx'
 import { AnimatedRows } from './AnimatedRows.tsx'
 import { FLAT_SESSION_ORDER_KEY, type SessionGroupBy } from '../stores.ts'
+import { useTreeKeyboardNavigation } from './tree-navigation.ts'
 import { WorkspacePickFlow } from '../WorkspacePicker.tsx'
 import css from './WorkspaceBrowser.module.css'
 
@@ -118,17 +119,17 @@ function ViewOptionsMenu({ groupBy, orderBy, archivedFilter, onGroupPick, onOrde
       onClose={() => { setOpen(false) }}
       items={[
         { type: 'label' as const, id: 'group-by', text: t('groupBy.label') },
-        { id: 'workspace', label: t('groupBy.workspace'), icon: <IconFolderCloseRegular /> },
-        { id: 'workspace-tree', label: t('groupBy.workspaceTree'), icon: <IconWorkspaceTreeOutlineRegular /> },
-        { id: 'flat', label: t('groupBy.flat'), icon: <IconFlatListOutlineRegular /> },
+        { id: 'workspace', label: t('groupBy.workspace'), selection: 'radio' as const, icon: <IconFolderCloseRegular /> },
+        { id: 'workspace-tree', label: t('groupBy.workspaceTree'), selection: 'radio' as const, icon: <IconWorkspaceTreeOutlineRegular /> },
+        { id: 'flat', label: t('groupBy.flat'), selection: 'radio' as const, icon: <IconFlatListOutlineRegular /> },
         { type: 'separator' as const, id: 'order-by-separator' },
         { type: 'label' as const, id: 'order-by', text: t('orderBy.label') },
-        { id: 'manual', label: t('orderBy.manual'), icon: <IconChevronsUpDownOutlineRegular /> },
-        { id: 'updated', label: t('orderBy.updated'), icon: <IconClockOutlineRegular /> },
+        { id: 'manual', label: t('orderBy.manual'), selection: 'radio' as const, icon: <IconChevronsUpDownOutlineRegular /> },
+        { id: 'updated', label: t('orderBy.updated'), selection: 'radio' as const, icon: <IconClockOutlineRegular /> },
         { type: 'separator' as const, id: 'archived-filter-separator' },
         { type: 'label' as const, id: 'filter-by', text: t('filterBy.label') },
-        { id: 'show-archived', label: t('viewOptions.showArchived'), icon: <IconArchiveOutlineRegular /> },
-        { id: 'only-archived', label: t('viewOptions.onlyArchived'), icon: <IconArchiveCheckOutlineRegular /> },
+        { id: 'show-archived', label: t('viewOptions.showArchived'), selection: 'checkbox' as const, icon: <IconArchiveOutlineRegular /> },
+        { id: 'only-archived', label: t('viewOptions.onlyArchived'), selection: 'checkbox' as const, icon: <IconArchiveCheckOutlineRegular /> },
       ]}
       selectedIds={[
         groupBy,
@@ -266,6 +267,7 @@ function SessionTree({
   revealSessionId, onSessionRevealed,
 }: SessionTreeProps) {
   const panelActive = usePanelInfo(info => info.activePanelId !== null)
+  const treeNavigation = useTreeKeyboardNavigation()
   const statuses = useSessionStatus(s => s)
   const current = panelActive
     ? undefined
@@ -585,6 +587,8 @@ function SessionTree({
         rowKeys={rowKeys}
         ready={list.phase === 'ready' && workspaceReady && !nativeDragActive}
         resetKey={JSON.stringify([animationResetKey, sessionLimits])}
+        treeNavigation={treeNavigation}
+        empty={groups.length === 0}
       >
         {groups.length === 0 && (
           <div className={css.empty} data-row-key="empty">{t('empty.none')}</div>
@@ -621,6 +625,7 @@ function FlatList({
   sessionIds: readonly SessionId[]
 }) {
   const panelActive = usePanelInfo(info => info.activePanelId !== null)
+  const treeNavigation = useTreeKeyboardNavigation()
   const statuses = useSessionStatus(s => s)
   const rows = useMemo(
     () => deriveFlat(list, sessionIds, rowState, statuses),
@@ -648,6 +653,8 @@ function FlatList({
         rowKeys={rows.length === 0 ? ['empty'] : rows.map(row => `session:${row.id}`)}
         ready={list.phase === 'ready' && workspaceReady && drag === null}
         resetKey={animationResetKey}
+        treeNavigation={treeNavigation}
+        empty={rows.length === 0}
       >
         {rows.length === 0 && (
           <div className={css.empty} data-row-key="empty">{t('empty.none')}</div>
@@ -733,6 +740,7 @@ function SearchResults({
   resultLimit: number
 }) {
   const panelActive = usePanelInfo(info => info.activePanelId !== null)
+  const treeNavigation = useTreeKeyboardNavigation()
   const list = useSessions(s => s)
   const statuses = useSessionStatus(s => s)
   const currentRemote = remote.query === query
@@ -759,7 +767,12 @@ function SearchResults({
   return (
     <div className={clsx(css.treeBody, css.wide)}>
       <div className={css.list}>
-        <div className={css.searchTree} role="tree" aria-label={t('search.results.aria')}>
+        <div
+          className={css.searchTree}
+          role={results.items.length === 0 ? undefined : 'tree'}
+          aria-label={results.items.length === 0 ? undefined : t('search.results.aria')}
+          {...treeNavigation}
+        >
           {results.items.map(result => (
             <SearchResultItem
               key={result.id}
@@ -972,7 +985,9 @@ export function WorkspaceBrowser({
     hasMore: false,
   })
   const searchRoot = useRef<HTMLDivElement | null>(null)
+  const searchButton = useRef<HTMLButtonElement | null>(null)
   const searchInput = useRef<HTMLInputElement | null>(null)
+  const restoreSearchFocus = useRef(false)
   // Section-header ＋ opens the picker menu (same popover in wide and rail
   // states; the menu anchors on this button).
   const [wsPickerOpen, setWsPickerOpen] = useState(false)
@@ -1014,6 +1029,12 @@ export function WorkspaceBrowser({
     searchInput.current?.focus({ preventScroll: true })
   }, [wide, searchExpanded, searchOnExpand])
 
+  useEffect(() => {
+    if (!wide || searchExpanded || !restoreSearchFocus.current) return
+    restoreSearchFocus.current = false
+    searchButton.current?.focus({ preventScroll: true })
+  }, [wide, searchExpanded])
+
   // Outside-click dismissal stays off while the rail gesture is in flight
   // (searchOnExpand): the rail click flips the shell wide and mounts this
   // listener during its own dispatch, then keeps bubbling to document with
@@ -1025,6 +1046,7 @@ export function WorkspaceBrowser({
       if (!(event.target instanceof Node) || searchRoot.current?.contains(event.target) === true) return
       searchInput.current?.blur()
       if (normalizedQuery !== '') return
+      restoreSearchFocus.current = false
       setSearchExpanded(false)
     }
     document.addEventListener('click', onClick)
@@ -1154,12 +1176,16 @@ export function WorkspaceBrowser({
               className={clsx(css.search, searchExpanded && css.searchExpanded)}
               onClick={() => {
                 setWsPickerOpen(false)
-                setSearchExpanded(true)
-                searchInput.current?.focus()
+                if (searchExpanded) {
+                  searchInput.current?.focus()
+                } else {
+                  setSearchExpanded(true)
+                }
               }}
             >
               <Tooltip label={t('search')} side="bottom" delayMs={500} disabled={searchExpanded}>
                 <button
+                  ref={searchButton}
                   type="button"
                   className={css.searchButton}
                   aria-label={t('search.sessions.aria')}
@@ -1176,6 +1202,8 @@ export function WorkspaceBrowser({
                 ref={searchInput}
                 className={css.searchInput}
                 type="text"
+                aria-label={t('search.placeholder')}
+                aria-hidden={searchExpanded ? undefined : true}
                 placeholder={t('search.placeholder')}
                 maxLength={SEARCH_QUERY_MAX_CODE_UNITS}
                 value={query}
@@ -1183,6 +1211,8 @@ export function WorkspaceBrowser({
                 onChange={(e) => { setQuery(sanitizeSearchQuery(e.target.value)) }}
                 onKeyDown={(e) => {
                   if (e.key !== 'Escape') return
+                  e.preventDefault()
+                  restoreSearchFocus.current = true
                   setQuery('')
                   setSearchExpanded(false)
                 }}
@@ -1194,6 +1224,7 @@ export function WorkspaceBrowser({
                   aria-label={t('search.clear')}
                   onClick={(e) => {
                     e.stopPropagation()
+                    restoreSearchFocus.current = true
                     setQuery('')
                     setSearchExpanded(false)
                   }}

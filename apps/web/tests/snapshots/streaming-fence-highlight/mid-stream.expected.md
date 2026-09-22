@@ -1,23 +1,29 @@
-- banner:
+- main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy": Stream one TypeScript fence for
   - text: Standard mode
   - button "More actions"
   - button "Open right sidebar"
-  - tablist:
+  - tablist "Session views":
     - tab "Chat" [selected]
     - tab "Trajectory"
-- text: Stream one TypeScript fence for the highlighting snapshot. {{clock}}
-- button "Copy"
-- status: Deep diving...
-- button "Deep diving for {{duration}}" [disabled] [expanded]
-- text: ts
-- button "Copy"
-- code: "const first: number = 1 const second = \"two\" let tail"
-- textbox "Message or run a task, / commands, @ files or sessions"
-- button "Add files or run commands"
-- 'button "Access mode, current: Workspace Write"': Workspace Write
-- button "Select model, current streaming-fence-highlight-test/streaming-fence": streaming-fence-highlight-test/streaming-fence
-- button "Stop generating"
+  - tabpanel "Chat":
+    - text: Response started.
+    - log "Conversation transcript":
+      - article "User message":
+        - text: Stream one TypeScript fence for the highlighting snapshot. {{clock}}
+        - button "Copy"
+      - status: Deep diving...
+      - button "Deep diving for {{duration}}" [disabled] [expanded]
+      - article "Assistant response":
+        - text: ts
+        - button "Copy"
+        - code: "const first: number = 1 const second = \"two\" let tail"
+  - textbox "Message or run a task, / commands, @ files or sessions"
+  - button "Add files or run commands"
+  - 'button "Access mode, current: Workspace Write"': Workspace Write
+  - button "Select model, current streaming-fence-highlight-test/streaming-fence": streaming-fence-highlight-test/streaming-fence
+  - button "Stop generating"
 
 ---
 

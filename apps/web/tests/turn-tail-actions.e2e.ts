@@ -148,7 +148,7 @@ describe('web e2e: assistant IconActions wait for the turn to end', () => {
     expect(await runningProcess.isDisabled()).toBe(true)
     expect(await runningProcess.getAttribute('aria-expanded')).toBe('true')
     await expect.poll(
-      () => page.getByRole('status').filter({ hasText: 'Deep diving...' }).isVisible(),
+      () => page.locator('[data-process-activity="thinking"]').isVisible(),
       { timeout: 10_000 },
     ).toBe(true)
     await page.locator('[data-streaming="true"]')
@@ -259,8 +259,8 @@ describe('web e2e: assistant IconActions wait for the turn to end', () => {
     await openSettings(page, 'en')
     const dialog = page.getByRole('dialog', { name: 'Settings' })
     await dialog.getByText('Work details', { exact: true }).locator('../..')
-      .getByRole('button', { name: 'Compact', exact: true }).click()
-    await page.getByRole('menuitem', { name: label, exact: true }).click()
+      .getByRole('button', { name: 'Work details: Compact', exact: true }).click()
+    await page.getByRole('menuitemradio', { name: label, exact: true }).click()
     await page.keyboard.press('Escape')
 
     expect(await process.count()).toBe(1)
@@ -282,8 +282,8 @@ describe('web e2e: assistant IconActions wait for the turn to end', () => {
     await openSettings(page, 'en')
     const restored = page.getByRole('dialog', { name: 'Settings' })
     await restored.getByText('Work details', { exact: true }).locator('../..')
-      .getByRole('button', { name: label, exact: true }).click()
-    await page.getByRole('menuitem', { name: 'Compact', exact: true }).click()
+      .getByRole('button', { name: `Work details: ${label}`, exact: true }).click()
+    await page.getByRole('menuitemradio', { name: 'Compact', exact: true }).click()
     await page.keyboard.press('Escape')
     await process.waitFor({ timeout: 10_000 })
     expect(await process.getAttribute('aria-expanded')).toBe('false')

@@ -61,6 +61,47 @@ function trigger(): HTMLButtonElement {
 }
 
 describe('PermissionSelect', () => {
+  it('restores the permission trigger after submission settles before the input unlocks', async () => {
+    const submitted = Promise.withResolvers<boolean>()
+    const { props, view } = setup({ selection: { currentValue: 'read-only' }, select: () => submitted.promise })
+    fireEvent.click(trigger())
+    fireEvent.click(screen.getByRole('menuitemradio', { name: '工作区内修改' }))
+    view.rerender(<PermissionSelect {...props} locked />)
+    submitted.resolve(true)
+    await act(async () => { await submitted.promise })
+    expect(trigger().disabled).toBe(true)
+    await act(async () => { view.rerender(<PermissionSelect {...props} locked={false} />) })
+    expect(trigger().disabled).toBe(false)
+    expect(document.activeElement).toBe(trigger())
+  })
+
+  it('cancels pending focus restoration if the permission input relocks before the microtask', async () => {
+    const submitted = Promise.withResolvers<boolean>()
+    const { props, view } = setup({ selection: { currentValue: 'read-only' }, select: () => submitted.promise })
+    fireEvent.click(trigger())
+    fireEvent.click(screen.getByRole('menuitemradio', { name: '工作区内修改' }))
+    view.rerender(<PermissionSelect {...props} locked />)
+    submitted.resolve(true)
+    await act(async () => { await submitted.promise })
+
+    const pending: VoidFunction[] = []
+    const microtask = vi.spyOn(globalThis, 'queueMicrotask').mockImplementation(callback => pending.push(callback))
+    try {
+      view.rerender(<PermissionSelect {...props} locked={false} />)
+      expect(pending.length).toBeGreaterThan(0)
+      view.rerender(<PermissionSelect {...props} locked />)
+      const focus = vi.spyOn(trigger(), 'focus')
+      act(() => { for (const callback of pending.splice(0)) callback() })
+      expect(focus).not.toHaveBeenCalled()
+      expect(trigger().disabled).toBe(true)
+      focus.mockRestore()
+    } finally {
+      microtask.mockRestore()
+    }
+    await act(async () => { view.rerender(<PermissionSelect {...props} locked={false} />) })
+    expect(document.activeElement).toBe(trigger())
+  })
+
   it('renders only when both the Session selection and process catalog exist', () => {
     const missingSelection = setup({ selection: undefined })
     expect(missingSelection.view.container.innerHTML).toBe('')
@@ -80,9 +121,9 @@ describe('PermissionSelect', () => {
       .every(icon => icon.closest('[aria-hidden="true"]') !== null)).toBe(true)
 
     fireEvent.click(trigger())
-    expect(screen.getAllByRole('menuitem').map(item => item.textContent))
+    expect(screen.getAllByRole('menuitemradio').map(item => item.textContent))
       .toEqual(['仅可查看', '工作区内修改', '完全权限', 'Auto reviewEXP'])
-    fireEvent.click(screen.getByRole('menuitem', { name: '工作区内修改' }))
+    fireEvent.click(screen.getByRole('menuitemradio', { name: '工作区内修改' }))
 
     expect(select).toHaveBeenCalledExactlyOnceWith('workspace-write')
     expect(trigger().textContent).toBe('工作区内修改')
@@ -105,25 +146,25 @@ describe('PermissionSelect', () => {
     const { select } = setup({ catalog })
     expect(trigger().textContent).toBe('Project Files')
     fireEvent.click(trigger())
-    expect(screen.getAllByRole('menuitem').map(item => item.textContent))
+    expect(screen.getAllByRole('menuitemradio').map(item => item.textContent))
       .toEqual(['Project Files', 'Operator Mode', 'Custom Mode', '__proto__'])
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Project Files' }))
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Project Files' }))
     expect(select).not.toHaveBeenCalled()
   })
 
   it('closes an open menu on an outside pointer', () => {
     setup()
     fireEvent.click(trigger())
-    expect(screen.getAllByRole('menuitem')).toHaveLength(4)
+    expect(screen.getAllByRole('menuitemradio')).toHaveLength(4)
     fireEvent.pointerDown(document.body)
-    expect(screen.queryByRole('menuitem')).toBeNull()
+    expect(screen.queryByRole('menuitemradio')).toBeNull()
   })
 
   it('requires and resets explicit acknowledgement for Full access', async () => {
     const { select } = setup()
     const open = () => {
       fireEvent.click(trigger())
-      fireEvent.click(screen.getByRole('menuitem', { name: '完全权限' }))
+      fireEvent.click(screen.getByRole('menuitemradio', { name: '完全权限' }))
     }
     open()
     const enable = screen.getByRole<HTMLButtonElement>('button', { name: '启用完全权限' })
@@ -143,7 +184,7 @@ describe('PermissionSelect', () => {
   it('marks Auto experimental and uses the current-session risk copy', async () => {
     const { select, selection } = setup()
     fireEvent.click(trigger())
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Auto review EXP' }))
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Auto review EXP' }))
 
     const dialog = screen.getByRole('dialog', { name: '确认启用 Auto review（实验）？' })
     expect(dialog.textContent).toContain('不使用沙箱')
@@ -162,7 +203,7 @@ describe('PermissionSelect', () => {
   it('revokes open UI when locked or either source disappears', () => {
     const locked = setup()
     fireEvent.click(trigger())
-    fireEvent.click(screen.getByRole('menuitem', { name: '完全权限' }))
+    fireEvent.click(screen.getByRole('menuitemradio', { name: '完全权限' }))
     locked.view.rerender(<PermissionSelect {...locked.props} locked />)
     expect(screen.queryByRole('dialog')).toBeNull()
     expect(trigger().disabled).toBe(true)
@@ -186,7 +227,7 @@ describe('PermissionSelect', () => {
     const withoutAuto = { ...CATALOG, options: CATALOG.options.filter(option => option.value !== 'auto') }
     const chooseAuto = () => {
       fireEvent.click(trigger())
-      fireEvent.click(screen.getByRole('menuitem', { name: 'Auto review EXP' }))
+      fireEvent.click(screen.getByRole('menuitemradio', { name: 'Auto review EXP' }))
     }
     try {
       chooseAuto()
@@ -225,7 +266,7 @@ describe('PermissionSelect', () => {
     expect(trigger().querySelectorAll('svg')).toHaveLength(1)
 
     fireEvent.click(trigger())
-    fireEvent.click(screen.getByRole('menuitem', { name: '工作区内修改' }))
+    fireEvent.click(screen.getByRole('menuitemradio', { name: '工作区内修改' }))
     expect(trigger().textContent).toBe('工作区内修改')
     await act(async () => {})
     expect(trigger().textContent).toBe('Custom')

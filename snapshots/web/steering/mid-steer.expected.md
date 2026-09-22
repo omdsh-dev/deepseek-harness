@@ -1,30 +1,37 @@
-- banner:
+- main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy": Use the ask_user_question tool to
   - text: Standard mode
   - button "More actions"
   - button "Open right sidebar"
-  - tablist:
+  - tablist "Session views":
     - tab "Chat" [selected]
     - tab "Trajectory"
-- text: Use the ask_user_question tool to ask me exactly one question with id "checkpoint", question "Ready to continue?", header "Checkpoint", and options labeled "Yes" and "No". After I answer, reply with one short sentence acknowledging my answer and stop. {{clock}}
-- button "Copy"
-- status: Deep diving...
-- button "Deep diving for {{duration}}" [disabled] [expanded]
-- button "Waiting for your action"
-- text: "Interjection: include the word BANANA in your final reply."
-- button "Copy"
-- region "Ready to continue?":
-  - text: Checkpoint
-  - heading "Ready to continue?" [level=2]
-  - button "Collapse the question card" [expanded]
-  - button "Dismiss all questions"
-  - radiogroup:
-    - radio "Yes": 1 Yes
-    - radio "No": 2 No
-    - textbox "Type your answer"
-  - button "Previous question" [disabled]
-  - text: 1 / 1
-  - button "Next question" [disabled]
-  - status
-  - button "Skip"
-  - button "Submit" [disabled]
+  - tabpanel "Chat":
+    - text: A question needs your answer.
+    - log "Conversation transcript":
+      - article "User message":
+        - text: Use the ask_user_question tool to ask me exactly one question with id "checkpoint", question "Ready to continue?", header "Checkpoint", and options labeled "Yes" and "No". After I answer, reply with one short sentence acknowledging my answer and stop. {{clock}}
+        - button "Copy"
+      - status: Deep diving...
+      - button "Deep diving for {{duration}}" [disabled] [expanded]
+      - button "Waiting for your action"
+      - article "User message":
+        - text: "Interjection: include the word BANANA in your final reply."
+        - button "Copy"
+  - region "Ready to continue?":
+    - text: Checkpoint
+    - heading "Ready to continue?" [level=2]
+    - button "Collapse the question card" [expanded]
+    - button "Dismiss all questions"
+    - radiogroup "Ready to continue?":
+      - radio "Yes": 1 Yes
+      - radio "No": 2 No
+      - textbox "Custom answer":
+        - /placeholder: Type your answer
+    - button "Previous question" [disabled]
+    - text: 1 / 1
+    - button "Next question" [disabled]
+    - alert
+    - button "Skip"
+    - button "Submit" [disabled]

@@ -75,6 +75,8 @@ export const apply = ctx => globalThis.__headlessStartupApply(ctx)
     '    task: !!js ctx.headlessStartup.task',
     '    sessionId: !!js ctx.headlessStartup.sessionId',
     '    json: !!js ctx.headlessStartup.json',
+    '    accessibility: !!js ctx.headlessStartup.accessibility',
+    '    outputFormat: !!js ctx.headlessStartup.outputFormat',
     '- id: headless-startup',
     `  name: ${pathToFileURL(join(dir, 'startup.mjs')).href}`,
     '',
@@ -116,25 +118,48 @@ export const apply = ctx => globalThis.__headlessStartupApply(ctx)
 describe('headless command-line provider', () => {
   it('joins the task positional into the runner config', async () => {
     const { task, observed } = await bootStartup(['run', 'the', 'tests'])
-    expect(task).toEqual({ task: 'run the tests', sessionId: undefined, json: false })
-    expect(observed.runnerConfig).toMatchObject({ task: 'run the tests', json: false })
+    expect(task).toEqual({
+      task: 'run the tests',
+      sessionId: undefined,
+      json: false,
+      accessibility: false,
+      outputFormat: 'text',
+    })
+    expect(observed.runnerConfig).toEqual(task)
+    expect(observed.exits).toEqual([])
+  })
+
+  it('publishes the assistive-technology and JSON output flags', async () => {
+    const { task, observed } = await bootStartup([
+      '--accessibility',
+      '--output-format', 'json',
+      'inspect', 'the', 'workspace',
+    ])
+    expect(task).toEqual({
+      task: 'inspect the workspace',
+      sessionId: undefined,
+      json: false,
+      accessibility: true,
+      outputFormat: 'json',
+    })
+    expect(observed.runnerConfig).toEqual(task)
     expect(observed.exits).toEqual([])
   })
 
   it('publishes the machine-readable output mode and the exact Session identity', async () => {
     const { task, observed } = await bootStartup(['--json', '--session-id', 'session-exact', 'do', 'it'])
-    expect(task).toEqual({ task: 'do it', sessionId: 'session-exact', json: true })
+    expect(task).toEqual({ task: 'do it', sessionId: 'session-exact', json: true, accessibility: false, outputFormat: 'text' })
     expect(observed.runnerConfig).toMatchObject({ task: 'do it', sessionId: 'session-exact', json: true })
   })
 
   it('keeps the stdin marker as the task so the runner reads the pipe', async () => {
     const { task } = await bootStartup(['-'], { stdinIsTty: false })
-    expect(task).toEqual({ task: '-', sessionId: undefined, json: false })
+    expect(task).toEqual({ task: '-', sessionId: undefined, json: false, accessibility: false, outputFormat: 'text' })
   })
 
   it('defers an absent task to stdin when stdin is not a terminal', async () => {
     const { task, observed } = await bootStartup([], { stdinIsTty: false })
-    expect(task).toEqual({ task: undefined, sessionId: undefined, json: false })
+    expect(task).toEqual({ task: undefined, sessionId: undefined, json: false, accessibility: false, outputFormat: 'text' })
     expect(observed.runnerConfig).toMatchObject({ json: false })
   })
 
@@ -155,7 +180,7 @@ describe('headless command-line provider', () => {
 
   it('keeps the caller-provided exact Session identity verbatim', async () => {
     const { task } = await bootStartup(['--session-id', ' session-x ', 'do', 'it'])
-    expect(task).toEqual({ task: 'do it', sessionId: ' session-x ', json: false })
+    expect(task).toEqual({ task: 'do it', sessionId: ' session-x ', json: false, accessibility: false, outputFormat: 'text' })
   })
 
   it('rejects a lone stdin marker mixed with other task words', async () => {
@@ -186,6 +211,19 @@ describe('headless command-line provider', () => {
     expect(observed.exits).toEqual([1])
   })
 
+  it('rejects combining event streaming with final JSON output before mounting the runner', async () => {
+    const { task, observed } = await bootStartup(['--json', '--output-format', 'json', 'inspect'])
+    const event: unknown = JSON.parse(observed.out.trim())
+    expect(event).toEqual({
+      type: 'error',
+      message: '--json event streaming cannot be combined with --output-format json',
+    })
+    expect(task).toBeUndefined()
+    expect(observed.runnerConfig).toBeUndefined()
+    expect(observed.err).toBe('')
+    expect(observed.exits).toEqual([1])
+  })
+
   it('writes the JSON error event for a commander grammar rejection in --json mode', async () => {
     const { task, observed } = await bootStartup(['--json', '--bogus', 'do', 'it'])
     const first = JSON.parse(observed.out.trim().split('\n')[0] ?? '{}') as { type: string; message: string }
@@ -204,7 +242,7 @@ describe('headless command-line provider', () => {
 
   it('does not install the JSON error override for a --json positional after --', async () => {
     const { task, observed } = await bootStartup(['--', '--json'], { stdinIsTty: false })
-    expect(task).toEqual({ task: '--json', sessionId: undefined, json: false })
+    expect(task).toEqual({ task: '--json', sessionId: undefined, json: false, accessibility: false, outputFormat: 'text' })
     expect(observed.out).not.toContain('"type":"error"')
   })
 
@@ -235,8 +273,18 @@ describe('headless command-line provider', () => {
     expect(observed.out).toContain('dsh --profile headless')
     expect(observed.out).toContain('the answer goes to stdout and diagnostics to stderr')
     expect(observed.out).toContain('--session-id')
+    expect(observed.out).toContain('--accessibility')
+    expect(observed.out).toContain('--output-format <format>')
     expect(task).toBeUndefined()
     expect(observed.runnerConfig).toBeUndefined()
     expect(observed.exits).toEqual([0])
+  })
+
+  it('rejects an unsupported output format before the runner activates', async () => {
+    const { task, observed } = await bootStartup(['--output-format', 'xml', 'run', 'the', 'tests'])
+    expect(observed.out).toContain('--output-format must be text or json')
+    expect(task).toBeUndefined()
+    expect(observed.runnerConfig).toBeUndefined()
+    expect(observed.exits).toEqual([1])
   })
 })

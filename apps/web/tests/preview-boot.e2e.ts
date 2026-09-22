@@ -446,8 +446,8 @@ async function bootPreview(origin: string, browser: Browser): Promise<void> {
     await readTool.waitFor({ state: 'attached' })
     expect(await readTool.isVisible()).toBe(false)
     await expandOwningTurnProcess(page, readTool)
-    await page.getByRole('button', { name: 'PREVIEW.md', exact: true }).waitFor()
-    await page.getByRole('button', { name: 'src/preview.ts', exact: true }).waitFor()
+    await page.getByRole('button', { name: 'Open file PREVIEW.md', exact: true }).waitFor()
+    await page.getByRole('button', { name: 'Open file src/preview.ts', exact: true }).waitFor()
     await page.getByText('Update to-do list', { exact: true }).waitFor()
     await page.getByText('Error: ENOENT: no such file, open missing.txt', { exact: true }).waitFor()
 

@@ -380,7 +380,7 @@ describe('web e2e: a git workspace turn ends with its changed files', () => {
       const content = row.querySelector<HTMLElement>('span > span')
       const path = content?.children[0]
       const counts = content?.children[1]
-      const check = row.querySelector(':scope > svg')
+      const check = row.querySelector(':scope > [class*="check"] > svg')
       if (path === undefined || counts === undefined || check === null) throw new Error('review menu alignment elements are missing')
       const rowCenter = center(row)
       return [center(path), center(counts), center(check)].map(value => Math.abs(value - rowCenter))

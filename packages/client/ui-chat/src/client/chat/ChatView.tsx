@@ -16,6 +16,7 @@ import { ChatNodeSeat } from './ChatNodeSeat.tsx'
 import { ChatGroupSeat } from './ChatGroupSeat.tsx'
 import { chatRenderKey } from './render-entry.ts'
 import { assertNever } from '@deepseek-ai/dsh-util-values'
+import { LiveAnnouncements } from './LiveAnnouncements.tsx'
 import { TurnNavigator } from './TurnNavigator.tsx'
 import { mergeTurnRailItems } from './turn-rail-items.ts'
 import { useChatScroll } from './use-chat-scroll.ts'
@@ -81,7 +82,7 @@ const ChatNodeList = memo(function ChatNodeList({ entries, useChatGroup, ...seat
 export function ChatView({
   useSession, useChat, useChatNode, useChatNodeProcess, useChatGroup, useConversation, useSessions, useStore, actions, renderSlot,
   sessionId, openFile, openSkill, openExternalLink, loadOlder, loadThrough, loadImage, inspectCall, chatScroll, forkAt, fileMentions,
-  usePresentation, useProjection, t,
+  usePresentation, useProjection, useSessionStatus, t,
 }: ChatViewSlotProps) {
   const order = useChat(s => s.order)
   const groupedEntries = useConversation(snapshot => snapshot.views.grouped('chat')?.entries)
@@ -102,6 +103,10 @@ export function ChatView({
   const inbox = useProjection('inbox') as unknown as InboxState | undefined
   // Workspace root off the session list row: path summaries display relative to it.
   const cwd = useSessions(s => s.byId[sessionId]?.cwd)
+  const timeline = useChat(s => s.timeline)
+  const conversationNodes = useChat(s => s.legacy.nodes)
+  const runningCalls = useChat(s => s.legacy.runningCalls)
+  const pendingInteraction = useSessionStatus(snapshot => snapshot.get(sessionId)?.pendingInteraction)
   const running = useSession(s => s.running)
   const openState = useSession(s => s.openState)
   const openError = useSession(s => s.openError)
@@ -192,6 +197,16 @@ export function ChatView({
 
   return (
     <div className={css.root} data-chat-following-tail={scroll.followingTail ? '' : undefined}>
+      <LiveAnnouncements
+        sessionId={sessionId}
+        ready={openState === 'open'}
+        running={running}
+        nodes={conversationNodes}
+        timeline={timeline}
+        runningCalls={runningCalls}
+        pendingInteraction={pendingInteraction}
+        t={t}
+      />
       <div ref={scroll.listRef} className={css.scroll}>
         {scroll.initialized && (
           <TurnNavigator
@@ -202,7 +217,7 @@ export function ChatView({
             t={t}
           />
         )}
-        <div ref={scroll.columnRef} className={css.column} data-chat-flow="">
+        <div ref={scroll.columnRef} className={css.column} data-chat-flow="" role="log" aria-label={t('chat.log')} aria-live="off" aria-busy={running}>
           {openState === 'loading' && <div className={css.hint}>{t('chat.loadingHistory')}</div>}
           {openState === 'error' && openError !== null && (
             <div className={css.openError}>

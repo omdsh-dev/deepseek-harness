@@ -1,5 +1,6 @@
 /** Strict per-session header/body content inserted into the resident conversation layout. */
 
+import type { KeyboardEvent } from 'react'
 import clsx from 'clsx'
 import type { SessionListState, SessionSummary } from '@deepseek-ai/dsh-api-session-controller/client'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
@@ -20,6 +21,14 @@ interface Breadcrumb {
   readonly id: SessionId
   readonly displayTitle: string
   readonly subagent: boolean
+}
+
+function conversationViewPanelId(sessionId: string, viewId: string): string {
+  return `dsh-conversation-view-panel-${encodeURIComponent(sessionId)}-${encodeURIComponent(viewId)}`
+}
+
+function conversationViewTabId(sessionId: string, viewId: string): string {
+  return `dsh-conversation-view-tab-${encodeURIComponent(sessionId)}-${encodeURIComponent(viewId)}`
 }
 
 function deriveAncestry(list: SessionListState, id: SessionId): readonly Breadcrumb[] {
@@ -56,7 +65,7 @@ function equalBreadcrumbs(left: readonly Breadcrumb[], right: readonly Breadcrum
  * @returns Session navigation controls, with title and tabs after conversation starts.
  */
 export function ConversationSessionHeader({
-  sessionId, hideChrome, useSessions, useConversationViews, useStore,
+  sessionId, hideChrome, viewTabGroupId, useSessions, useConversationViews, useStore,
   renderSlot, open, selectView, t,
 }: ConversationSessionHeaderProps) {
   const tabs = useConversationViews(value => value)
@@ -64,6 +73,36 @@ export function ConversationSessionHeader({
   const active = resolveActiveView(tabs, selectedId)
   const ancestry = useSessions(s => deriveAncestry(s, sessionId), equalBreadcrumbs)
   const showTabs = !hideChrome && tabs.length > 1
+
+  const handleTabKeyDown = (
+    event: KeyboardEvent<HTMLButtonElement>,
+    currentIndex: number,
+  ): void => {
+    let nextIndex: number | undefined
+    switch (event.key) {
+      case 'ArrowLeft':
+        nextIndex = (currentIndex - 1 + tabs.length) % tabs.length
+        break
+      case 'ArrowRight':
+        nextIndex = (currentIndex + 1) % tabs.length
+        break
+      case 'Home':
+        nextIndex = 0
+        break
+      case 'End':
+        nextIndex = tabs.length - 1
+        break
+      default:
+        return
+    }
+    const next = tabs.at(nextIndex)
+    const tablist = event.currentTarget.parentElement
+    const target = tablist?.querySelectorAll<HTMLButtonElement>('[role="tab"]').item(nextIndex)
+    if (next === undefined || target === undefined) return
+    event.preventDefault()
+    target.focus()
+    selectView(next.id)
+  }
   return (
     <>
       <div className={css.titleRow}>
@@ -140,12 +179,16 @@ export function ConversationSessionHeader({
       {showTabs && (
         // data-conversation-tabs: ui-layout's window drag band matches this
         // marker (:has) to deepen only while the tab strip adds header height.
-        <div className={css.tabs} role="tablist" data-conversation-tabs="">
-          {tabs.map(viewTab => (
+        <div className={css.tabs} role="tablist" aria-label={t('session.views')} data-conversation-tabs="">
+          {tabs.map((viewTab, index) => (
             <button
               key={viewTab.id}
+              id={viewTabGroupId === undefined ? undefined : conversationViewTabId(viewTabGroupId, viewTab.id)}
               type="button"
               role="tab"
+              aria-controls={viewTabGroupId === undefined ? undefined : conversationViewPanelId(viewTabGroupId, viewTab.id)}
+              tabIndex={viewTab.id === active?.id ? 0 : -1}
+              onKeyDown={(event) => { handleTabKeyDown(event, index) }}
               aria-selected={viewTab.id === active?.id}
               className={clsx(css.tab, viewTab.id === active?.id && css.tabActive)}
               onClick={() => { selectView(viewTab.id) }}

@@ -56,7 +56,7 @@ describe('web e2e: PTC program sandbox escalation', () => {
     const input = page.locator('[data-composer-input]').first()
     await input.waitFor({ timeout: 10_000 })
     await page.locator('[aria-label^="Access mode"]').click()
-    await page.getByRole('menuitem', { name: 'Read Only' }).click()
+    await page.getByRole('menuitemradio', { name: 'Read Only' }).click()
     await expect.poll(() => page.locator('[aria-label="Access mode, current: Read Only"]').count()).toBe(1)
     const settled = scaffold.whenTurnSettled(MODE === 'record' ? 240_000 : 60_000)
     await input.fill(PROMPT)

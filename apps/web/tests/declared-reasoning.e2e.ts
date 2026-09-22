@@ -94,9 +94,8 @@ describe.skipIf(MODE === 'record')('web e2e: declared reasoning efforts reach th
       { timeout: 10_000 },
     ).toBe(true)
 
-    // Settling with Tab is the same gesture that saves the default selection, so
-    // the effort lands in the Agent default Settings section beside provider/model.
-    await page.keyboard.press('Tab')
+    // Enter commits the focused effort; Tab exits without changing selection.
+    await page.keyboard.press('Enter')
     await expect.poll(() => levels.count(), { timeout: 10_000 }).toBe(0)
     await expect.poll(
       async () => readFile(join(scaffold.harnessHome, 'profiles', 'scaffold', 'cordis.patch.yml'), 'utf8'),
@@ -106,7 +105,7 @@ describe.skipIf(MODE === 'record')('web e2e: declared reasoning efforts reach th
       .toBe('选择模型，当前 Acme Think，推理等级 High')
 
     // Reopening the drilled pane parks the keyboard on the level in use, and
-    // Shift+Tab walks back out like Escape: to the drilled cell, then closed.
+    // Escape returns to the drilled cell; Shift+Tab then exits without selecting.
     await trigger.click()
     await page.getByRole('menuitem', { name: /推理等级/ }).click()
     const high = page.getByRole('menuitemradio', { name: 'High' })
@@ -114,7 +113,7 @@ describe.skipIf(MODE === 'record')('web e2e: declared reasoning efforts reach th
       () => high.evaluate(element => element === document.activeElement),
       { timeout: 10_000 },
     ).toBe(true)
-    await page.keyboard.press('Shift+Tab')
+    await page.keyboard.press('Escape')
     await expect.poll(
       () => page.getByRole('menuitem', { name: /推理等级/ })
         .evaluate(element => element === document.activeElement),

@@ -1,4 +1,4 @@
 - tree "Sessions":
-  - treeitem "workspace" [expanded]
-  - treeitem "Explain event sourcing in one (1) now" [selected]
-  - treeitem "Ask a research subagent to now"
+  - treeitem "workspace" [expanded] [level=1]
+  - treeitem "Explain event sourcing in one (1) now" [level=2] [selected]
+  - treeitem "Ask a research subagent to now" [level=2]

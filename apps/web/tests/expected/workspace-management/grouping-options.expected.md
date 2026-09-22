@@ -1,13 +1,13 @@
-- menu:
+- menu "View options":
   - text: Group by
-  - menuitem "WorkSpace"
-  - menuitem "Workspace Tree"
-  - menuitem "In one list"
+  - menuitemradio "WorkSpace" [checked]
+  - menuitemradio "Workspace Tree"
+  - menuitemradio "In one list"
   - separator
   - text: Order by
-  - menuitem "Manual"
-  - menuitem "Last updated"
+  - menuitemradio "Manual"
+  - menuitemradio "Last updated" [checked]
   - separator
   - text: Filter sessions
-  - menuitem "Show archived"
-  - menuitem "Archived only"
+  - menuitemcheckbox "Show archived"
+  - menuitemcheckbox "Archived only"

@@ -80,6 +80,8 @@ File chips and editable skill references share a whole-reference hover backgroun
 
 When another writer owns the Session, the send-error toast asks the user to quit other running DSH instances and retry.
 
+The composer Context Meter exposes its rounded occupancy in the trigger's accessible name and synchronizes `aria-expanded` with a stable `aria-controls` relationship. Its click-open breakdown is a named non-modal region, so opening it keeps focus on the trigger and does not falsely advertise dialog focus behavior. Provider capacity and total occupancy are authoritative; the system-prompt, tool, and message composition is explicitly heuristic.
+
 <a id="temporary-composer-entries"></a>
 ## Temporary composer entries
 

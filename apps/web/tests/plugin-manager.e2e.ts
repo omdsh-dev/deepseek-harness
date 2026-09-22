@@ -59,7 +59,8 @@ describe('web e2e: plugin manager', () => {
 
   /** Change the UI language through Settings and close the dialog. */
   async function setLanguage(language: 'en' | 'zh'): Promise<void> {
-    if (await page.locator('html').getAttribute('lang') === language) return
+    const activeLanguage = await page.locator('html').getAttribute('lang')
+    if (activeLanguage?.split('-')[0] === language) return
     const settings = language === 'en' ? '设置' : 'Settings'
     const source = language === 'en' ? '中文' : 'English'
     const target = language === 'en' ? 'English' : '中文'
@@ -67,7 +68,7 @@ describe('web e2e: plugin manager', () => {
       await openSettings(page, language === 'en' ? 'zh' : 'en')
     }
     await page.getByRole('dialog', { name: settings }).getByRole('button', { name: source }).click()
-    await page.getByRole('menuitem', { name: target }).click()
+    await page.getByRole('menuitemradio', { name: target }).click()
     const dialog = page.getByRole('dialog', { name: language === 'en' ? 'Settings' : '设置' })
     await dialog.waitFor()
     await page.keyboard.press('Escape')

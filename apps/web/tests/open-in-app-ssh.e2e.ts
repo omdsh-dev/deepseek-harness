@@ -62,7 +62,7 @@ describe.skipIf(MODE === 'record')('web e2e: Open In under SSH', () => {
     expect(await response.json()).toEqual({ apps: [] })
     expect(await page.locator('[data-open-target="directory"]').count()).toBe(0)
     expect(await page.evaluate(() => localStorage.getItem('dsh.open-in-app.choice'))).toBe('"vscode"')
-    const snapshot = (await captureStableAria(page, 'role=banner', scaffold.workspaceCwd))
+    const snapshot = (await captureStableAria(page, 'main header', scaffold.workspaceCwd))
       .split(SEED_ID).join('{{seededId}}')
     await compareOrRefreshGolden(join(SNAPSHOT_DIR, 'header.expected.md'), snapshot, MODE)
     expect(tripwire.pageErrors).toEqual([])
