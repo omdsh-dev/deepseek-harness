@@ -75,6 +75,33 @@ describe('PermissionSelect', () => {
     expect(document.activeElement).toBe(trigger())
   })
 
+  it('cancels pending focus restoration if the permission input relocks before the microtask', async () => {
+    const submitted = Promise.withResolvers<boolean>()
+    const { props, view } = setup({ selection: { currentValue: 'read-only' }, select: () => submitted.promise })
+    fireEvent.click(trigger())
+    fireEvent.click(screen.getByRole('menuitemradio', { name: '工作区内修改' }))
+    view.rerender(<PermissionSelect {...props} locked />)
+    submitted.resolve(true)
+    await act(async () => { await submitted.promise })
+
+    const pending: VoidFunction[] = []
+    const microtask = vi.spyOn(globalThis, 'queueMicrotask').mockImplementation(callback => pending.push(callback))
+    try {
+      view.rerender(<PermissionSelect {...props} locked={false} />)
+      expect(pending.length).toBeGreaterThan(0)
+      view.rerender(<PermissionSelect {...props} locked />)
+      const focus = vi.spyOn(trigger(), 'focus')
+      act(() => { for (const callback of pending.splice(0)) callback() })
+      expect(focus).not.toHaveBeenCalled()
+      expect(trigger().disabled).toBe(true)
+      focus.mockRestore()
+    } finally {
+      microtask.mockRestore()
+    }
+    await act(async () => { view.rerender(<PermissionSelect {...props} locked={false} />) })
+    expect(document.activeElement).toBe(trigger())
+  })
+
   it('renders only when both the Session selection and process catalog exist', () => {
     const missingSelection = setup({ selection: undefined })
     expect(missingSelection.view.container.innerHTML).toBe('')

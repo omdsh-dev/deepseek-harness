@@ -211,6 +211,19 @@ describe('headless command-line provider', () => {
     expect(observed.exits).toEqual([1])
   })
 
+  it('rejects combining event streaming with final JSON output before mounting the runner', async () => {
+    const { task, observed } = await bootStartup(['--json', '--output-format', 'json', 'inspect'])
+    const event: unknown = JSON.parse(observed.out.trim())
+    expect(event).toEqual({
+      type: 'error',
+      message: '--json event streaming cannot be combined with --output-format json',
+    })
+    expect(task).toBeUndefined()
+    expect(observed.runnerConfig).toBeUndefined()
+    expect(observed.err).toBe('')
+    expect(observed.exits).toEqual([1])
+  })
+
   it('writes the JSON error event for a commander grammar rejection in --json mode', async () => {
     const { task, observed } = await bootStartup(['--json', '--bogus', 'do', 'it'])
     const first = JSON.parse(observed.out.trim().split('\n')[0] ?? '{}') as { type: string; message: string }

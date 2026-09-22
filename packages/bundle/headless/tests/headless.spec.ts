@@ -253,6 +253,19 @@ async function bench(script: Script, options: BenchOptions = {}): Promise<{
 }
 
 describe('headless runner', () => {
+  it('rejects conflicting JSON modes supplied directly by a profile overlay', async () => {
+    const test = await bench({ afterPrompt() { throw new Error('conflicting modes must not start a task') } })
+    try {
+      const result = await test.run({ json: true, outputFormat: 'json' })
+      expect(result.code).toBe(1)
+      const event: unknown = JSON.parse(result.out.trim())
+      expect(event).toEqual({ type: 'error', message: 'headless event streaming cannot be combined with final JSON output' })
+      expect(result.err).toBe('dsh: headless event streaming cannot be combined with final JSON output\n')
+    } finally {
+      await test.ctx.fiber.dispose()
+    }
+  })
+
   it('records a fresh Session in the filesystem provider working directory', async () => {
     const cwd = '/remote/workspace'
     const test = await bench({

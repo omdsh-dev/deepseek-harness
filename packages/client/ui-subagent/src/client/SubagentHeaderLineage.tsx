@@ -725,6 +725,7 @@ function CatalogDropdown({
         onKeyDown={(event) => {
           if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
           event.preventDefault()
+          event.stopPropagation()
           if (open) focusAt(event.key === 'ArrowDown' ? 0 : treeItems(menuRef.current).length - 1)
           else {
             entryFocus.current = event.key === 'ArrowDown' ? 'first' : 'last'

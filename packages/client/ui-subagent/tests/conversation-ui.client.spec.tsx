@@ -320,6 +320,13 @@ describe('SubagentHeaderLineage', () => {
     await Promise.resolve()
     expect(document.activeElement).toBe(screen.getByRole('treeitem', { name: /worker/ }))
 
+    trigger.focus()
+    fireEvent.keyDown(trigger, { key: 'ArrowUp' })
+    expect(document.activeElement).toBe(screen.getByRole('treeitem', { name: /reviewer/ }))
+    trigger.focus()
+    fireEvent.keyDown(trigger, { key: 'ArrowDown' })
+    expect(document.activeElement).toBe(screen.getByRole('treeitem', { name: /worker/ }))
+
     fireEvent.keyDown(document.activeElement as Element, { key: 'End' })
     expect(document.activeElement).toBe(screen.getByRole('treeitem', { name: /reviewer/ }))
     fireEvent.keyDown(document.activeElement as Element, { key: 'Home' })
@@ -328,6 +335,8 @@ describe('SubagentHeaderLineage', () => {
     expect(document.activeElement).toBe(screen.getByRole('treeitem', { name: /reviewer/ }))
     fireEvent.keyDown(document.activeElement as Element, { key: 'ArrowLeft' })
     expect(document.activeElement).toBe(screen.getByRole('treeitem', { name: /reviewer/ }))
+    fireEvent.keyDown(document.activeElement as Element, { key: 'ArrowDown' })
+    expect(document.activeElement).toBe(screen.getByRole('treeitem', { name: /worker/ }))
     expect(screen.getAllByRole('treeitem').filter(item => item.tabIndex === 0)).toHaveLength(1)
     fireEvent.keyDown(document.activeElement as Element, { key: 'Escape' })
     await Promise.resolve()
@@ -828,6 +837,18 @@ describe('SubagentHeaderLineage', () => {
     fireEvent.keyDown(trigger, { key: 'ArrowDown' })
     view.unmount()
     await Promise.resolve()
+  })
+
+  it('keeps keyboard focus on an empty error trigger until catalog rows arrive', () => {
+    const view = render(<HeaderCatalog {...props(catalog({ entries: [], state: 'error', error: null }))} />)
+    const trigger = screen.getByRole('button', { name: /0 个子代理/ })
+    trigger.focus()
+    fireEvent.keyDown(trigger, { key: 'ArrowDown' })
+    expect(screen.getByText('无法加载子代理')).toBeTruthy()
+    expect(document.activeElement).toBe(trigger)
+
+    view.rerender(<HeaderCatalog {...props(catalog())} />)
+    expect(document.activeElement).toBe(screen.getByRole('treeitem', { name: /worker/ }))
   })
 
   it('closes every observed catalog when the root becomes empty', () => {

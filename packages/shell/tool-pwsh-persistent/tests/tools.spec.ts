@@ -533,12 +533,14 @@ describe('tool-pwsh-persistent', () => {
     async (mode) => {
       const { ctx, owner, stub } = await setup({ backendType: 'stub', timeoutMs: 5_000 })
       await call(ctx, owner, 'warm up')
-      stub.sessions[0]!.mode = mode
+      const session = stub.sessions[0]!
+      const warmupSends = session.sends
+      session.mode = mode
       const controller = new AbortController()
       const cancelled = call(ctx, owner, 'hang', controller.signal)
       const queued = call(ctx, owner, 'after cancellation')
       try {
-        await expect.poll(() => stub.sessions[0]!.sends).toBe(3)
+        await expect.poll(() => session.sends).toBe(warmupSends + 1)
         controller.abort({ kind: 'user' })
 
         const result = await cancelled
@@ -561,6 +563,7 @@ describe('tool-pwsh-persistent', () => {
     const { ctx, owner, stub } = await setup({ backendType: 'stub' })
     await call(ctx, owner, 'warm up')
     const session = stub.sessions[0]!
+    const warmupSends = session.sends
     session.mode = 'wait-for-abort'
     const runningController = new AbortController()
     // Dispatch observation distinguishes the tool's queue from cancellation before tool entry.
@@ -569,14 +572,14 @@ describe('tool-pwsh-persistent', () => {
     const running = call(ctx, owner, 'hang', runningController.signal)
     const queued = call(ctx, owner, 'never sent', queuedController.signal)
     try {
-      await expect.poll(() => session.sends).toBe(3)
+      await expect.poll(() => session.sends).toBe(warmupSends + 1)
       await expect.poll(() => execute.mock.calls.length).toBe(2)
       queuedController.abort({ kind: 'user' })
       runningController.abort({ kind: 'user' })
       const result = await queued
       expect(text(result)).toBe('Error: tool call aborted')
       expect(result.error?.info).toEqual({ name: 'AbortError', code: 'ABORTED' })
-      expect(session.sends).toBe(3)
+      expect(session.sends).toBe(warmupSends + 1)
       expect(stub.sessions).toHaveLength(1)
       expect(session.closed).toContain('persistent pwsh command aborted')
     } finally {
