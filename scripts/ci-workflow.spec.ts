@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { runInNewContext } from 'node:vm'
 import * as yaml from 'js-yaml'
@@ -257,20 +257,11 @@ describe('CI workflow', () => {
       isRecord(step) && typeof step.run === 'string'
     ))
     const nativeTestCommand = nativeTestCommands.map(step => step.run).join('\n')
-    const workerLifecycleCommands = nativeTestCommands
-      .filter(step => step.run.includes('workflow-worker-thread.spec.ts'))
-      .map(step => step.run)
     const remainingNativeCommand = nativeTestCommands.find(step => step.run.includes('tool-pwsh/tests/loader.spec.ts'))?.run
-    expect(workerLifecycleCommands).toHaveLength(4)
-    expect(workerLifecycleCommands.every(command => command.includes('--no-file-parallelism'))).toBe(true)
-    expect(workerLifecycleCommands.every(command => command.includes('--testTimeout 90000'))).toBe(true)
-    expect(workerLifecycleCommands.every(command => !command.includes('tool-pwsh/tests/loader.spec.ts'))).toBe(true)
-    expect(workerLifecycleCommands).toEqual(expect.arrayContaining([
-      expect.stringContaining('--testNamePattern "script execution over a real worker thread"'),
-      expect.stringContaining('--testNamePattern "lifecycle: parse errors, cancellation, termination, disposal"'),
-      expect.stringContaining('--testNamePattern "worker death"'),
-      expect.stringContaining('--testNamePattern "service API"'),
-    ]))
+    expect(nativeTestCommand).not.toContain('workflow-worker-thread.spec.ts')
+    const nativeTestPaths = nativeTestCommand.match(/packages\/[^\s]+\.spec\.ts/g) ?? []
+    expect(nativeTestPaths).toHaveLength(4)
+    for (const path of nativeTestPaths) expect(existsSync(resolve(root, path)), path).toBe(true)
     expect(remainingNativeCommand).toContain('--no-file-parallelism')
     expect(remainingNativeCommand).toContain('--testTimeout 90000')
     expect(remainingNativeCommand).not.toContain('workflow-worker-thread.spec.ts')
@@ -420,7 +411,7 @@ describe('CI workflow', () => {
         'retention-days': 7,
       },
     }))
-    const packageJson = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8')) as unknown
+    const packageJson: unknown = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8'))
     if (!isRecord(packageJson) || !isRecord(packageJson.scripts)) {
       throw new TypeError('package.json must define scripts')
     }
@@ -1165,7 +1156,7 @@ describe('Issue lifecycle workflow', () => {
     expect(preflightStep?.run).toContain('if [ -f .github/issue-management/selective-preflight.json ]; then')
     expect(preflightStep?.run).toContain('node .github/issue-management/policy.mjs pr-preflight')
     expect(preflightStep?.if).toBeUndefined()
-    expect(policyJob.if).toBeUndefined()
+    expect(policyJob.if).toBe("github.repository == 'deepseek-ai/deepseek-harness'")
     expect(validateStep?.if).toBe("${{ steps.preflight.outputs.legacy-automated != 'true' }}")
 
     expect(tokenStep).toMatchObject({

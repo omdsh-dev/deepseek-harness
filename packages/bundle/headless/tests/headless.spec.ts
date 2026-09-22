@@ -22,6 +22,12 @@ import { createInboxStub } from '@deepseek-ai/dsh-agent-loop-testkit'
 import { apply, Config, HEADLESS_RESULT_SCHEMA_VERSION } from '../src/index.ts'
 import { internals } from '../src/runner-internals.ts'
 
+declare module '@deepseek-ai/dsh-session' {
+  interface TurnEndReasonMap {
+    'extension-stop': { kind: 'extension-stop' }
+  }
+}
+
 const originalInternals = { ...internals }
 afterEach(() => { Object.assign(internals, originalInternals) })
 
@@ -538,7 +544,8 @@ describe('headless runner', () => {
     expect(result.code).toBe(0)
     expect(result.err).toBe('')
     expect(result.out.trimEnd().split('\n')).toHaveLength(1)
-    expect(JSON.parse(result.out) as unknown).toEqual({
+    const parsed: unknown = JSON.parse(result.out)
+    expect(parsed).toEqual({
       type: 'dsh-headless-result',
       schemaVersion: HEADLESS_RESULT_SCHEMA_VERSION,
       status: 'completed',
@@ -1144,7 +1151,8 @@ describe('headless runner', () => {
       const result = await test.run({ outputFormat: 'json' })
       expect(result.code).toBe(1)
       expect(result.err).toBe('')
-      expect(JSON.parse(result.out) as unknown).toEqual({
+      const parsed: unknown = JSON.parse(result.out)
+      expect(parsed).toEqual({
         type: 'dsh-headless-result',
         schemaVersion: HEADLESS_RESULT_SCHEMA_VERSION,
         status: 'failed',
@@ -1159,7 +1167,8 @@ describe('headless runner', () => {
     const test = await bench({ afterPrompt: () => {} })
     const result = await test.run({ outputFormat: 'json' })
     expect(result).toMatchObject({ code: 1, err: '' })
-    expect(JSON.parse(result.out) as unknown).toEqual({
+    const parsed: unknown = JSON.parse(result.out)
+    expect(parsed).toEqual({
       type: 'dsh-headless-result',
       schemaVersion: HEADLESS_RESULT_SCHEMA_VERSION,
       status: 'failed',
@@ -1182,7 +1191,7 @@ describe('headless runner', () => {
       { source: { kind: 'max-tokens' }, terminal: 'dsh: task stopped at the token limit' },
       { source: { kind: 'interrupted' }, terminal: 'dsh: task interrupted' },
       {
-        source: { kind: 'extension-stop' } as unknown as TurnEndReason,
+        source: { kind: 'extension-stop' },
         terminal: 'dsh: task failed: extension-stop',
       },
       { terminal: 'dsh: task ended without a durable result' },
@@ -1236,7 +1245,8 @@ describe('headless runner', () => {
     apply(ctx, headlessConfig({ task: 't', outputFormat: 'json' }))
     expect(await exited).toBe(1)
     expect(err).toBe('')
-    expect(JSON.parse(out) as unknown).toEqual({
+    const parsed: unknown = JSON.parse(out)
+    expect(parsed).toEqual({
       type: 'dsh-headless-result',
       schemaVersion: HEADLESS_RESULT_SCHEMA_VERSION,
       status: 'failed',

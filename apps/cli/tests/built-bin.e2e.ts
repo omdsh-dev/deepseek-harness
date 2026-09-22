@@ -641,7 +641,8 @@ describe.skipIf(!existsSync(dshBin))('dsh BUILT bin (node lib/bin.js, no tsx)', 
       })
       expect(json.code, json.stderr).toBe(0)
       expect(json.stderr).toBe('')
-      expect(JSON.parse(json.stdout) as unknown).toEqual({
+      const parsed: unknown = JSON.parse(json.stdout)
+      expect(parsed).toEqual({
         type: 'dsh-headless-result',
         schemaVersion: '1.0.0',
         status: 'completed',

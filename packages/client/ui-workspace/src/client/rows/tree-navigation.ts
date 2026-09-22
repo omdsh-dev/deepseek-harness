@@ -1,15 +1,21 @@
 import { useLayoutEffect, useRef } from 'react'
 import type {
-  FocusEvent as ReactFocusEvent, KeyboardEvent as ReactKeyboardEvent,
+  KeyboardEvent as ReactKeyboardEvent,
   MutableRefObject,
-  PointerEvent as ReactPointerEvent,
 } from 'react'
+
+interface NavigationTarget {
+  target: EventTarget | null
+}
+
+type NavigationKeyEvent = NavigationTarget & Pick<ReactKeyboardEvent<HTMLDivElement>,
+  'key' | 'altKey' | 'ctrlKey' | 'metaKey' | 'preventDefault'>
 
 interface TreeKeyboardNavigationProps {
   ref: MutableRefObject<HTMLDivElement | null>
-  onFocusCapture: (event: ReactFocusEvent<HTMLDivElement>) => void
-  onPointerDownCapture: (event: ReactPointerEvent<HTMLDivElement>) => void
-  onKeyDown: (event: ReactKeyboardEvent<HTMLDivElement>) => void
+  onFocusCapture: (event: NavigationTarget) => void
+  onPointerDownCapture: (event: NavigationTarget) => void
+  onKeyDown: (event: NavigationKeyEvent) => void
 }
 
 /** Return every rendered row in DOM order for one composite tree. */
@@ -72,15 +78,15 @@ export function useTreeKeyboardNavigation(): TreeKeyboardNavigationProps {
     return item
   }
 
-  const onFocusCapture = (event: ReactFocusEvent<HTMLDivElement>): void => {
+  const onFocusCapture = (event: NavigationTarget): void => {
     promote(event.target)
   }
-  const onPointerDownCapture = (event: ReactPointerEvent<HTMLDivElement>): void => {
+  const onPointerDownCapture = (event: NavigationTarget): void => {
     if (event.target instanceof HTMLElement
       && event.target.closest('button, a, input, select, textarea') !== null) return
     promote(event.target)?.focus({ preventScroll: true })
   }
-  const onKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>): void => {
+  const onKeyDown = (event: NavigationKeyEvent): void => {
     const tree = treeRef.current
     if (tree === null || !(event.target instanceof HTMLElement)) return
     const item = event.target.closest<HTMLElement>('[role="treeitem"]')

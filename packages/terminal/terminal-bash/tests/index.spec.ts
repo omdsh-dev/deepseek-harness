@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { PassThrough } from 'node:stream'
 import { resolve } from 'node:path'
 import { Context } from '@deepseek-ai/cordis'
@@ -15,7 +15,7 @@ import { BashTerminalBackend, PWSH_PROMPT_SETUP } from '@deepseek-ai/dsh-termina
 import { ENCODING_PREAMBLE } from '@deepseek-ai/dsh-pwsh-local'
 import * as ptyLocal from '@deepseek-ai/dsh-terminal-bash'
 import type { ResolvedConfig } from '@deepseek-ai/dsh-terminal-bash/src/config.ts'
-import type { LocalPtySession } from '@deepseek-ai/dsh-terminal-bash/src/session.ts'
+import { LocalPtySession } from '@deepseek-ai/dsh-terminal-bash/src/session.ts'
 import { SubprocessRuntime } from '@deepseek-ai/dsh-subprocess'
 import type {
   SubprocessHandle,
@@ -78,6 +78,18 @@ function terminalHandle(): SubprocessTerminalHandle {
     signalForeground: async () => 123,
     terminate: async () => { output.end() },
   }
+}
+
+const sessionCleanups: Array<() => Promise<void>> = []
+afterEach(async () => {
+  await Promise.all(sessionCleanups.splice(0).map(cleanup => cleanup()))
+})
+
+function stubSession(overrides: Partial<LocalPtySession>): LocalPtySession {
+  const session = new LocalPtySession(terminalHandle(), config())
+  const close = session.close.bind(session)
+  sessionCleanups.push(() => close('test cleanup'))
+  return Object.assign(session, overrides)
 }
 
 class StubSubprocessRuntime extends SubprocessRuntime {
@@ -425,7 +437,7 @@ describe('BashTerminalBackend startup rollback', () => {
     let spawned: SubprocessTerminalSpawnSpec | undefined
     const sends: TerminalSendRequest[] = []
     const calls: string[] = []
-    const session = {
+    const session = stubSession({
       motd: '',
       initialize: async () => { calls.push('initialize') },
       startSend: (request: TerminalSendRequest) => {
@@ -442,7 +454,7 @@ describe('BashTerminalBackend startup rollback', () => {
       },
       hasSeenControlledPrompt: () => sends.length >= 1,
       read: () => ({ text: '', totalLines: 0, lineBegin: 0, lineEnd: 0, truncated: false }),
-    } as unknown as LocalPtySession
+    })
     const backend = new BashTerminalBackend(
       ctx,
       { ...config(), shellDialect: 'pwsh', shellPath: 'pwsh' },
@@ -467,7 +479,7 @@ describe('BashTerminalBackend startup rollback', () => {
     await ctx.plugin(SessionProjectionRegistry)
     await ctx.plugin(SandboxPolicyService, { mode: 'danger-full-access', workspaceRoot: '/workspace' })
     const sends: TerminalSendRequest[] = []
-    const session = {
+    const session = stubSession({
       motd: '',
       initialize: async () => {},
       startSend: (request: TerminalSendRequest) => {
@@ -487,7 +499,7 @@ describe('BashTerminalBackend startup rollback', () => {
       },
       hasSeenControlledPrompt: () => sends.length >= 3,
       read: () => ({ text: '', totalLines: 0, lineBegin: 0, lineEnd: 0, truncated: false }),
-    } as unknown as LocalPtySession
+    })
     const backend = new BashTerminalBackend(
       ctx,
       { ...config(), shellDialect: 'pwsh', shellPath: 'pwsh' },
@@ -507,7 +519,7 @@ describe('BashTerminalBackend startup rollback', () => {
     await ctx.plugin(EmptySandbox)
     await ctx.plugin(SessionProjectionRegistry)
     await ctx.plugin(SandboxPolicyService, { mode: 'danger-full-access', workspaceRoot: '/workspace' })
-    const sessionFor = (waitReason: TerminalWaitReason): LocalPtySession => ({
+    const sessionFor = (waitReason: TerminalWaitReason): LocalPtySession => stubSession({
       initialize: () => Promise.resolve(),
       startSend: () => ({
         done: Promise.resolve({
@@ -520,7 +532,7 @@ describe('BashTerminalBackend startup rollback', () => {
       hasSeenControlledPrompt: () => false,
       read: () => ({ text: '', totalLines: 0, lineBegin: 0, lineEnd: 0, truncated: false }),
       close: () => Promise.resolve(),
-    }) as unknown as LocalPtySession
+    })
     const exited = new BashTerminalBackend(ctx, { ...config(), shellDialect: 'pwsh' }, async () => terminalHandle(), () => sessionFor('session_exit'))
     await expect(exited.spawn(spec(agent(ctx)))).rejects.toThrow('PTY shell exited during startup')
     const timedOut = new BashTerminalBackend(ctx, { ...config(), shellDialect: 'pwsh' }, async () => terminalHandle(), () => sessionFor('timeout'))
@@ -543,7 +555,7 @@ describe('BashTerminalBackend startup rollback', () => {
       let sends = 0
       let cancellations = 0
       let closes = 0
-      const session = {
+      const session = stubSession({
         motd: '',
         initialize: () => Promise.resolve(),
         startSend: () => {
@@ -562,7 +574,7 @@ describe('BashTerminalBackend startup rollback', () => {
         hasSeenControlledPrompt: () => false,
         read: () => ({ text: '', totalLines: 0, lineBegin: 0, lineEnd: 0, truncated: false }),
         close: () => { closes += 1; return Promise.resolve() },
-      } as unknown as LocalPtySession
+      })
       const backend = new BashTerminalBackend(
         ctx,
         { ...config(), shellDialect: 'pwsh', shellPath: 'pwsh' },
@@ -591,7 +603,7 @@ describe('BashTerminalBackend startup rollback', () => {
     await ctx.plugin(SandboxPolicyService, { mode: 'danger-full-access', workspaceRoot: '/workspace' })
     const sends: TerminalSendRequest[] = []
     const initializeSignals: Array<AbortSignal | undefined> = []
-    const session = {
+    const session = stubSession({
       motd: '',
       initialize: async (signal?: AbortSignal) => { initializeSignals.push(signal) },
       startSend: (request: TerminalSendRequest) => {
@@ -607,7 +619,7 @@ describe('BashTerminalBackend startup rollback', () => {
       },
       hasSeenControlledPrompt: () => sends.length >= 1,
       read: () => ({ text: '', totalLines: 0, lineBegin: 0, lineEnd: 0, truncated: false }),
-    } as unknown as LocalPtySession
+    })
     const backend = new BashTerminalBackend(
       ctx,
       { ...config(), shellDialect: 'pwsh', shellPath: 'pwsh' },
