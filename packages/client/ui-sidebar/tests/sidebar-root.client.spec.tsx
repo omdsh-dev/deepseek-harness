@@ -26,6 +26,7 @@ afterEach(() => {
   cleanup()
   delete document.documentElement.dataset.platform
   vi.unstubAllEnvs()
+  vi.unstubAllGlobals()
   vi.useRealTimers()
 })
 
@@ -185,6 +186,33 @@ describe('SidebarRoot shell', () => {
     expect(screen.getByTestId('region')).toBeTruthy()
     b.regionOwner().expandSidebar()
     expect(b.toggleSidebar).toHaveBeenCalledOnce()
+  })
+
+  it('settles the focused rail control before paint at a narrow viewport', () => {
+    vi.stubGlobal('innerWidth', 320)
+    const b = mountShell()
+    const toggle = screen.getByRole('button', { name: 'Collapse sidebar' })
+    toggle.focus()
+    b.rerender({ collapsed: true })
+
+    expect(b.regionOwner().wide).toBe(false)
+    const open = screen.getByRole('button', { name: 'Open sidebar' })
+    expect(document.activeElement).toBe(open)
+  })
+
+  it('settles the focused rail control before paint when reduced motion is requested', () => {
+    vi.stubGlobal('innerWidth', 1280)
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: query === '(prefers-reduced-motion: reduce)',
+      media: query,
+    }))
+    const b = mountShell()
+    const toggle = screen.getByRole('button', { name: 'Collapse sidebar' })
+    toggle.focus()
+    b.rerender({ collapsed: true })
+
+    expect(b.regionOwner().wide).toBe(false)
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Open sidebar' }))
   })
 
   it('renders statically collapsed on a cold start (no crossfade classes)', () => {

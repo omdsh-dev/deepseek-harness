@@ -44,7 +44,7 @@ export const TurnProcessNodeView = memo(function TurnProcessNodeView({
         : t('message.turnProcess.worked')
   return (
     <>
-      <span className={a11yCss.visuallyHidden} role="status" aria-live="polite" aria-atomic="true">{announcement}</span>
+      <span className={a11yCss.visuallyHidden} role="status" aria-live="off" aria-atomic="true">{announcement}</span>
       <button
         type="button"
         className={css.root}

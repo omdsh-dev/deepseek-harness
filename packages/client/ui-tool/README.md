@@ -25,6 +25,8 @@ English | [中文](README.zh.md)
 <a id="use-this-package"></a>
 ## Use this package
 
+Disclosure controls expose expanded state and controlled content. A file-path action has its own accessible name and keyboard target, separate from the disclosure, so opening a file does not also expand the row.
+
 Tool calls appear in the conversation as cards: a root call tree with its nested subcalls, each atomic call rendered by its owning view. Every lifecycle state retains the tool's ordinary business glyph; failure and interruption remain explicit through the frozen call/result state, accessible status text, and failure summary. Users can open files or inspect calls through the Host callbacks.
 
 Shared Tool rows and Bash rows retain error and warning colors for failed and stopped summaries, including on hover. Hover darkens only summaries without those states.

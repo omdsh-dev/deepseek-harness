@@ -93,7 +93,8 @@ describe('apply', () => {
     const scope = mint('s1')
     const entry = slots.entries('conversation.input.overlay')[0]!
     const injectEntry = entry.inject as unknown as (sessionId: SessionId) => PopupSelectInjected
-    expect(injectEntry(sid('s1')).popup).toBe(command.popupFor(scope.ctx))
+    const injected = injectEntry(sid('s1'))
+    expect(injected.popup).toBe(command.popupFor(scope.ctx))
     expect(() => injectEntry(sid('ghost'))).toThrow(/resolved no scope/)
   })
 })

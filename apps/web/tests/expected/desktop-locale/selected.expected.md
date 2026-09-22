@@ -19,9 +19,9 @@
   - button "Increase font size"
   - button "Decrease font size"
   - text: px Work details Controls how turns and steps expand by default
-  - button "Compact"
+  - 'button "Work details: Compact"': Compact
   - text: Performance & usage Choose how much performance and usage information to show
-  - button "Detailed"
+  - 'button "Performance & usage: Detailed"': Detailed
   - text: Developer tools Show tools and information for debugging and troubleshooting
   - switch "Developer tools" [checked]
   - text: Send behavior while busy What Enter and the Send button do while the agent is running; Cmd/Ctrl+Enter uses the other behavior

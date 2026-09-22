@@ -50,7 +50,7 @@ export function EnterBehaviorRow({ useBusyEnter, setBusyEnter, t }: EnterBehavio
       <Menu
         open={open}
         onClose={() => { setOpen(false) }}
-        items={OPTIONS.map(option => ({ id: option.id, label: t(option.label) }))}
+        items={OPTIONS.map(option => ({ id: option.id, label: t(option.label), selection: 'radio' as const }))}
         selectedId={behavior}
         onSelect={(id) => {
           setOpen(false)

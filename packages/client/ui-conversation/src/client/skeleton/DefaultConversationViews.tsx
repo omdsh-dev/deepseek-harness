@@ -11,7 +11,7 @@ import css from './ConversationRoot.module.css'
  * @returns the active view area, or null while the Session remains blank.
  */
 export function DefaultConversationViews({
-  view, useSession, useConversation, useConversationViews, useInput, inputActions, useStore, actions,
+  view, viewTabGroupId, useSession, useConversation, useConversationViews, useInput, inputActions, useStore, actions,
   renderSlot, bindDraftMirror, openView, useInspectCall,
 }: ConversationSessionSlotProps) {
   const tabs = useConversationViews(value => value)
@@ -34,14 +34,32 @@ export function DefaultConversationViews({
 
   if (session.blank && conversationPhase(session, conversation) === 'blank') return null
   const viewId = view ?? active?.id
+  const activeView = viewId === undefined ? null : renderSlot('conversation.view', {
+    inspectCall,
+    viewRequest,
+    openView,
+    completeViewRequest: actions.completeViewRequest,
+  }, { only: viewId })
+  const linkedTabs = view === undefined && viewTabGroupId !== undefined && tabs.length > 1
   return (
     <div className={css.viewArea}>
-      {viewId !== undefined && renderSlot('conversation.view', {
-        inspectCall,
-        viewRequest,
-        openView,
-        completeViewRequest: actions.completeViewRequest,
-      }, { only: viewId })}
+      {linkedTabs ? tabs.map(tab => (
+        <div
+          key={tab.id}
+          id={`dsh-conversation-view-panel-${encodeURIComponent(viewTabGroupId)}-${encodeURIComponent(tab.id)}`}
+          className={css.viewPanel}
+          role="tabpanel"
+          aria-labelledby={`dsh-conversation-view-tab-${encodeURIComponent(viewTabGroupId)}-${encodeURIComponent(tab.id)}`}
+          tabIndex={0}
+          hidden={tab.id !== viewId}
+        >
+          {tab.id === viewId && activeView}
+        </div>
+      )) : (
+        <div className={css.viewPanel} role="region" aria-label={tabs.find(tab => tab.id === viewId)?.label}>
+          {activeView}
+        </div>
+      )}
     </div>
   )
 }

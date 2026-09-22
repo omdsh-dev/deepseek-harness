@@ -256,7 +256,7 @@ describe('web e2e: secondary Thinking Markdown', () => {
     await page.setViewportSize({ width: 1680, height: 1000 })
     await page.getByRole('tab', { name: 'Trajectory', exact: true }).click()
     await page.locator('tr[data-trajectory-row-key]', { hasText: DONE }).click()
-    const details = page.getByRole('tabpanel')
+    const details = page.locator('#trajectory-detail-panel')
     const trajectoryToggle = details.getByRole('button', { name: 'Thinking', exact: true })
     if (await trajectoryToggle.getAttribute('aria-expanded') !== 'true') await trajectoryToggle.click()
     const trajectoryHeading = details.locator('[data-markdown-variant="compact"] h1')

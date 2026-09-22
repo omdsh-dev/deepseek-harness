@@ -247,7 +247,7 @@ describe('web e2e: settings modal and General preferences', () => {
     await selector.waitFor({ timeout: 10_000 })
     await expect.poll(() => selector.isEnabled(), { timeout: 5_000 }).toBe(true)
     await selector.click()
-    await page.getByRole('menuitem', { name: '仅可查看' }).click()
+    await page.getByRole('menuitemradio', { name: '仅可查看' }).click()
     await dialog.getByRole('button', { name: '仅可查看' }).waitFor({ timeout: 10_000 })
 
     const document = await readFile(join(scaffold.harnessHome, 'profiles', 'scaffold', 'cordis.patch.yml'), 'utf8')
@@ -264,13 +264,18 @@ describe('web e2e: settings modal and General preferences', () => {
     ])
 
     await dialog.getByRole('button', { name: '仅可查看' }).click()
-    await page.getByRole('menuitem', { name: '完全权限' }).click()
+    await page.getByRole('menuitemradio', { name: '完全权限' }).click()
     const confirmation = page.getByRole('dialog', { name: '确认启用完全权限？' })
     const enable = confirmation.getByRole('button', { name: '启用完全权限' })
     expect(await enable.isDisabled()).toBe(true)
     await confirmation.getByRole('checkbox').click()
     await enable.click()
-    await dialog.getByRole('button', { name: '完全权限' }).waitFor({ timeout: 10_000 })
+    const fullAccess = dialog.getByRole('button', { name: '完全权限' })
+    await fullAccess.waitFor({ timeout: 10_000 })
+    await expect.poll(
+      () => fullAccess.evaluate(node => node.ownerDocument.activeElement === node),
+      { timeout: 5_000 },
+    ).toBe(true)
     const confirmedDocument = await readFile(join(scaffold.harnessHome, 'profiles', 'scaffold', 'cordis.patch.yml'), 'utf8')
     expect(confirmedDocument).toContain('defaultPreset: danger-full-access')
     const confirmed = scaffold.ctx.sessions.create(SessionId('settings-permission-confirmed'))
@@ -568,9 +573,9 @@ describe('web e2e: settings modal and General preferences', () => {
     await dialog.waitFor({ timeout: 10_000 })
     await dialog.getByText('工作过程展示', { exact: true }).waitFor({ timeout: 10_000 })
     const details = dialog.getByText('工作过程展示', { exact: true }).locator('../..')
-    await details.getByRole('button', { name: '简洁', exact: true }).click()
-    await page.getByRole('menuitem', { name: label, exact: true }).click()
-    await details.getByRole('button', { name: label, exact: true }).waitFor({ timeout: 10_000 })
+    await details.getByRole('button', { name: '工作过程展示: 简洁', exact: true }).click()
+    await page.getByRole('menuitemradio', { name: label, exact: true }).click()
+    await details.getByRole('button', { name: `工作过程展示: ${label}`, exact: true }).waitFor({ timeout: 10_000 })
     await expect.poll(async () => readFile(join(scaffold.harnessHome, 'profiles', 'scaffold', 'cordis.patch.yml'), 'utf8'), { timeout: 5_000 })
       .toContain(`transcriptView: ${mode}`)
     await page.keyboard.press('Escape')
@@ -582,11 +587,11 @@ describe('web e2e: settings modal and General preferences', () => {
     await openSettings(page, 'zh')
     const reloaded = page.getByRole('dialog', { name: '设置' })
     const restoredDetails = reloaded.getByText('工作过程展示', { exact: true }).locator('../..')
-    await restoredDetails.getByRole('button', { name: label, exact: true }).waitFor({ timeout: 10_000 })
+    await restoredDetails.getByRole('button', { name: `工作过程展示: ${label}`, exact: true }).waitFor({ timeout: 10_000 })
 
-    await restoredDetails.getByRole('button', { name: label, exact: true }).click()
-    await page.getByRole('menuitem', { name: '简洁', exact: true }).click()
-    await restoredDetails.getByRole('button', { name: '简洁', exact: true }).waitFor({ timeout: 10_000 })
+    await restoredDetails.getByRole('button', { name: `工作过程展示: ${label}`, exact: true }).click()
+    await page.getByRole('menuitemradio', { name: '简洁', exact: true }).click()
+    await restoredDetails.getByRole('button', { name: '工作过程展示: 简洁', exact: true }).waitFor({ timeout: 10_000 })
     await expect.poll(async () => readFile(join(scaffold.harnessHome, 'profiles', 'scaffold', 'cordis.patch.yml'), 'utf8'), { timeout: 5_000 })
       .toContain('transcriptView: compact')
     await page.keyboard.press('Escape')
@@ -599,7 +604,7 @@ describe('web e2e: settings modal and General preferences', () => {
     const dialog = page.getByRole('dialog', { name: '设置' })
     await dialog.waitFor({ timeout: 10_000 })
     await dialog.getByRole('button', { name: '排队发送' }).click()
-    await page.getByRole('menuitem', { name: '插话发送' }).click()
+    await page.getByRole('menuitemradio', { name: '插话发送' }).click()
     await dialog.getByRole('button', { name: '插话发送' }).waitFor({ timeout: 10_000 })
     expect(await page.evaluate(() => localStorage.getItem('dsh.conversation.busyEnter'))).toBeNull()
     await expect.poll(async () => readFile(join(scaffold.harnessHome, 'profiles', 'scaffold', 'cordis.patch.yml'), 'utf8'), { timeout: 5_000 })
@@ -633,7 +638,7 @@ describe('web e2e: settings modal and General preferences', () => {
     }
 
     await reloaded.getByRole('button', { name: '插话发送' }).click()
-    await page.getByRole('menuitem', { name: '排队发送' }).click()
+    await page.getByRole('menuitemradio', { name: '排队发送' }).click()
     await reloaded.getByRole('button', { name: '排队发送' }).waitFor({ timeout: 10_000 })
     expect(await page.evaluate(() => localStorage.getItem('dsh.conversation.busyEnter'))).toBeNull()
     await expect.poll(async () => readFile(join(scaffold.harnessHome, 'profiles', 'scaffold', 'cordis.patch.yml'), 'utf8'), { timeout: 5_000 })
@@ -656,7 +661,7 @@ describe('web e2e: settings modal and General preferences', () => {
     const selector = zhDialog.getByRole('button', { name: '中文' })
     expect(await selector.getAttribute('aria-haspopup')).toBe('menu')
     await selector.click()
-    await page.getByRole('menuitem', { name: 'English' }).click()
+    await page.getByRole('menuitemradio', { name: 'English' }).click()
     // The settings-owned copy re-registers localized: dialog title, nav,
     // Appearance labels. (Only the settings namespaces are localized —
     // the rest of the app's copy is intentionally out of this row's scope.)
@@ -701,7 +706,7 @@ describe('web e2e: settings modal and General preferences', () => {
 
     await openSettings(page, 'en')
     await page.getByRole('dialog', { name: 'Settings' }).getByRole('button', { name: 'English' }).click()
-    await page.getByRole('menuitem', { name: '中文' }).click()
+    await page.getByRole('menuitemradio', { name: '中文' }).click()
     await page.getByRole('dialog', { name: '设置' }).waitFor({ timeout: 10_000 })
     expect(await page.evaluate(() => localStorage.getItem('dsh.locale'))).toBeNull()
     await expect.poll(async () => readFile(join(scaffold.harnessHome, 'profiles', 'scaffold', 'cordis.patch.yml'), 'utf8'), { timeout: 5_000 })
@@ -798,7 +803,7 @@ describe('web e2e: settings modal and General preferences', () => {
     await withoutBrowser.goto(fresh.authenticatedUrl, { waitUntil: 'load' })
     await openSettings(withoutBrowser, 'en')
     const dialog = withoutBrowser.getByRole('dialog', { name: 'Settings' })
-    await dialog.getByRole('button', { name: 'Detailed', exact: true }).waitFor()
+    await dialog.getByRole('button', { name: 'Performance & usage: Detailed', exact: true }).waitFor()
     expect(await dialog.getByText('Open chat links in', { exact: true }).count()).toBe(0)
     const snapshot = await captureStableAria(withoutBrowser, '[role="dialog"]', fresh.workspaceCwd, versionCapture)
     await compareOrRefreshGolden(join(SNAPSHOT_DIR, 'dialog-no-browser.expected.md'), snapshot, MODE)

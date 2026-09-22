@@ -1,22 +1,29 @@
-- banner:
+- main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy": Use the ask_user_question tool to
   - text: Standard mode
   - button "More actions"
   - button "Open right sidebar"
-  - tablist:
+  - tablist "Session views":
     - tab "Chat" [selected]
     - tab "Trajectory"
-- text: Use the ask_user_question tool to ask me exactly one question with id "checkpoint", question "Ready to continue?", header "Checkpoint", and options labeled "Yes" and "No". After I answer, reply with one short sentence acknowledging my answer and stop. {{clock}}
-- button "Copy"
-- status: Deep diving...
-- button "Deep diving for {{duration}}" [disabled] [expanded]
-- button "Analyzing the request"
-- text: "Interjection: include the word BANANA in your final reply."
-- button "Copy"
-- text: "Interjection: include the word ORANGE in your final reply."
-- button "Copy"
-- textbox "Message or run a task, / commands, @ files or sessions"
-- button "Add files or run commands"
-- 'button "Access mode, current: Workspace Write"': Workspace Write
-- button "Select model, current DeepSeek-V4-Flash": DeepSeek-V4-Flash
-- button "Stop generating"
+  - tabpanel "Chat":
+    - text: Response started.
+    - log "Conversation transcript":
+      - article "User message":
+        - text: Use the ask_user_question tool to ask me exactly one question with id "checkpoint", question "Ready to continue?", header "Checkpoint", and options labeled "Yes" and "No". After I answer, reply with one short sentence acknowledging my answer and stop. {{clock}}
+        - button "Copy"
+      - status: Deep diving...
+      - button "Deep diving for {{duration}}" [disabled] [expanded]
+      - button "Analyzing the request"
+      - article "User message":
+        - text: "Interjection: include the word BANANA in your final reply."
+        - button "Copy"
+      - article "User message":
+        - text: "Interjection: include the word ORANGE in your final reply."
+        - button "Copy"
+  - textbox "Message or run a task, / commands, @ files or sessions"
+  - button "Add files or run commands"
+  - 'button "Access mode, current: Workspace Write"': Workspace Write
+  - button "Select model, current DeepSeek-V4-Flash": DeepSeek-V4-Flash
+  - button "Stop generating"

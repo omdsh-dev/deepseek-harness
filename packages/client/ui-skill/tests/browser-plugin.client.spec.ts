@@ -134,6 +134,7 @@ describe('apply', () => {
         zh: {
           'row.title': '加载技能',
           'row.running': '正在加载 skill',
+          'row.completed': 'skill 加载完成',
           'row.failed': 'skill 加载失败',
           'row.stopped': 'skill 加载已中止',
           'row.instructions': '说明',
@@ -143,6 +144,7 @@ describe('apply', () => {
         en: {
           'row.title': 'Skill',
           'row.running': 'Loading skill',
+          'row.completed': 'Skill loaded',
           'row.failed': 'Skill load failed',
           'row.stopped': 'Skill load stopped',
           'row.instructions': 'Instructions',

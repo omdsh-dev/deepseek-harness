@@ -1,7 +1,8 @@
-- button "Edit config.txt +1 -1" [expanded]:
-  - text: Edit
-  - button "config.txt"
-  - text: +1 -1
+- text: Completed
+- button "Edit Completed config.txt +1 -1" [expanded]
+- text: Edit
+- button "Open file config.txt": config.txt
+- text: +1 -1
 - button "Copy"
 - text: config.txt - mode=DEBUG + mode=RELEASE level=info └ +1 -1 · 1 file
 - button "Inspect"

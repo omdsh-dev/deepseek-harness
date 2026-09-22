@@ -27,6 +27,10 @@ This package lets users browse grouped or flat Session lists, choose a Workspace
 
 Use the sidebar to browse Workspaces and their Sessions, reorder them, and start new ones; use the picker in the Session Intent hero to choose a Workspace for a new session. An open Workspace shows five idle, non-blank Sessions by default. Running Sessions, including parents with running children, remain visible in their ordered positions without using that quota; the selected blank **New Session** is also an extra row until its first prompt. Each **Show more** click reveals up to five more idle Sessions; after the final batch, **Show less** restores the initial rows while keeping running Sessions visible. Closing and reopening the Workspace also restores this folded projection.
 
+### Keyboard and screen-reader navigation
+
+Grouped, flat, and search presentations expose a single-selection tree. When focus enters the tree, the selected current Session is preferred as its one sequential Tab entry; otherwise exactly one row remains tabbable. Use Up and Down to move between visible rows, Home and End to reach the boundary, Right to expand a Workspace or move to its first child, Left to collapse it or return to its parent, and Enter or Space to activate a row. Printable characters perform label typeahead, including repeated-character cycling. Pointer or focus interaction promotes that row to the active tree entry. When an active row has actions, Tab moves into them and their focus indication remains visible without requiring pointer hover.
+
 ### Reordering and view options
 
 Pinned Sessions lead ordinary Sessions in both grouped and flat views. **Last updated** sorts each partition strictly by the latest user prompt or steer time, newest first; pin time does not affect it. **Manual** uses the relative positions in one complete Session sequence, including hidden archives. Returning to Last updated discards the manual layout, and entering Manual again freezes the then-current chronological order. The browser defaults to Last updated and remembers the selected mode across reloads.

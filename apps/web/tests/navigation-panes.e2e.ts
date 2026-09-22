@@ -423,7 +423,7 @@ describe('web e2e: navigation & panes over a rich seeded session', () => {
     await page.locator('[data-sample="bash"] ~ div [data-terminal] [class*="_copyButton_"]').first().click()
     await expect.poll(() => frame.getAttribute('data-rightbar-collapsed'), { timeout: 5_000 }).toBe('true')
     // Opening a file into the empty column creates only its preview tab.
-    const fileLink = page.locator('[data-variant="read"] button').first()
+    const fileLink = page.locator('[data-variant="read"]').first().getByRole('button', { name: /^Open file / })
     await fileLink.waitFor({ timeout: 10_000 })
     await fileLink.click()
     await expect.poll(() => frame.getAttribute('data-rightbar-collapsed'), { timeout: 5_000 }).toBe(null)

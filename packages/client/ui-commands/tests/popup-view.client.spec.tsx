@@ -70,7 +70,7 @@ async function mountOpen(overrides: Partial<PopupSpec<string>> = {}, consumeResu
     popup.open('theme', spec(overrides), 'ctx-A', SEGMENT)
     await Promise.resolve()
   })
-  return { popup, view, consume, focusComposer, search: screen.getByRole('textbox', { name: '筛选选项' }) }
+  return { popup, view, consume, focusComposer, search: screen.getByRole('combobox', { name: '筛选选项' }) }
 }
 
 function rowLabels(): string[] {
@@ -78,6 +78,13 @@ function rowLabels(): string[] {
 }
 
 describe('PopupSelectView', () => {
+  it('returns Escape through the owning session controller focus route', async () => {
+    const { focusComposer, search } = await mountOpen()
+    fireEvent.keyDown(search, { key: 'Escape' })
+    expect(focusComposer).toHaveBeenCalledOnce()
+    expect(screen.queryByRole('combobox')).toBeNull()
+  })
+
   it('renders null while closed, opens with focus in the search input', async () => {
     const popup = new PopupSelectController<string>({ consume: () => true, focusComposer: () => {} })
     const view = render(<PopupSelectView popup={popup} t={t} />)
@@ -86,9 +93,15 @@ describe('PopupSelectView', () => {
       popup.open('theme', spec(), 'ctx-A', SEGMENT)
       await Promise.resolve()
     })
-    const search = screen.getByRole('textbox', { name: '筛选选项' })
+    const search = screen.getByRole('combobox', { name: '筛选选项' })
     expect(document.activeElement).toBe(search)
     expect(rowLabels()).toEqual(['Dark', 'Light', 'Sepia'])
+    const listbox = screen.getByRole('listbox', { name: '/theme 匹配项' })
+    const options = screen.getAllByRole('option')
+    expect(search.getAttribute('aria-controls')).toBe(listbox.id)
+    expect(search.getAttribute('aria-expanded')).toBe('true')
+    expect(search.getAttribute('aria-activedescendant')).toBe(options[1]!.id)
+    expect(options[1]!.getAttribute('aria-selected')).toBe('true')
   })
 
   it('renders an optional option badge as a superscript marker', async () => {
@@ -118,9 +131,11 @@ describe('PopupSelectView', () => {
     act(() => { fireEvent.keyDown(search, { key: 'ArrowDown' }) })
     let options = screen.getAllByRole('option')
     expect(options[2]!.getAttribute('aria-selected')).toBe('true')
+    expect(search.getAttribute('aria-activedescendant')).toBe(options[2]!.id)
     act(() => { fireEvent.keyDown(search, { key: 'ArrowUp' }) })
     options = screen.getAllByRole('option')
     expect(options[1]!.getAttribute('aria-selected')).toBe('true')
+    expect(search.getAttribute('aria-activedescendant')).toBe(options[1]!.id)
     // fireEvent returns false when preventDefault was called: arrow left/right must NOT be intercepted.
     expect(fireEvent.keyDown(search, { key: 'ArrowLeft' })).toBe(true)
     expect(fireEvent.keyDown(search, { key: 'ArrowRight' })).toBe(true)
@@ -150,7 +165,7 @@ describe('PopupSelectView', () => {
     const popup = new PopupSelectController<string>({ consume: () => true, focusComposer: () => {} })
     render(<PopupSelectView popup={popup} t={t} />)
     await act(async () => { popup.open('theme', spec({ options: () => new Promise(() => {}) }), 'ctx-A', SEGMENT) })
-    const search = screen.getByRole('textbox', { name: '筛选选项' })
+    const search = screen.getByRole('combobox', { name: '筛选选项' })
     // Nothing is settleable yet, so the keystroke is not swallowed.
     expect(fireEvent.keyDown(search, { key: 'Tab' })).toBe(true)
     expect(document.activeElement).toBe(search)
@@ -164,7 +179,7 @@ describe('PopupSelectView', () => {
       popup.open('theme', spec({ options: () => Promise.reject(new Error('directory down')) }), 'ctx-A', SEGMENT)
       await Promise.resolve()
     })
-    const search = screen.getByRole('textbox', { name: '筛选选项' })
+    const search = screen.getByRole('combobox', { name: '筛选选项' })
     expect(fireEvent.keyDown(search, { key: 'Tab' })).toBe(true)
     expect(screen.getByRole('button', { name: '重试' })).toBeTruthy()
   })
@@ -215,13 +230,17 @@ describe('PopupSelectView', () => {
 
   it('renders a gated option as an in-page modal and requires the checkbox before onSelect', async () => {
     const onSelect = vi.fn()
-    const { popup, consume } = await mountOpen({
+    const { popup, consume, focusComposer } = await mountOpen({
       options: () => Promise.resolve([GATED]),
       onSelect,
     })
     await act(async () => { fireEvent.click(screen.getByRole('option', { name: 'Full access' })) })
     expect(screen.queryByLabelText('/theme 选项')).toBeNull()
-    expect(screen.getByRole('dialog', { name: 'Enable Full access?' })).toBeTruthy()
+    const dialog = screen.getByRole('dialog', { name: 'Enable Full access?' })
+    expect(dialog).toBeTruthy()
+    const risk = screen.getByText('Sensitive operations.')
+    expect(dialog.getAttribute('aria-describedby')).toBe(risk.id)
+    expect(document.activeElement).toBe(screen.getByRole('checkbox', { name: 'I understand the risks' }))
     const enable = screen.getByRole('button', { name: 'Enable Full access' }) as HTMLButtonElement
     expect(enable.disabled).toBe(true)
     expect(onSelect).not.toHaveBeenCalled()
@@ -232,6 +251,7 @@ describe('PopupSelectView', () => {
     expect(onSelect).toHaveBeenCalledExactlyOnceWith(GATED, 'ctx-A')
     expect(consume).toHaveBeenCalledExactlyOnceWith(SEGMENT)
     expect(popup.state.getSnapshot().open).toBe(false)
+    expect(focusComposer).toHaveBeenCalledTimes(1)
   })
 
   it('canceling a gated option returns to the picker with acknowledgement reset', async () => {
@@ -240,6 +260,7 @@ describe('PopupSelectView', () => {
     fireEvent.click(screen.getByRole('checkbox'))
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
     expect(screen.getByLabelText('/theme 选项')).toBeTruthy()
+    expect(document.activeElement).toBe(screen.getByRole('combobox', { name: '筛选选项' }))
     await act(async () => { fireEvent.click(screen.getByRole('option', { name: 'Full access' })) })
     expect(screen.getByRole<HTMLInputElement>('checkbox').checked).toBe(false)
   })

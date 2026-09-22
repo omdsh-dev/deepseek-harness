@@ -129,7 +129,7 @@ describe('web e2e: generic file upload through the real assembly', () => {
     const ledger = await captureStableAria(page, '[data-trajectory-row-key][aria-label*="Files ×1"]', scaffold.workspaceCwd)
     await row.click()
 
-    const panel = page.getByRole('tabpanel')
+    const panel = page.locator('#trajectory-detail-panel')
     const list = panel.getByRole('list', { name: 'Attachments', exact: true })
     let summaryAttachments: string | undefined
     let preview: string | undefined
@@ -151,7 +151,7 @@ describe('web e2e: generic file upload through the real assembly', () => {
       if (tab === 'Summary') summaryAttachments = attachments
       else {
         expect(attachments).toBe(summaryAttachments)
-        preview = await captureStableAria(page, '[role="tabpanel"]', scaffold.workspaceCwd)
+        preview = await captureStableAria(page, '#trajectory-detail-panel', scaffold.workspaceCwd)
       }
       const opener = list.getByRole('button', { name: `${imageName}, click to view original`, exact: true })
       await opener.focus()
@@ -172,7 +172,7 @@ describe('web e2e: generic file upload through the real assembly', () => {
       expect(await disclosure.getAttribute('open')).toBeNull()
       expect(await disclosure.locator('pre').isVisible()).toBe(false)
     }
-    const rawCollapsed = await captureStableAria(page, '[role="tabpanel"]', scaffold.workspaceCwd)
+    const rawCollapsed = await captureStableAria(page, '#trajectory-detail-panel', scaffold.workspaceCwd)
     const blocks = panel.locator('details, section')
     expect(await blocks.count()).toBe(content.length)
     for (const [index, block] of content.entries()) {
@@ -187,7 +187,7 @@ describe('web e2e: generic file upload through the real assembly', () => {
         expect(raw).toEqual(block)
       }
     }
-    const rawExpanded = await captureStableAria(page, '[role="tabpanel"]', scaffold.workspaceCwd)
+    const rawExpanded = await captureStableAria(page, '#trajectory-detail-panel', scaffold.workspaceCwd)
     return [
       '# Ledger', ledger,
       '# Summary attachments', summaryAttachments,
@@ -401,7 +401,7 @@ describe('web e2e: generic file upload through the real assembly', () => {
       await page.getByRole('tab', { name: 'Trajectory', exact: true }).click()
       await page.getByRole('row', { name: `USER, Images ×1 · Files ×1 · ${PROMPT}`, exact: true }).click()
       await page.getByRole('tab', { name: 'Preview', exact: true }).click()
-      const panel = page.getByRole('tabpanel')
+      const panel = page.locator('#trajectory-detail-panel')
       const thumbnail = panel.locator('[data-variant="thumbnail"]')
       await thumbnail.waitFor()
       await expect.poll(() => read.mock.calls.length).toBe(1)

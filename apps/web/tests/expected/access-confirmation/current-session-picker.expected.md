@@ -1,7 +1,7 @@
-- menu:
-  - menuitem "仅可查看"
-  - menuitem "工作区内修改"
-  - menuitem "完全权限"
-  - menuitem "Auto review EXP":
+- menu "访问模式，当前：工作区内修改":
+  - menuitemradio "仅可查看"
+  - menuitemradio "工作区内修改" [checked]
+  - menuitemradio "完全权限"
+  - menuitemradio "Auto review EXP":
     - text: Auto review
     - superscript: EXP

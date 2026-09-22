@@ -423,9 +423,9 @@ export interface LaunchOptions {
   /** SDK batch cadence for a scenario-owned collector; omitted to retain the SDK default. */
   telemetryScheduledDelayMillis?: number
   /**
-   * Browse through a trusted non-loopback hostname that the browser resolves
-   * to loopback (for example `*.localhost`). The test server stays bound to
-   * 127.0.0.1; a non-resolving authority fails before Host trust is exercised.
+   * Browse through a trusted non-loopback hostname that the browser maps to
+   * loopback (for example `*.localhost`). The test server and scaffold's token
+   * exchange stay on 127.0.0.1 while preserving this HTTP Host authority.
    */
   remoteAuthority?: string
   /**
@@ -883,11 +883,17 @@ export async function launchWebScaffold(options: LaunchOptions = {}): Promise<We
       baseUrl = `http://${publicHost}:${String(publicProxy.port)}${publicPrefix}`
     }
     authenticatedUrl = ctx.connection.authenticatedUrl(baseUrl)
-    // Chromium resolves *.localhost itself; Node may not, so a mounted scaffold
-    // posts the exchange to loopback, the authority the Host fence always trusts.
     const loginUrl = new URL(authenticatedUrl)
     if (publicPrefix !== undefined) loginUrl.hostname = '127.0.0.1'
-    const login = await fetch(loginUrl, { redirect: 'manual' })
+    const loginHeaders = new Headers()
+    if (options.remoteAuthority !== undefined) {
+      // Node's resolver does not consistently implement wildcard .localhost
+      // across supported hosts. Connect to the bound loopback address while
+      // preserving the exact authority whose trust policy this lane verifies.
+      loginUrl.hostname = '127.0.0.1'
+      loginHeaders.set('host', `${options.remoteAuthority}:${String(port)}`)
+    }
+    const login = await fetch(loginUrl, { redirect: 'manual', headers: loginHeaders })
     const setCookie = login.headers.get('set-cookie')
     if (login.status !== 303 || login.headers.get('location') !== './' || setCookie === null) {
       throw new Error('web e2e scaffold: browser token exchange did not return its session cookie')

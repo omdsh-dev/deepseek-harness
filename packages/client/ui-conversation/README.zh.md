@@ -80,6 +80,8 @@ Send 和 Stop 按钮禁用时不显示提示气泡，轮次结束后由 Stop 切
 
 当会话被其他写句柄占用时，发送失败的 toast 提示用户退出其他正在运行的 DSH 后重试。
 
+composer 的 Context Meter 会在触发器无障碍名称中公开取整后的占用率，并通过稳定的 `aria-controls` 关系同步 `aria-expanded`。点击展开的明细是具名的非模态 region，因此打开时焦点仍停留在触发器上，也不会错误宣称对话框焦点行为。提供方容量和总占用率属于权威数据；系统提示词、工具与消息的组成明确只是启发式估算。
+
 <a id="temporary-composer-entries"></a>
 ## 临时 composer entry
 

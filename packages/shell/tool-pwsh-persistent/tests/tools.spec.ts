@@ -94,7 +94,6 @@ type StubMode =
   | 'finish-torn-status'
   | 'end-only'
   | 'init-exit'
-  | 'init-timeout'
   | 'spawn-error'
   | 'send-error'
   | 'prompt-after-idle'
@@ -126,16 +125,6 @@ class StubTerminalSession implements TerminalBackendSession {
 
   startSend(request: TerminalSendRequest): TerminalSendOperation {
     this.sends += 1
-    if (request.text.startsWith('function prompt')) {
-      if (this.mode === 'init-exit') {
-        this.statusValue = { kind: 'exited', exitCode: 1, signal: null }
-        return this.operation(Promise.resolve(this.result('', 'session_exit')))
-      }
-      if (this.mode === 'init-timeout') {
-        return this.operation(Promise.resolve(this.result('', 'timeout')))
-      }
-      return this.operation(Promise.resolve(this.result(this.motd, 'stdin_read')))
-    }
     if (this.mode === 'send-error') throw new Error('stub send failed')
     if (this.throwOnSend) throw new Error('PTY session has exited')
     if (this.mode === 'wait-for-abort' || this.mode === 'end-on-abort') {
@@ -304,6 +293,9 @@ function stubBackend(initialMode: StubMode = 'normal') {
     async spawn() {
       if (initialMode === 'spawn-error') throw new Error('stub spawn failed')
       const session = new StubTerminalSession(initialMode)
+      if (initialMode === 'init-exit') {
+        session.statusValue = { kind: 'exited', exitCode: 1, signal: null }
+      }
       sessions.push(session)
       return session
     },
@@ -346,7 +338,7 @@ describe('tool-pwsh-persistent', () => {
     expect(text(await call(ctx, owner, 'Write-Output one'))).toBe('hello from stub')
     expect(text(await call(ctx, owner, 'Write-Output two'))).toBe('hello from stub')
     expect(stub.sessions).toHaveLength(1)
-    expect(stub.sessions[0]?.sends).toBe(3)
+    expect(stub.sessions[0]?.sends).toBe(2)
 
     const ownerWithoutCwd = await agent(ctx, undefined)
     expect(text(await call(ctx, ownerWithoutCwd, 'pwd'))).toBe('hello from stub')
@@ -702,10 +694,9 @@ describe('tool-pwsh-persistent', () => {
     expect(stub.sessions).toEqual([])
   })
 
-  it.each(['init-exit', 'init-timeout'] as const)(
-    'fails initialization and closes the unusable shell for %s',
-    async (mode) => {
-      const { ctx, owner, stub } = await setup({ backendType: 'stub' }, mode)
+  it('fails initialization and closes a shell published as exited',
+    async () => {
+      const { ctx, owner, stub } = await setup({ backendType: 'stub' }, 'init-exit')
       expect((await call(ctx, owner, 'pwd')).isError).toBe(true)
       expect(stub.sessions[0]?.closed).toContain('persistent pwsh initialization failed')
     },

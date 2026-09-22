@@ -81,6 +81,8 @@ Work-details modes control process-group display and reasoning previews; eligibl
 <a id="grouped-rendering"></a>
 ## Grouped rendering
 
+The transcript exposes a named log with live updates disabled and named user and assistant articles. A separate polite live region announces response, tool, and attention-request transitions without reading every streamed token or replaying loaded history.
+
 Chat registers its process Group Definition through `uiConversation.groups`. React renders the mixed `node`/`group` root sequence through stable Group and Node seats; group headers subscribe to data separately from member arrays. Settled group titles remain independent of the live-detail preference; only running titles update when that preference changes. [Process-group business rules](src/client/conversation-nodes/README.md#process-grouping) define segmentation and activity summaries.
 
 `groupPart` selects reasoning or response in the Assistant renderer without copying Node payloads. Each part has a distinct DOM anchor for reading-position restoration; Turn navigation addresses the original Node key and lands on its first visible part. Group sources, member parents, and keys survive display-mode changes and newly loaded prefixes that extend an intact group. The source Node Store remains the only Node-data owner, and a replaced Builder rebinds keyed subscriptions without remounting seats. Mode changes retain size observers and reuse the Turn-state selector.

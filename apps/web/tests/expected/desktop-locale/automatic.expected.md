@@ -19,9 +19,9 @@
   - button "增大字号"
   - button "减小字号"
   - text: px 工作过程展示 控制轮次和步骤的默认展开方式
-  - button "简洁"
+  - 'button "工作过程展示: 简洁"': 简洁
   - text: 性能与用量 选择性能与用量信息展示的详细程度
-  - button "详细"
+  - 'button "性能与用量: 详细"': 详细
   - text: 开发者工具 显示用于调试和排查问题的工具与信息
   - switch "开发者工具" [checked]
   - text: 繁忙时的发送行为 智能体运行时 Enter 键和发送按钮的行为；Cmd/Ctrl+Enter 使用另一行为

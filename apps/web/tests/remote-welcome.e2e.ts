@@ -23,7 +23,10 @@ describe.skipIf(MODE === 'record')('web e2e: remote welcome notice', () => {
       remoteAuthority: 'remote.localhost',
       welcomeNoticePending: true,
     })
-    browser = await chromium.launch()
+    // Chromium's wildcard .localhost behavior differs by host resolver. Map
+    // the test authority explicitly while retaining it in the page URL and
+    // HTTP Host header, which are the product semantics under test.
+    browser = await chromium.launch({ args: ['--host-resolver-rules=MAP remote.localhost 127.0.0.1'] })
     page = await browser.newPage({
       viewport: { width: 1440, height: 960 },
       locale: ZH_BROWSER_LOCALE,

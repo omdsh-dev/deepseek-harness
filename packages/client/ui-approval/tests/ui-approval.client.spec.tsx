@@ -334,7 +334,7 @@ describe('ApprovalPanel', () => {
     expect(props.renderSlot).not.toHaveBeenCalled()
     fireEvent.click(screen.getByRole('button', { name: 'Reject' }))
 
-    expect(document.querySelector('[data-approval-key]')?.getAttribute('aria-busy')).toBe('true')
+    expect(document.querySelector('[data-approval-key] [aria-busy]')?.getAttribute('aria-busy')).toBe('true')
     await expect(pending.result).resolves.toBe('rejected')
     expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Reject' }).disabled).toBe(true)
     expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Allow once' }).disabled).toBe(true)
@@ -356,7 +356,7 @@ describe('ApprovalPanel', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: 'Allow once' }))
     expect(document.querySelector('[data-approval-key] [data-state="ongoing"]')).not.toBeNull()
-    expect(document.querySelector('[data-approval-key]')?.getAttribute('aria-busy')).toBe('true')
+    expect(document.querySelector('[data-approval-key] [aria-busy]')?.getAttribute('aria-busy')).toBe('true')
 
     await expect(pending.result).resolves.toBe('allowed-once')
   })
@@ -368,10 +368,27 @@ describe('ApprovalPanel', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Allow once' }))
     expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Allow once' }).disabled).toBe(true)
+    expect(screen.getByText('Waiting').closest('[aria-busy="true"]')).toBeTruthy()
     await waitFor(() => {
       expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Allow once' }).disabled).toBe(false)
     })
-    expect(document.querySelector('[data-approval-key]')?.getAttribute('aria-busy')).toBe('false')
+    expect(screen.getByRole('alert').textContent).toBe('transport closed')
+    pending.abort(new Error('test cleanup'))
+    await pending.result.catch(() => {})
+  })
+
+  it('announces a non-Error rejection without leaving the panel busy', async () => {
+    const pending = new PendingApproval(id('s1'), { toolName: 'bash' })
+    vi.spyOn(pending, 'answer').mockRejectedValue('transport unavailable')
+    render(<ApprovalPanel {...panelProps(pending)} />)
+
+    const card = screen.getByText('Waiting').closest('[data-approval-key]')?.firstElementChild
+    expect(card?.hasAttribute('aria-busy')).toBe(false)
+    fireEvent.click(screen.getByRole('button', { name: 'Reject' }))
+    await waitFor(() => {
+      expect(screen.getByRole('alert').textContent).toBe('transport unavailable')
+    })
+    expect(card?.hasAttribute('aria-busy')).toBe(false)
     pending.abort(new Error('test cleanup'))
     await pending.result.catch(() => {})
   })

@@ -10,7 +10,7 @@
  * null; the overlay slot stays mounted. The card height clamps to the space
  * above the composer.
  */
-import { useEffect, useRef } from 'react'
+import { useEffect, useId, useRef } from 'react'
 import { useSyncExternalStore } from 'react'
 import clsx from 'clsx'
 import { IconCheckOutlineRegular, RiskConfirmation, useAnchoredMaxHeight } from '@deepseek-ai/dsh-client-ui-primitives'
@@ -43,6 +43,7 @@ export function PopupSelectView({ popup, t }: PopupSelectViewProps) {
   )
   const cardRef = useRef<HTMLDivElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
+  const listboxId = useId()
   // The card is bottom-anchored above the composer; clamp the design cap to
   // the space above it, re-measured on every store update.
   const maxHeight = useAnchoredMaxHeight(cardRef, MAX_HEIGHT, state)
@@ -79,6 +80,9 @@ export function PopupSelectView({ popup, t }: PopupSelectViewProps) {
 
   const rows = filterOptions(state.options, state.search)
   const confirmation = state.confirming?.confirmation
+  const activeOptionId = active !== null && rows[active] !== undefined
+    ? `${listboxId}-option-${String(active)}`
+    : undefined
 
   const onKeyDown = (ev: React.KeyboardEvent<HTMLDivElement>): void => {
     // ArrowLeft/ArrowRight fall through on purpose: the search input keeps
@@ -131,6 +135,11 @@ export function PopupSelectView({ popup, t }: PopupSelectViewProps) {
             ref={searchRef}
             className={css.search}
             type="text"
+            role="combobox"
+            aria-autocomplete="list"
+            aria-expanded={state.status === 'ready'}
+            aria-controls={state.status === 'ready' ? listboxId : undefined}
+            aria-activedescendant={activeOptionId}
             placeholder={t('search.placeholder')}
             aria-label={t('search.aria')}
             value={state.search}
@@ -145,13 +154,19 @@ export function PopupSelectView({ popup, t }: PopupSelectViewProps) {
               )}
             </div>
           )}
-          {state.status === 'pending' && <div className={css.status}>{t('status.loading')}</div>}
-          {state.submitting && <div className={css.status}>{t('status.applying')}</div>}
-          {state.status === 'ready' && rows.length === 0 && <div className={css.status}>{t('status.empty')}</div>}
+          {state.status === 'pending' && <div className={css.status} role="status">{t('status.loading')}</div>}
+          {state.submitting && <div className={css.status} role="status">{t('status.applying')}</div>}
+          {state.status === 'ready' && rows.length === 0 && <div className={css.status} role="status">{t('status.empty')}</div>}
           {state.status === 'ready' && (
-            <div role="listbox" aria-label={t('listbox.aria', { command: String(state.command) })} className={css.viewport}>
+            <div
+              id={listboxId}
+              role="listbox"
+              aria-label={t('listbox.aria', { command: String(state.command) })}
+              className={css.viewport}
+            >
               {rows.map((option, index) => (
                 <div
+                  id={`${listboxId}-option-${String(index)}`}
                   key={option.id}
                   role="option"
                   aria-selected={index === state.active}

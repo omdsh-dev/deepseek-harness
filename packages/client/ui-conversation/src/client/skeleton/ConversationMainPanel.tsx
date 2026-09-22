@@ -1,3 +1,4 @@
+import { useId } from 'react'
 import type { ConversationSlotProps } from '../contract/slots.ts'
 import { conversationPhase } from '../contract/snapshot.ts'
 import { ConversationWidthControls } from './ConversationWidthControls.tsx'
@@ -9,6 +10,7 @@ import css from './ConversationRoot.module.css'
  * @returns the unchanged root, Header, content, and width-control subtree.
  */
 export function ConversationMainPanel(props: ConversationSlotProps) {
+  const viewTabGroupId = useId()
   const { sessionId, useSession, useSessions, useConversation, renderSlot, renderFactorySlot } = props
   const session = useSession(s => s)
   const conversation = useConversation(s => s)
@@ -42,9 +44,10 @@ export function ConversationMainPanel(props: ConversationSlotProps) {
 
   return (
     <div className={css.root} data-phase={phase}>
-      {renderSlot('conversation.header', {})}
+      {renderSlot('conversation.header', { viewTabGroupId })}
       {renderFactorySlot('conversation.content', {
         variant: 'main',
+        viewTabGroupId,
         phase,
         hero,
       }, {

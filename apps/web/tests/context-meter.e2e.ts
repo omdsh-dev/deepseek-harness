@@ -48,7 +48,7 @@ describe.skipIf(webSnapshotMode() === 'record')('web e2e: context details placem
           }
         })).toEqual({ above: '4px', below: '4px' })
         await trigger.click()
-        const panel = page.getByRole('dialog', { name: 'of context used', exact: true })
+        const panel = page.getByRole('region', { name: 'of context used', exact: true })
         await panel.waitFor()
         for (const width of [390, 800, 1280]) {
           await page.setViewportSize({ width, height: 900 })

@@ -55,6 +55,69 @@ function state(overrides: Partial<ModelDirectoryState> = {}): ModelDirectoryStat
 afterEach(cleanup)
 
 describe('ModelSelect reasoning effort', () => {
+  it('implements one menu-button Tab stop with edge opening, roving keys, pane entry, and focus return', async () => {
+    const groups = [{
+      id: 'deepseek-official',
+      name: 'DeepSeek',
+      models: [
+        { id: 'deepseek-v4-flash', name: 'DeepSeek-V4-Flash', reasoning },
+        { id: 'deepseek-v4-pro', name: 'DeepSeek-V4-Pro' },
+      ],
+    }]
+    const directory = createSnapshotStore<ModelDirectoryState>(state({ groups }))
+    render(<ModelSelect
+      locked={false}
+      available
+      directory={directory}
+      load={vi.fn()}
+      select={vi.fn().mockResolvedValue(true)}
+      t={t}
+    />)
+
+    const trigger = screen.getByRole('button', { name: /选择模型，当前/ })
+    trigger.focus()
+    fireEvent.keyDown(trigger, { key: 'ArrowDown' })
+    const rootItems = await screen.findAllByRole('menuitem')
+    await waitFor(() => { expect(document.activeElement).toBe(rootItems[0]) })
+    expect(rootItems.every(item => item.getAttribute('tabindex') === '-1')).toBe(true)
+    expect(rootItems.every(item => item.getAttribute('aria-haspopup') === 'menu')).toBe(true)
+
+    fireEvent.keyDown(rootItems[0]!, { key: 'End' })
+    expect(document.activeElement).toBe(rootItems[1])
+    fireEvent.keyDown(rootItems[1]!, { key: 'Home' })
+    expect(document.activeElement).toBe(rootItems[0])
+    fireEvent.keyDown(rootItems[0]!, { key: 'ArrowRight' })
+
+    let choices = await screen.findAllByRole('menuitemradio')
+    await waitFor(() => { expect(document.activeElement).toBe(choices[0]) })
+    expect(choices[0]!.getAttribute('aria-checked')).toBe('true')
+    fireEvent.keyDown(choices[0]!, { key: 'ArrowDown' })
+    expect(document.activeElement).toBe(choices[1])
+    fireEvent.keyDown(choices[1]!, { key: 'ArrowLeft' })
+
+    const returnedRoot = await screen.findAllByRole('menuitem')
+    await waitFor(() => { expect(document.activeElement).toBe(returnedRoot[0]) })
+    fireEvent.keyDown(returnedRoot[0]!, { key: 'End' })
+    fireEvent.keyDown(returnedRoot[1]!, { key: 'ArrowRight' })
+    choices = await screen.findAllByRole('menuitemradio')
+    const selectedEffort = choices.find(item => item.getAttribute('aria-checked') === 'true')
+    await waitFor(() => { expect(document.activeElement).toBe(selectedEffort) })
+
+    fireEvent.keyDown(selectedEffort!, { key: 'Escape' })
+    const effortParent = await screen.findAllByRole('menuitem')
+    await waitFor(() => { expect(document.activeElement).toBe(effortParent[1]) })
+    fireEvent.keyDown(effortParent[1]!, { key: 'Escape' })
+    await waitFor(() => {
+      expect(screen.queryByRole('menu')).toBeNull()
+      expect(document.activeElement).toBe(trigger)
+    })
+
+    trigger.focus()
+    fireEvent.keyDown(trigger, { key: 'ArrowUp' })
+    const edgeItems = await screen.findAllByRole('menuitem')
+    await waitFor(() => { expect(document.activeElement).toBe(edgeItems.at(-1)) })
+  })
+
   it('renders effort names without descriptions and submits the effort as part of the session selection', async () => {
     const directory = createSnapshotStore<ModelDirectoryState>(state())
     const select = vi.fn(async (selection: ModelSelection) => {
@@ -281,7 +344,7 @@ describe('ModelSelect keyboard walk', () => {
     // enters at the first cell instead of skipping it. false = preventDefault ran.
     const cells = screen.getAllByRole('menuitem')
     expect(fireEvent.keyDown(cells[0]!, { key: 'ArrowDown' })).toBe(false)
-    expect(document.activeElement).toBe(cells[0])
+    expect(document.activeElement).toBe(cells[1])
 
     fireEvent.click(screen.getByRole('menuitem', { name: /推理等级/ }))
     const rows = screen.getAllByRole('menuitemradio')
@@ -296,50 +359,37 @@ describe('ModelSelect keyboard walk', () => {
     expect(screen.getByRole('menu')).toBeTruthy()
   })
 
-  it('Tab settles the focused row like Enter and closes the menu', async () => {
+  it('Tab leaves without changing the focused model choice', () => {
     const select = mountOpen()
     fireEvent.click(screen.getByRole('menuitem', { name: /推理等级/ }))
     const rows = screen.getAllByRole('menuitemradio')
-    fireEvent.keyDown(rows[1]!, { key: 'ArrowDown' }) // High → Max
-    expect(fireEvent.keyDown(rows[2]!, { key: 'Tab' })).toBe(false)
-    expect(select).toHaveBeenCalledWith({
-      provider: 'deepseek-official', model: 'deepseek-v4-flash', reasoningEffort: 'max',
-    })
-    await waitFor(() => { expect(screen.queryByRole('menu')).toBeNull() })
+    fireEvent.keyDown(rows[1]!, { key: 'ArrowDown' })
+    expect(fireEvent.keyDown(rows[2]!, { key: 'Tab' })).toBe(true)
+    expect(select).not.toHaveBeenCalled()
+    expect(screen.queryByRole('menu')).toBeNull()
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: /选择模型/ }))
   })
 
-  it('Shift+Tab leaves a drilled pane and then closes, like Escape', () => {
-    mountOpen()
+
+  it('Shift+Tab leaves a drilled pane without applying a selection', () => {
+    const select = mountOpen()
     fireEvent.click(screen.getByRole('menuitem', { name: /推理等级/ }))
     const rows = screen.getAllByRole('menuitemradio')
-    expect(fireEvent.keyDown(rows[0]!, { key: 'Tab', shiftKey: true })).toBe(false)
-    // Back on the drilled cell, then closed on the second press.
-    const cells = screen.getAllByRole('menuitem')
-    expect(document.activeElement).toBe(cells[1])
-    expect(screen.getByRole('menu')).toBeTruthy()
-    fireEvent.keyDown(cells[1]!, { key: 'Tab', shiftKey: true })
+    expect(fireEvent.keyDown(rows[0]!, { key: 'Tab', shiftKey: true })).toBe(true)
     expect(screen.queryByRole('menu')).toBeNull()
+    expect(select).not.toHaveBeenCalled()
   })
 
-  it('Tab with the keyboard still on the trigger enters the menu at the value in use', () => {
-    render(<ModelSelect
-      locked={false}
-      available
-      directory={createSnapshotStore(state())}
-      load={vi.fn()}
-      select={vi.fn().mockResolvedValue({ ok: true, value: undefined })}
-      t={t}
-    />)
+
+  it('Tab on an open trigger closes the menu and preserves native traversal', () => {
+    const select = mountOpen()
     const trigger = screen.getByRole('button', { name: /选择模型/ })
-    // A real click focuses the trigger first; jsdom's does not.
     trigger.focus()
-    fireEvent.click(trigger)
-    expect(fireEvent.keyDown(trigger, { key: 'Tab' })).toBe(false)
-    // The root pane's first cell carries the current selection.
-    const cells = screen.getAllByRole('menuitem')
-    expect(document.activeElement).toBe(cells[0])
-    expect(screen.getByRole('menu')).toBeTruthy()
+    expect(fireEvent.keyDown(trigger, { key: 'Tab' })).toBe(true)
+    expect(screen.queryByRole('menu')).toBeNull()
+    expect(select).not.toHaveBeenCalled()
   })
+
 
   it('a backward step from outside the list enters at the last row, and a closed menu leaves Tab native', () => {
     mountOpen()
@@ -382,16 +432,17 @@ describe('ModelSelect keyboard walk', () => {
     trigger.focus()
     fireEvent.click(trigger)
     fireEvent.click(screen.getByRole('menuitem', { name: /^模型/ }))
-    // No rows to hand the keyboard to: the trigger keeps it, so the card's
-    // keys still reach the menu.
-    expect(document.activeElement).toBe(trigger)
+    // An empty pane retains keyboard ownership on the menu container.
+    expect(document.activeElement).toBe(screen.getByRole('menu'))
 
     const retry = screen.getByRole('button', { name: '重试' })
     retry.focus()
-    // A control that is not a row keeps the browser's traversal.
+    // Tab leaves the whole composite without activating Retry.
     expect(fireEvent.keyDown(retry, { key: 'Tab' })).toBe(true)
-    // Escape still backs out of the pane and then closes the card.
-    fireEvent.keyDown(retry, { key: 'Escape' })
+    expect(screen.queryByRole('menu')).toBeNull()
+    fireEvent.click(trigger)
+    fireEvent.click(screen.getByRole('menuitem', { name: /^模型/ }))
+    fireEvent.keyDown(screen.getByRole('button', { name: '重试' }), { key: 'Escape' })
     // Back on the root pane, whose only cell remains (no model means no effort row).
     const cell = screen.getAllByRole('menuitem')[0]!
     fireEvent.keyDown(cell, { key: 'Escape' })

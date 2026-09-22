@@ -133,10 +133,10 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
     'conversation.session': {
       kind: 'single'
       scope: 'session'
-      owner: { view?: string }
+      owner: { view?: string; viewTabGroupId?: string | undefined }
     }
     /** Resident navigation container, including when no Session is selected. */
-    'conversation.header': { kind: 'single'; scope: 'session-maybe' }
+    'conversation.header': { kind: 'single'; scope: 'session-maybe'; owner: { viewTabGroupId?: string | undefined } }
     /** Strict per-Session title, actions, and View navigation. */
     'conversation.session.header': {
       kind: 'single'
@@ -144,6 +144,8 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
       owner: {
         /** Parent-owned visibility shared with the header container styling. */
         hideChrome: boolean
+        /** Mounted host identity linking only this header's tabs to its body. */
+        viewTabGroupId?: string | undefined
       }
     }
     /** Optional replacement for one Session breadcrumb title. */
@@ -240,7 +242,7 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
       inject: ConversationInjected
       locale: 'conversation'
       slots: {
-        views: { scope: 'session' }
+        views: { scope: 'session'; props: { viewTabGroupId?: string | undefined } }
         widthControls: { scope: 'root'; props: ConversationWidthControlsInputProps }
       }
     }
@@ -455,6 +457,8 @@ export type ConversationSlotProps =
 
 /** Inputs shared by main and embedded Conversation content occurrences. */
 export interface ConversationContentInputProps {
+  /** Host-local tab identity; embedded content without a header omits it. */
+  viewTabGroupId?: string | undefined
   variant: 'main' | 'embedded'
   phase: 'settling' | 'hero' | 'active'
   hero: boolean

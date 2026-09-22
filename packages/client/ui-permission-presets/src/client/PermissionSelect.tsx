@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import clsx from 'clsx'
 import {
@@ -82,6 +82,8 @@ export function PermissionSelect({
   const [open, setOpen] = useState(false)
   const [confirmation, setConfirmation] = useState<string | null>(null)
   const [acknowledged, setAcknowledged] = useState(false)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const restoreAfterSubmitRef = useRef(false)
 
   useEffect(() => {
     if (!locked && selection !== undefined && catalog !== null
@@ -89,7 +91,22 @@ export function PermissionSelect({
     setOpen(false)
     setAcknowledged(false)
     setConfirmation(null)
+    if (selection === undefined || catalog === null) restoreAfterSubmitRef.current = false
   }, [catalog, confirmation, locked, selection])
+
+  useEffect(() => {
+    if (pick !== null || locked || !restoreAfterSubmitRef.current) return
+    // Admission can settle before the input shell unlocks. Restore only after
+    // that commit's effects, when the durable trigger accepts focus again.
+    let cancelled = false
+    queueMicrotask(() => {
+      const trigger = triggerRef.current
+      if (cancelled || !restoreAfterSubmitRef.current || trigger?.isConnected !== true || trigger.disabled) return
+      restoreAfterSubmitRef.current = false
+      trigger.focus()
+    })
+    return () => { cancelled = true }
+  }, [locked, pick, selection, catalog])
 
   if (selection === undefined || catalog === null) return null
 
@@ -107,6 +124,7 @@ export function PermissionSelect({
     const badge = optionBadge(option.value, t)
     return {
       id: option.value,
+      selection: 'radio',
       label: badge === undefined
         ? label
         : (
@@ -120,6 +138,7 @@ export function PermissionSelect({
   })
 
   const submit = (id: string): void => {
+    restoreAfterSubmitRef.current = true
     setPick(id)
     void select(id)
       .catch(() => false)
@@ -129,6 +148,7 @@ export function PermissionSelect({
   const choose = (id: string): void => {
     setOpen(false)
     if (id === selection.currentValue) return
+    triggerRef.current?.focus()
     if (id === FULL_ACCESS || id === AUTO_REVIEW) {
       setAcknowledged(false)
       setConfirmation(id)
@@ -174,6 +194,7 @@ export function PermissionSelect({
         portal
         anchor={
           <button
+            ref={triggerRef}
             type="button"
             className={css.trigger}
             aria-label={t('mode', { name: currentAccessibleLabel })}

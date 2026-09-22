@@ -162,8 +162,8 @@ describe('web e2e: PTC mode round renders nested sub-calls', () => {
     const row = page.locator('tr[data-kind="tool"]').filter({ hasText: 'run_code' }).first()
     await row.click()
     await page.getByRole('tab', { name: 'Code', exact: true }).waitFor()
-    expect(await page.getByRole('tabpanel').textContent()).toContain(args.description)
-    expect(await page.getByRole('tabpanel').locator('dl').first().locator('dt').allTextContents())
+    expect(await page.locator('#trajectory-detail-panel').textContent()).toContain(args.description)
+    expect(await page.locator('#trajectory-detail-panel').locator('dl').first().locator('dt').allTextContents())
       .toEqual(['Hierarchy', 'Status'])
     const overview = await Promise.all([1, 2].map(index => captureStableAria(
       page, `[role="tabpanel"] [class*="overviewSections"] > section:nth-child(${index})`, scaffold.workspaceCwd,
@@ -181,7 +181,7 @@ describe('web e2e: PTC mode round renders nested sub-calls', () => {
     await wrap.click()
     expect(await wrap.getAttribute('aria-pressed')).toBe('true')
     await expect.poll(() => content.evaluate(element => element.scrollWidth - element.clientWidth)).toBeLessThanOrEqual(1)
-    const code = await captureStableAria(page, '[role="tabpanel"]', scaffold.workspaceCwd)
+    const code = await captureStableAria(page, '#trajectory-detail-panel', scaffold.workspaceCwd)
     await compareOrRefreshGolden(CODE_EXPECTED, code, MODE)
 
     await page.getByRole('button', { name: 'Original JSON' }).click()

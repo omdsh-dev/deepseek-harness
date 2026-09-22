@@ -309,6 +309,13 @@ describe('SubagentHeaderLineage', () => {
     const input = props(catalog())
     render(<HeaderCatalog {...input} />)
     const trigger = screen.getByRole('button', { name: /1 个子代理，正在运行/ })
+    expect(trigger.getAttribute('aria-controls')).toBeTruthy()
+    fireEvent.keyDown(trigger, { key: 'ArrowUp' })
+    await Promise.resolve()
+    expect(document.activeElement).toBe(screen.getByRole('treeitem', { name: /reviewer/ }))
+    fireEvent.keyDown(document.activeElement as Element, { key: 'Escape' })
+    await Promise.resolve()
+    expect(document.activeElement).toBe(trigger)
     fireEvent.keyDown(trigger, { key: 'ArrowDown' })
     await Promise.resolve()
     expect(document.activeElement).toBe(screen.getByRole('treeitem', { name: /worker/ }))
@@ -319,6 +326,9 @@ describe('SubagentHeaderLineage', () => {
     expect(document.activeElement).toBe(screen.getByRole('treeitem', { name: /worker/ }))
     fireEvent.keyDown(document.activeElement as Element, { key: 'ArrowUp' })
     expect(document.activeElement).toBe(screen.getByRole('treeitem', { name: /reviewer/ }))
+    fireEvent.keyDown(document.activeElement as Element, { key: 'ArrowLeft' })
+    expect(document.activeElement).toBe(screen.getByRole('treeitem', { name: /reviewer/ }))
+    expect(screen.getAllByRole('treeitem').filter(item => item.tabIndex === 0)).toHaveLength(1)
     fireEvent.keyDown(document.activeElement as Element, { key: 'Escape' })
     await Promise.resolve()
     expect(screen.queryByRole('tree')).toBeNull()
@@ -331,7 +341,7 @@ describe('SubagentHeaderLineage', () => {
     expect(screen.queryByRole('tree')).toBeNull()
   })
 
-  it('opens only on hover and preserves the portaled-menu crossing grace', async () => {
+  it('opens by native activation or hover and preserves the portaled-menu crossing grace', async () => {
     vi.useFakeTimers()
     const advance = async (duration: number): Promise<void> => {
       await act(async () => { await vi.advanceTimersByTimeAsync(duration) })
@@ -341,6 +351,9 @@ describe('SubagentHeaderLineage', () => {
     const triggerRect = vi.spyOn(trigger, 'getBoundingClientRect')
       .mockReturnValue({ bottom: 40, left: 50 } as DOMRect)
 
+    fireEvent.click(trigger)
+    expect(screen.getByRole('tree')).toBeTruthy()
+    expect(trigger.getAttribute('aria-expanded')).toBe('true')
     fireEvent.click(trigger)
     expect(screen.queryByRole('tree')).toBeNull()
 
@@ -685,9 +698,47 @@ describe('SubagentHeaderLineage', () => {
     await Promise.resolve()
     const worker = screen.getByRole('treeitem', { name: /worker/ })
     fireEvent.keyDown(worker, { key: 'ArrowRight' })
-    expect(screen.getByRole('treeitem', { name: /indexer/ })).toBeTruthy()
+    const indexer = screen.getByRole('treeitem', { name: /indexer/ })
+    expect(indexer).toBeTruthy()
+    fireEvent.keyDown(worker, { key: 'ArrowRight' })
+    expect(document.activeElement).toBe(indexer)
+    fireEvent.keyDown(indexer, { key: 'ArrowLeft' })
+    expect(document.activeElement).toBe(worker)
     fireEvent.keyDown(worker, { key: 'ArrowLeft' })
     expect(screen.queryByRole('treeitem', { name: /indexer/ })).toBeNull()
+  })
+
+  it('keeps focus on an expanded branch that has no enabled child row', () => {
+    const input = props(catalog(), {
+      [CHILD]: catalog({
+        entries: [], state: 'error', error: new RemoteError('gateway/internal', 'corrupt', {}),
+      }),
+    })
+    render(<HeaderCatalog {...input} />)
+    fireEvent.click(screen.getByRole('button', { name: /1 个子代理/ }))
+    const worker = screen.getByRole('treeitem', { name: /worker/ })
+    worker.focus()
+
+    fireEvent.keyDown(worker, { key: 'ArrowRight' })
+    expect(screen.getByText('corrupt')).toBeTruthy()
+    fireEvent.keyDown(worker, { key: 'ArrowRight' })
+    expect(document.activeElement).toBe(worker)
+  })
+
+  it('repairs the roving tab stop when a refreshed catalog removes its owner', () => {
+    const view = render(<HeaderCatalog {...props(catalog())} />)
+    fireEvent.click(screen.getByRole('button', { name: /1 个子代理/ }))
+    const reviewer = screen.getByRole('treeitem', { name: /reviewer/ })
+    fireEvent.focus(reviewer)
+    expect(reviewer.tabIndex).toBe(0)
+
+    view.rerender(<HeaderCatalog {...props(catalog({
+      entries: [{
+        id: CHILD, mode: 'continuable', label: 'worker',
+        activity: 'running',
+      }],
+    }))} />)
+    expect(screen.getByRole('treeitem', { name: /worker/ }).tabIndex).toBe(0)
   })
 
   it('closes expanded descendants even when their own catalogs have not arrived', () => {

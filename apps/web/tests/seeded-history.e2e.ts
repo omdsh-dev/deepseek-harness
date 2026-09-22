@@ -474,7 +474,7 @@ describe('web e2e: seeded history renders through cold resume', () => {
     // Interaction over cold-resumed history: read summaries are file links
     // that open a text-preview tab in the right Sidebar (not expand-in-place).
     // Runs after the golden capture; still zero model calls.
-    const fileLink = page.locator('[data-variant="read"] button').first()
+    const fileLink = page.locator('[data-variant="read"] button[aria-label="Open file a.txt"]').first()
     await expandOwningTurnProcess(page, fileLink)
     await fileLink.waitFor({ timeout: 10_000 })
     const frame = page.locator('[style*="grid-template-columns"]').first()
@@ -698,7 +698,7 @@ describe('web e2e: seeded history renders through cold resume', () => {
   it.skipIf(MODE === 'record')('an Access-chip switch persists its command without adding a Chat row', async () => {
     onTestFailed(() => saveFailureShot(page, 'web-e2e-seeded-command-row'))
     await page.getByRole('button', { name: 'Access mode, current: Workspace Write' }).click()
-    await page.getByRole('menuitem', { name: 'Read Only' }).click()
+    await page.getByRole('menuitemradio', { name: 'Read Only' }).click()
     const access = page.getByRole('button', { name: 'Access mode, current: Read Only' })
     await expect.poll(() => access.isEnabled(), { timeout: 10_000 }).toBe(true)
     const row = page.locator('[data-variant="others"]').filter({ hasText: 'preset read-only' })
