@@ -483,10 +483,11 @@ it('adds private deployment cookies to every Platform request without exposing t
   expect(JSON.stringify(await f.account.getState())).not.toContain('test_gate')
   await f.account.signOut()
   await expect.poll(f.logoutCount).toBe(1)
-  expect(f.receivedHeaders.map(item => item.path)).toEqual([
-    '/auth-api/v0/dsh/auth_init', '/auth-api/v0/dsh/auth_exchange',
-    '/auth-api/v0/users/current', '/api/v0/users/get_user_summary', '/auth-api/v0/users/logout',
-  ])
+  const paths = f.receivedHeaders.map(item => item.path)
+  expect(paths.slice(0, 2)).toEqual(['/auth-api/v0/dsh/auth_init', '/auth-api/v0/dsh/auth_exchange'])
+  // Profile and balance use independent concurrent requests.
+  expect(paths.slice(2, 4).toSorted()).toEqual(['/api/v0/users/get_user_summary', '/auth-api/v0/users/current'])
+  expect(paths.slice(4)).toEqual(['/auth-api/v0/users/logout'])
   expect(f.receivedHeaders.every(item => item.cookie === 'test_gate=synthetic')).toBe(true)
   expect(f.receivedHeaders.slice(2).every(item => item.authorization === 'dsh_mock_test')).toBe(true)
 })
