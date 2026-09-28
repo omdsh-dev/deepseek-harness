@@ -7,6 +7,16 @@ import { pathToFileURL } from 'node:url'
 /** Command-line dispatch for PR policy checks and Issue lifecycle events. */
 import { runLifecycle } from './lifecycle.mjs'
 import { runPullRequestCheck, runPullRequestPreflight } from './pull-request.mjs'
+import config from './config.json' with { type: 'json' }
+
+// Read-only PR policy should follow the repository running the workflow. This
+// preserves the checked-in upstream defaults for local use while making forks
+// validate their own pull requests instead of querying the upstream PR number.
+const runtimeRepository = process.env.GITHUB_REPOSITORY?.split('/')
+if (runtimeRepository?.length === 2 && runtimeRepository.every(Boolean)) {
+  config.organization = runtimeRepository[0]
+  config.repository = runtimeRepository[1]
+}
 
 function readEvent() {
   if (!process.env.GITHUB_EVENT_PATH) throw new Error('GITHUB_EVENT_PATH 未设置')

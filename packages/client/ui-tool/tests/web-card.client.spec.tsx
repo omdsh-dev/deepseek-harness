@@ -185,11 +185,18 @@ describe('chat row web body', () => {
     expect(link.getAttribute('href')).toBe('https://example.com/page')
     expect(link.getAttribute('target')).toBe('_blank')
     expect(link.getAttribute('rel')).toBe('noopener noreferrer')
+    expect(link.closest('[role="button"], button')).toBeNull()
+    const disclosure = view.getByRole('button', { name: /网页获取.*https:\/\/example\.com\/page/ })
+    expect(disclosure.tagName).toBe('BUTTON')
+    expect(disclosure.getAttribute('aria-expanded')).toBe('false')
     // jsdom does not implement navigation; cancel it after the row's handlers run.
     link.addEventListener('click', (event) => { event.preventDefault() })
     fireEvent.click(link)
     fireEvent.keyDown(link, { key: 'Enter' })
     expect(view.container.querySelector('[data-web]')).toBeNull()
+    fireEvent.click(disclosure)
+    expect(disclosure.getAttribute('aria-expanded')).toBe('true')
+    expect(view.container.querySelector('[data-web="fetch"]')).not.toBeNull()
   })
 
   it('a failed web fetch keeps its plain error summary', () => {

@@ -1,4 +1,4 @@
-import { memo, useCallback, useMemo, type KeyboardEvent } from 'react'
+import { memo, useCallback, useMemo, useId, type KeyboardEvent } from 'react'
 import type { Context } from '@deepseek-ai/cordis'
 import clsx from 'clsx'
 import {
@@ -24,13 +24,14 @@ type BashRowProps = ToolCallViewProps & PropsLocale<'conversation'>
 
 const BASH_ICON = <IconApiOutlineRegular size={14} />
 
-/** Visually hidden status for the color-only running sweep and error tone. */
-function stateStatus(state: ToolRowState, t: BashRowProps['t']): string | null {
+/** Visually hidden status — StateDot is aria-hidden; AT needs a text label. */
+function stateStatus(state: ToolRowState, t: BashRowProps['t']): string {
   switch (state) {
+    case 'preparing': return t('row.preparing')
     case 'running': return t('bash.running')
+    case 'ok': return t('bash.completed')
     case 'error': return t('bash.failed')
     case 'stopped': return t('bash.stopped')
-    default: return null
   }
 }
 
@@ -60,6 +61,7 @@ const StartedBashRow = memo(function StartedBashRow({ toolName, block, sessionId
     : model.state
   const status = stateStatus(state, t)
   const { expanded, toggle: toggleExpand } = useDisclosure()
+  const bodyId = useId()
   // Failures, persistent-shell results, and spill previews use a generic body;
   // background acknowledgements and malformed calls remain collapsed.
   const genericBody = terminal === null
@@ -104,11 +106,12 @@ const StartedBashRow = memo(function StartedBashRow({ toolName, block, sessionId
         role={expandable ? 'button' : undefined}
         tabIndex={expandable ? 0 : undefined}
         aria-expanded={expandable ? open : undefined}
+        aria-controls={expandable ? bodyId : undefined}
         onClick={expandable ? toggleExpand : undefined}
         onKeyDown={expandable ? toggleFromKeyboard : undefined}
       >
         <span className={css.leading}>{leading}</span>
-        {status !== null && <span className={css.visuallyHidden}>{status}</span>}
+        <span className={css.visuallyHidden}>{status}</span>
         <TextShimmer className={css.title} active={running}>{t(model.titleKey)}</TextShimmer>
         <span className={css.sep} aria-hidden />
         <span className={clsx(
@@ -119,9 +122,9 @@ const StartedBashRow = memo(function StartedBashRow({ toolName, block, sessionId
           <TextShimmer active={running}>{settlementLine ?? normalSummary}</TextShimmer>
         </span>
       </div>
-      {open && (
-        <div className={css.bodyWrap}>
-          {terminal !== null
+      {expandable && (
+        <div id={bodyId} className={css.bodyWrap} hidden={!open}>
+          {open && (terminal !== null
             ? (
               <TerminalBlock
                 {...terminal.card}
@@ -150,8 +153,8 @@ const StartedBashRow = memo(function StartedBashRow({ toolName, block, sessionId
                   </div>
                 )}
               </div>
-            )}
-          {inspect !== undefined && (
+            ))}
+          {open && inspect !== undefined && (
             <button type="button" className={css.inspectButton} onClick={inspect}>
               <IconInspectOutlineRegular />
               {t('row.inspect')}

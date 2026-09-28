@@ -11,7 +11,7 @@
   - button "New tab"
   - button "Split" [disabled]
   - button "Exit fullscreen"
-  - button "Collapse right sidebar"
+  - button "Collapse right sidebar" [expanded]
 - textbox "Terminal"
 - tablist:
   - tab "Files Close" [selected]:

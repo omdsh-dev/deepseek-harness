@@ -7,7 +7,23 @@ import { focusWithoutRing } from './focus.ts'
 /** Dialog and menu elements whose document order determines foreground shortcut ownership. */
 export const modalSelector = '[role="dialog"][aria-modal="true"], [role="menu"]'
 
-const layers = new WeakMap<Document, { element: HTMLElement; close: () => void }[]>()
+interface ModalLayer {
+  element: HTMLElement
+  close: () => void
+  previousInert: boolean
+}
+
+interface ModalState {
+  layers: ModalLayer[]
+  background: { element: HTMLElement; previousInert: boolean } | null
+}
+
+const documents = new WeakMap<Document, ModalState>()
+
+function syncInertness(state: ModalState): void {
+  const top = state.layers.at(-1)
+  for (const layer of state.layers) layer.element.inert = layer === top ? layer.previousInert : true
+}
 
 /**
  * Request closure of the foreground registered modal using its current onClose callback.
@@ -15,7 +31,7 @@ const layers = new WeakMap<Document, { element: HTMLElement; close: () => void }
  * @param document - product document whose modal owns the close command.
  */
 export function closeTopModal(document: Document): void {
-  const top = layers.get(document)?.at(-1)
+  const top = documents.get(document)?.layers.at(-1)
   if (top === undefined) return
   const foreground = [...document.querySelectorAll(modalSelector)].at(-1)
   if (foreground === top.element) top.close()
@@ -27,11 +43,18 @@ export function closeTopModal(document: Document): void {
  */
 export function isBehindModal(anchor: HTMLElement | null): boolean {
   if (anchor === null) return false
-  const top = layers.get(anchor.ownerDocument)?.at(-1)
+  const top = documents.get(anchor.ownerDocument)?.layers.at(-1)
   return top !== undefined && !top.element.contains(anchor)
 }
 
-const focusable = 'button:not(:disabled), input:not(:disabled), textarea:not(:disabled), select:not(:disabled), a[href], [tabindex="0"]'
+const focusable = 'button, input, textarea, select, a[href], area[href], [contenteditable="true"], [tabindex]'
+
+function focusableElements(element: HTMLElement): HTMLElement[] {
+  return [...element.querySelectorAll<HTMLElement>(focusable)]
+    .filter(item => !item.matches(':disabled, [type="hidden"]')
+      && (item.tabIndex >= 0 || (item.isContentEditable && !item.hasAttribute('tabindex')))
+      && !item.closest('[inert], [hidden], [aria-hidden="true"]'))
+}
 
 /**
  * Give only the top modal Escape and Tab ownership, then restore its previous focus.
@@ -42,27 +65,48 @@ const focusable = 'button:not(:disabled), input:not(:disabled), textarea:not(:di
  * @param dialog - mounted dialog element.
  * @param open - whether this layer is active.
  * @param onClose - top-layer Escape or application close action.
+ * @param initialFocusRef - optional contained entry target, including a non-tabbable heading.
+ * @param restoreFocusRef - optional connected return target; otherwise restore the invoking control.
  */
-export function useModalLayer(dialog: RefObject<HTMLElement | null>, open: boolean, onClose: () => void): void {
+export function useModalLayer(
+  dialog: RefObject<HTMLElement | null>, open: boolean, onClose: () => void,
+  initialFocusRef?: RefObject<HTMLElement | null>, restoreFocusRef?: RefObject<HTMLElement | null>,
+): void {
   const close = useRef(onClose)
   close.current = onClose
+  const invoker = useRef<HTMLElement | null>(null)
+  // Capture before descendant autoFocus runs; older consumers still use it.
+  if (!open) invoker.current = null
+  else if (dialog.current === null && invoker.current === null
+    && typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) {
+    invoker.current = document.activeElement
+  }
   useLayoutEffect(() => {
     const element = dialog.current
     if (!open || element === null) return
     const document = element.ownerDocument
     const composition = observeComposition(document)
-    const previous = document.activeElement
-    const stack = layers.get(document) ?? []
-    layers.set(document, stack)
-    const layer = { element, close: () => { close.current() } }
+    const previous = invoker.current ?? document.activeElement
+    let state = documents.get(document)
+    if (state === undefined) {
+      const root = document.getElementById('root')
+      state = { layers: [], background: root === null ? null : { element: root, previousInert: root.inert } }
+      if (root !== null) root.inert = true
+      documents.set(document, state)
+    }
+    const stack = state.layers
+    const layer = { element, close: () => { close.current() }, previousInert: element.inert }
     stack.push(layer)
-    const initial = element.querySelector<HTMLElement>('[data-modal-autofocus]')
-      ?? element.querySelector<HTMLElement>(focusable) ?? element
-    if (!element.contains(document.activeElement)) focusWithoutRing(initial)
+    syncInertness(state)
+    const requested = initialFocusRef?.current
+    const explicit = requested != null && element.contains(requested) ? requested : null
+    const initial = explicit ?? element.querySelector<HTMLElement>('[data-modal-autofocus]')
+      ?? focusableElements(element)[0] ?? element
+    if (explicit !== null || !element.contains(document.activeElement)) focusWithoutRing(initial)
     const keydown = (event: KeyboardEvent): void => {
       const composing = composition.guards(event)
       if (stack.at(-1) !== layer || event.defaultPrevented || composing
-        || event.ctrlKey || event.altKey || event.metaKey) return
+        || event.ctrlKey || event.metaKey || (event.altKey && event.key !== 'Tab')) return
       if (event.key === 'Escape' && !event.shiftKey) {
         event.preventDefault()
         if (!event.repeat) close.current()
@@ -70,12 +114,12 @@ export function useModalLayer(dialog: RefObject<HTMLElement | null>, open: boole
       if (event.key !== 'Tab') return
       // Portaled menus own their traversal while they contain focus.
       if (document.activeElement?.closest('[role="menu"]')) return
-      const items = [...element.querySelectorAll<HTMLElement>(focusable)]
-        .filter(item => !item.closest('[inert], [hidden]'))
+      const items = focusableElements(element)
       const first = items[0] ?? element
       const last = items.at(-1) ?? element
       const atEdge = event.shiftKey ? document.activeElement === first : document.activeElement === last
-      if (document.activeElement === element || !element.contains(document.activeElement) || atEdge) {
+      const active = document.activeElement
+      if (active === element || !element.contains(active) || active?.getAttribute('tabindex') === '-1' || atEdge) {
         event.preventDefault()
         const target = event.shiftKey ? last : first
         target.focus()
@@ -86,12 +130,19 @@ export function useModalLayer(dialog: RefObject<HTMLElement | null>, open: boole
       composition.dispose()
       const wasTop = stack.at(-1) === layer
       stack.splice(stack.indexOf(layer), 1)
+      element.inert = layer.previousInert
+      syncInertness(state)
       document.removeEventListener('keydown', keydown)
-      if (stack.length === 0) layers.delete(document)
+      if (stack.length === 0) {
+        if (state.background !== null) state.background.element.inert = state.background.previousInert
+        documents.delete(document)
+      }
       if (wasTop) {
-        const target = previous instanceof HTMLElement && previous.isConnected ? previous : stack.at(-1)?.element
+        const requested = restoreFocusRef?.current
+        const target = requested?.isConnected === true ? requested
+          : previous instanceof HTMLElement && previous.isConnected ? previous : stack.at(-1)?.element
         if (target !== undefined) focusWithoutRing(target)
       }
     }
-  }, [dialog, open])
+  }, [dialog, open, initialFocusRef, restoreFocusRef])
 }

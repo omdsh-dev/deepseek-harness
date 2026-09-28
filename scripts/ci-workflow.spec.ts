@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { runInNewContext } from 'node:vm'
 import * as yaml from 'js-yaml'
@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest'
 
 function evaluateRunsOn(selector: unknown, context: Record<string, unknown>): unknown {
   if (typeof selector !== 'string') throw new TypeError('Runner selector must be a string')
-  return runInNewContext(selector.trim().slice(3, -2), context, { timeout: 1000 })
+  return runInNewContext(selector.trim().slice(3, -2), { github: { repository: 'deepseek-ai/deepseek-harness', event: { pull_request: { user: { login: 'contributor' } } } }, ...context }, { timeout: 1000 })
 }
 
 const root = resolve(import.meta.dirname, '..')
@@ -160,6 +160,7 @@ describe('CI workflow', () => {
       || !isRecord(workflow.jobs['node-24-bench'])
       || !isRecord(workflow.jobs['node-24-consumers'])
       || !isRecord(workflow.jobs['node-compat'])
+      || !isRecord(workflow.jobs['node-24-accessibility'])
       || !isRecord(workflow.jobs['all-checks-passed'])
       || !isRecord(masterWorkflow.jobs)
       || !isRecord(masterWorkflow.jobs['serial-windows'])) {
@@ -175,6 +176,7 @@ describe('CI workflow', () => {
     const node24Bench = workflow.jobs['node-24-bench']
     const node24Consumers = workflow.jobs['node-24-consumers']
     const nodeCompat = workflow.jobs['node-compat']
+    const node24Accessibility = workflow.jobs['node-24-accessibility']
     const aggregate = workflow.jobs['all-checks-passed']
     if (!Array.isArray(aggregate.needs)) {
       throw new TypeError('CI aggregate must define needs')
@@ -184,6 +186,8 @@ describe('CI workflow', () => {
       expect(typeof job['runs-on']).toBe('string')
       expect(job['runs-on'], `${jobName} runs-on must use the Windows failover switch`).toContain('DSH_CI_FAILOVER_WINDOWS')
       expect(job['runs-on'], `${jobName} runs-on must not use the Linux failover switch`).not.toContain('DSH_CI_FAILOVER_LINUX')
+      expect(job['runs-on'], `${jobName} must use a standard runner outside upstream`).toContain("github.repository != 'deepseek-ai/deepseek-harness'")
+      expect(job['runs-on']).toContain('windows-2025')
       expect(job['runs-on']).toContain('self-hosted')
       expect(job['runs-on']).toContain('dsh-win-ci')
       expect(job['runs-on']).toContain('dsh-windows-2025-16core')
@@ -231,7 +235,7 @@ describe('CI workflow', () => {
     }
 
     expect(windowsCoverage.name).toBe('windows node 24 / coverage')
-    expect(windowsCoverage.env).toMatchObject({ DSH_COVERAGE_PARTITIONS: "${{ vars.DSH_CI_FAILOVER_WINDOWS == 'selfhosted' && github.event.pull_request.user.login != 'dependabot[bot]' && '4' || '' }}" })
+    expect(windowsCoverage.env).toMatchObject({ DSH_COVERAGE_PARTITIONS: "${{ github.repository != 'deepseek-ai/deepseek-harness' && '2' || vars.DSH_CI_FAILOVER_WINDOWS == 'selfhosted' && github.event.pull_request.user.login != 'dependabot[bot]' && '4' || '' }}" })
     const coverageSteps = windowsCoverage.steps as unknown[]
     const coverageCommands = coverageSteps.filter((step): step is Record<string, unknown> & { run: string } => (
       isRecord(step) && typeof step.run === 'string'
@@ -253,8 +257,14 @@ describe('CI workflow', () => {
       isRecord(step) && typeof step.run === 'string'
     ))
     const nativeTestCommand = nativeTestCommands.map(step => step.run).join('\n')
-    expect(nativeTestCommand).toContain('--no-file-parallelism')
-    expect(nativeTestCommand).toContain('--testTimeout 90000')
+    const remainingNativeCommand = nativeTestCommands.find(step => step.run.includes('tool-pwsh/tests/loader.spec.ts'))?.run
+    expect(nativeTestCommand).not.toContain('workflow-worker-thread.spec.ts')
+    const nativeTestPaths = nativeTestCommand.match(/packages\/[^\s]+\.spec\.ts/g) ?? []
+    expect(nativeTestPaths).toHaveLength(4)
+    for (const path of nativeTestPaths) expect(existsSync(resolve(root, path)), path).toBe(true)
+    expect(remainingNativeCommand).toContain('--no-file-parallelism')
+    expect(remainingNativeCommand).toContain('--testTimeout 90000')
+    expect(remainingNativeCommand).not.toContain('workflow-worker-thread.spec.ts')
     expect(nativeTestCommand).toContain('tool-pwsh/tests/loader.spec.ts')
     expect(nativeTestCommand).toContain('workflow-ptc.spec.ts')
 
@@ -344,14 +354,74 @@ describe('CI workflow', () => {
     // Linux failover is a separate switch: the three enterprise Linux workers
     // and the verdict job resolve their pool through DSH_CI_FAILOVER_LINUX,
     // never the Windows switch.
-    for (const [jobName, job] of [['node-24', node24], ['node-24-coverage', node24Coverage], ['node-24-consumers', node24Consumers]] as const) {
+    for (const [jobName, job] of [['node-24', node24], ['node-24-coverage', node24Coverage], ['node-24-consumers', node24Consumers], ['node-24-accessibility', node24Accessibility]] as const) {
       expect(typeof job['runs-on']).toBe('string')
       expect(job['runs-on'], `${jobName} runs-on must use the Linux failover switch`).toContain('DSH_CI_FAILOVER_LINUX')
       expect(job['runs-on'], `${jobName} runs-on must not use the Windows failover switch`).not.toContain('DSH_CI_FAILOVER_WINDOWS')
+      expect(job['runs-on'], `${jobName} must use a standard runner outside upstream`).toContain("github.repository != 'deepseek-ai/deepseek-harness'")
+      expect(job['runs-on']).toContain('ubuntu-24.04')
       expect(job['runs-on']).toContain('vm-backup')
       expect(evaluateRunsOn(job['runs-on'], { vars: { DSH_CI_FAILOVER_LINUX: 'blacksmith' } }))
         .toBe(`blacksmith-${jobName === 'node-24' ? 8 : 16}vcpu-ubuntu-2404`)
     }
+    if (!isRecord(node24Coverage.env) || !isRecord(node24Consumers.env)) {
+      throw new TypeError('Linux coverage and consumer jobs must define environment budgets')
+    }
+    expect(node24Coverage.env).toMatchObject({
+      DSH_COVERAGE_MAX_WORKERS: "${{ github.repository != 'deepseek-ai/deepseek-harness' && '2' || vars.DSH_CI_FAILOVER_LINUX == 'selfhosted' && github.event.pull_request.user.login != 'dependabot[bot]' && '6' || '' }}",
+      DSH_COVERAGE_PARTITIONS: "${{ github.repository != 'deepseek-ai/deepseek-harness' && '2' || vars.DSH_CI_FAILOVER_LINUX == 'selfhosted' && github.event.pull_request.user.login != 'dependabot[bot]' && '4' || '' }}",
+      DSH_GATE_CONCURRENCY: "${{ github.repository != 'deepseek-ai/deepseek-harness' && '1' || vars.DSH_CI_FAILOVER_LINUX == 'selfhosted' && github.event.pull_request.user.login != 'dependabot[bot]' && '3' || '' }}",
+    })
+    expect(node24Consumers.env).toMatchObject({
+      DSH_GATE_CONCURRENCY: "${{ github.repository != 'deepseek-ai/deepseek-harness' && '2' || vars.DSH_CI_FAILOVER_LINUX == 'selfhosted' && github.event.pull_request.user.login != 'dependabot[bot]' && '10' || '' }}",
+      DSH_OXLINT_THREADS: "${{ github.repository != 'deepseek-ai/deepseek-harness' && '2' || vars.DSH_CI_FAILOVER_LINUX == 'selfhosted' && github.event.pull_request.user.login != 'dependabot[bot]' && '8' || '' }}",
+      DSH_PUBLINT_CONCURRENCY: "${{ github.repository != 'deepseek-ai/deepseek-harness' && '2' || vars.DSH_CI_FAILOVER_LINUX == 'selfhosted' && github.event.pull_request.user.login != 'dependabot[bot]' && '8' || '' }}",
+      DSH_WEB_SNAPSHOT_WORKERS: "${{ github.repository != 'deepseek-ai/deepseek-harness' && '2' || vars.DSH_CI_FAILOVER_LINUX == 'selfhosted' && github.event.pull_request.user.login != 'dependabot[bot]' && '6' || '' }}",
+    })
+    expect(node24Consumers.env.DSH_SNAPSHOT_MAX_CONCURRENCY).toContain(
+      "github.repository != 'deepseek-ai/deepseek-harness' && '2'",
+    )
+    expect(node24Accessibility).toMatchObject({
+      name: 'node 24 / accessibility browser contracts',
+      env: { DSH_SNAPSHOT: 'replay' },
+      'timeout-minutes': 30,
+    })
+    if (!Array.isArray(node24Accessibility.steps)) {
+      throw new TypeError('Accessibility browser job must define steps')
+    }
+    const accessibilityCommands = node24Accessibility.steps
+      .filter((step): step is Record<string, unknown> & { run: string } => (
+        isRecord(step) && typeof step.run === 'string'
+      ))
+      .map(step => step.run)
+      .join('\n')
+    expect(accessibilityCommands).toContain('pnpm --filter @deepseek-ai/dsh-web-frontend exec playwright install --with-deps chromium firefox webkit')
+    expect(accessibilityCommands).toContain('pnpm --filter @deepseek-ai/dsh-web-frontend exec playwright install chromium firefox webkit')
+    expect(node24Accessibility.steps).toContainEqual(expect.objectContaining({
+      name: 'Run versioned assembled-app accessibility evidence',
+      run: 'pnpm run test:web:accessibility:evidence',
+    }))
+    expect(node24Accessibility.steps).toContainEqual(expect.objectContaining({
+      name: 'Retain exact-revision accessibility evidence',
+      uses: 'actions/upload-artifact@v4',
+      with: {
+        name: 'dsh-core-browser-accessibility-${{ github.run_id }}-${{ github.run_attempt }}',
+        path: '.artifacts/accessibility/core-browser-evidence.json',
+        'if-no-files-found': 'error',
+        'retention-days': 7,
+      },
+    }))
+    const packageJson: unknown = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8'))
+    if (!isRecord(packageJson) || !isRecord(packageJson.scripts)) {
+      throw new TypeError('package.json must define scripts')
+    }
+    expect(packageJson.scripts['test:web:accessibility']).toBe(
+      'pnpm run build && pnpm run test:web:accessibility:built',
+    )
+    expect(packageJson.scripts['test:web:accessibility:evidence']).toBe(
+      'pnpm run build && pnpm run test:web:accessibility:evidence:built',
+    )
+    expect(aggregate.needs).toContain('node-24-accessibility')
     expect(aggregate['runs-on']).toContain('DSH_CI_FAILOVER_LINUX')
     expect(aggregate['runs-on']).not.toContain('DSH_CI_FAILOVER_WINDOWS')
     expect(aggregate['runs-on']).toContain('vm-backup')
@@ -369,7 +439,7 @@ describe('CI workflow', () => {
       return evaluateRunsOn(expression, {
         vars,
         fromJSON: JSON.parse,
-        github: { event: { pull_request: { user: { login } } } },
+        github: { repository: 'deepseek-ai/deepseek-harness', event: { pull_request: { user: { login } } } },
       })
     }
     for (const [name, selector, variable, pool, hosted] of [
@@ -1031,13 +1101,21 @@ describe('Issue lifecycle workflow', () => {
   it('allocates lifecycle runners only for events that can change the board', () => {
     const lifecycle = loadWorkflow('.github/workflows/issue-lifecycle.yml')
     const policy = loadWorkflow('.github/workflows/issue-policy.yml')
+    const preview = loadWorkflow('.github/workflows/build-preview-cloudflare.yml')
     const lifecycleJob = workflowJob(lifecycle, 'lifecycle')
+    const previewJob = workflowJob(preview, 'preview')
     if (!Array.isArray(lifecycleJob.steps)) throw new TypeError('Issue lifecycle job must define steps')
 
     expect(lifecycle.on).toHaveProperty('pull_request')
     expect(lifecycle.on).toHaveProperty('pull_request_review')
     expect(lifecycleJob.if).toContain("github.event.review.state == 'changes_requested'")
     expect(lifecycleJob.if).toContain('github.event.changes.body != null')
+    expect(previewJob.if).toBe("github.repository == 'deepseek-ai/deepseek-harness'")
+    expect(previewJob['runs-on']).toBe('ubuntu-24.04')
+    const policySource = readFileSync(resolve(root, '.github/issue-management/policy.mjs'), 'utf8')
+    expect(policySource).toContain('process.env.GITHUB_REPOSITORY')
+    expect(policySource).toContain('config.organization = runtimeRepository[0]')
+    expect(policySource).toContain('config.repository = runtimeRepository[1]')
     // Keep the subscription-type gates: issue-lifecycle does not re-subscribe
     // ready_for_review (issue-policy owns that) and only reacts to submitted
     // review events.
@@ -1078,7 +1156,7 @@ describe('Issue lifecycle workflow', () => {
     expect(preflightStep?.run).toContain('if [ -f .github/issue-management/selective-preflight.json ]; then')
     expect(preflightStep?.run).toContain('node .github/issue-management/policy.mjs pr-preflight')
     expect(preflightStep?.if).toBeUndefined()
-    expect(policyJob.if).toBeUndefined()
+    expect(policyJob.if).toBe("github.repository == 'deepseek-ai/deepseek-harness'")
     expect(validateStep?.if).toBe("${{ steps.preflight.outputs.legacy-automated != 'true' }}")
 
     expect(tokenStep).toMatchObject({

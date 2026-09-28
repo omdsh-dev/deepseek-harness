@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { INPUT_MODALITY, INPUT_MODALITY_ATTRIBUTE } from '../../ui-primitives/src/input-modality.ts'
-import { packageStylesheets, parseRules, varReferences } from './stylesheet-scan.ts'
+import { atRuleBlock, packageStylesheets, parseRules, varReferences } from './stylesheet-scan.ts'
 
 const ACCENT = '--dsw-alias-state-business-primary'
 const COLOR = '--dsw-focus-ring-color'
@@ -13,7 +13,14 @@ const rules = parseRules(css)
 const properties = new Set(['outline', 'outline-color', 'box-shadow'])
 const allowedTokens = new Set([ACCENT, COLOR, WIDTH])
 
-function ringColorViolations(source: string): string[] {
+function ringColorViolations(source: string, forcedColors = false): string[] {
+  const forced = atRuleBlock(source, '@media (forced-colors: active)')
+  if (forced !== undefined) {
+    return [
+      ...ringColorViolations(source.slice(0, source.lastIndexOf('@media', forced.start)) + source.slice(forced.end + 1), forcedColors),
+      ...ringColorViolations(source.slice(forced.start + 1, forced.end), true),
+    ]
+  }
   const violations: string[] = []
   for (const rule of parseRules(source)) {
     if (!rule.selectors.some(selector => /:focus(?:-visible)?\b/.test(selector))) continue
@@ -22,7 +29,8 @@ function ringColorViolations(source: string): string[] {
       const tokens = varReferences(value)
       const hasColor = tokens.includes(ACCENT) || tokens.includes(COLOR)
       const colorless = /^(none|transparent|currentcolor|inherit)$/i.test(value)
-      if (tokens.some(token => !allowedTokens.has(token)) || (!hasColor && !colorless)) {
+      const systemColor = forcedColors && /\b(?:CanvasText|Highlight)\b/i.test(value)
+      if (tokens.some(token => !allowedTokens.has(token)) || (!hasColor && !colorless && !systemColor)) {
         violations.push(`${rule.selectors.join(', ')} { ${property}: ${value} }`)
       }
       if (rule.selectors.every(selector => selector.includes(':focus-visible'))
@@ -59,6 +67,14 @@ describe('focus styles', () => {
     expect(ringColorViolations('.a:focus-visible .label { outline: 2px solid var(--dsw-alias-state-business-primary); }'))
       .toHaveLength(1)
     expect(ringColorViolations(`.a:focus-visible::after { outline: 2px solid ${FALLBACK}; }`)).toEqual([])
+  })
+
+  it('allows system focus colors only inside the forced-colors media query', () => {
+    const ring = '.a:focus-visible { outline: 2px solid CanvasText; }'
+    expect(ringColorViolations(ring)).toHaveLength(1)
+    expect(ringColorViolations(`@media (forced-colors: active) { ${ring} }`)).toEqual([])
+    expect(ringColorViolations(`@media (forced-colors: active) { ${ring.replace('CanvasText', 'red')} }`)).toHaveLength(1)
+    expect(ringColorViolations(`@media (forced-colors: active) { ${ring} } ${ring}`)).toHaveLength(1)
   })
 
   it('uses the shared ring color throughout a non-empty client stylesheet corpus', () => {

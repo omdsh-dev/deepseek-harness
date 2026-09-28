@@ -5,6 +5,6 @@ import { Tooltip } from '../src/Tooltip.tsx'
 describe('Tooltip module in Node', () => {
   it('loads without installing browser input listeners', () => {
     expect(typeof window).toBe('undefined')
-    expect(Tooltip).toBeTypeOf('function')
+    expect(Tooltip).toMatchObject({ $$typeof: Symbol.for('react.forward_ref') })
   })
 })

@@ -1,4 +1,4 @@
-- menu:
+- menu "Open More ways to open":
   - menuitem "Test Player (default)"
   - menuitem "Other Player"
   - menuitem "Show file location"

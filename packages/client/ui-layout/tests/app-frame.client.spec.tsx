@@ -3,7 +3,7 @@
 import type { GlobalStandardProps, RenderOpts } from '@deepseek-ai/dsh-client-ui-slots'
 import { bindSnapshotSelector } from '@deepseek-ai/dsh-client-test-runtime'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { act, cleanup, render } from '@testing-library/react'
+import { act, cleanup, fireEvent, render } from '@testing-library/react'
 import { AppFrame } from '../src/client/AppFrame.tsx'
 import type { AppFrameProps } from '../src/client/AppFrame.tsx'
 import type { MainPanelId, RightbarOwnerProps, SidebarOwnerProps } from '../src/client/index.ts'
@@ -241,13 +241,14 @@ describe('AppFrame', () => {
     }
   })
 
-  it('keeps the closed sidebar mounted at its 56px rail without a handle', () => {
+  it('keeps the closed sidebar mounted with a keyboard-restorable splitter', () => {
     const { frame, instance, sidebarOwner, getByTestId, queryByTestId } = mountFrame()
     act(() => { instance.actions.toggleSidebar() })
     expect(tracks(frame)).toEqual([56, 0])
     expect(sidebarOwner()).toEqual({ collapsed: true, width: 56 })
     expect(getByTestId('sidebar-content')).toBeTruthy()
-    expect(frame.querySelector('[data-side="sidebar"]')).toBeNull()
+    expect(handleFor(frame, 'sidebar').tabIndex).toBe(0)
+    expect(handleFor(frame, 'sidebar').getAttribute('aria-valuenow')).toBe('56')
     // The rail keeps the window chrome housed: no shell.leading seat.
     expect(queryByTestId('shell.leading-content')).toBeNull()
     expect(frame.querySelector('[data-shell-leading-band]')).toBeNull()
@@ -267,6 +268,47 @@ describe('AppFrame', () => {
     expect(queryByTestId('shell.leading-content')).toBeTruthy()
     act(() => { instance.actions.toggleSidebar() })
     expect(queryByTestId('shell.leading-content')).toBeNull()
+  })
+
+  it('names the landmarks and makes a hidden right sidebar inert', () => {
+    const { getByRole, frame, instance } = mountFrame()
+    expect(getByRole('navigation', { name: 'layout.sidebar' }).id).toBe('dsh-sidebar-pane')
+    expect(getByRole('main')).toBeTruthy()
+    expect(getByRole('heading', { level: 1, name: 'layout.application' })).toBeTruthy()
+    const rightbar = frame.querySelector<HTMLElement>('#dsh-rightbar-pane')!
+    expect(rightbar.inert).toBe(true)
+    expect(rightbar.getAttribute('aria-hidden')).toBe('true')
+    act(() => { instance.actions.openRightbar(true, false) })
+    expect(rightbar.inert).toBe(false)
+    expect(getByRole('complementary', { name: 'layout.rightbar' })).toBe(rightbar)
+  })
+
+  it('operates both width splitters from the keyboard without losing sidebar focus', () => {
+    const { getByRole, instance } = mountFrame()
+    const sidebar = getByRole('separator', { name: 'layout.sidebar' })
+    expect(sidebar.getAttribute('aria-controls')).toBe('dsh-sidebar-pane')
+    expect(sidebar.getAttribute('aria-orientation')).toBe('vertical')
+    sidebar.focus()
+    fireEvent.keyDown(sidebar, { key: 'ArrowRight' })
+    expect(sidebar.getAttribute('aria-valuenow')).toBe('290')
+    fireEvent.keyDown(sidebar, { key: 'End' })
+    expect(sidebar.getAttribute('aria-valuenow')).toBe('420')
+    fireEvent.keyDown(sidebar, { key: 'Home' })
+    expect(sidebar.getAttribute('aria-valuenow')).toBe('56')
+    expect(document.activeElement).toBe(sidebar)
+    fireEvent.keyDown(sidebar, { key: 'Enter' })
+    expect(sidebar.getAttribute('aria-valuenow')).toBe('280')
+    act(() => { instance.actions.openRightbar(true, false) })
+    const rightbar = getByRole('separator', { name: 'layout.rightbar' })
+    expect(rightbar.getAttribute('aria-controls')).toBe('dsh-rightbar-pane')
+    fireEvent.keyDown(rightbar, { key: 'Home' })
+    expect(rightbar.getAttribute('aria-valuenow')).toBe('300')
+    fireEvent.keyDown(rightbar, { key: 'ArrowLeft' })
+    expect(rightbar.getAttribute('aria-valuenow')).toBe('310')
+    fireEvent.keyDown(rightbar, { key: 'End' })
+    expect(rightbar.getAttribute('aria-valuenow')).toBe('1240')
+    fireEvent.keyDown(rightbar, { key: 'Enter' })
+    expect(rightbar.getAttribute('aria-valuenow')).toBe('864')
   })
 
   it('switches only the keyed main outlet when the active panel changes', () => {

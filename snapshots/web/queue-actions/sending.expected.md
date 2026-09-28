@@ -1,25 +1,31 @@
-- banner:
+- main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy": Reply with a one-sentence description
   - text: Standard mode
   - button "More actions"
   - button "Open right sidebar"
-  - tablist:
+  - tablist "Session views":
     - tab "Chat" [selected]
     - tab "Trajectory"
-- text: Reply with a one-sentence description of event sourcing, then stop. {{clock}}
-- button "Copy"
-- status: Deep diving...
-- button "Deep diving for {{duration}}" [disabled] [expanded]
-- paragraph: partial
-- list:
-  - listitem:
-    - text: Queue item to remove
-    - status: Sending…
-    - button "Edit queued message" [disabled]
-    - button "Remove queued message" [disabled]
-    - button "Steer queued message" [disabled]
-- textbox "Message or run a task, / commands, @ files or sessions"
-- button "Add files or run commands"
-- 'button "Access mode, current: Workspace Write"': Workspace Write
-- button "Select model, current DeepSeek-V4-Flash": DeepSeek-V4-Flash
-- button "Stop generating"
+  - tabpanel "Chat":
+    - text: Response started.
+    - log "Conversation transcript":
+      - article "User message":
+        - text: Reply with a one-sentence description of event sourcing, then stop. {{clock}}
+        - button "Copy"
+      - status: Deep diving...
+      - button "Deep diving for {{duration}}" [disabled] [expanded]
+      - article "Assistant response":
+        - paragraph: partial
+  - list:
+    - listitem:
+      - text: Queue item to remove
+      - status: Sending…
+      - button "Edit queued message" [disabled]
+      - button "Remove queued message" [disabled]
+      - button "Steer queued message" [disabled]
+  - textbox "Message or run a task, / commands, @ files or sessions"
+  - button "Add files or run commands"
+  - 'button "Access mode, current: Workspace Write"': Workspace Write
+  - button "Select model, current DeepSeek-V4-Flash": DeepSeek-V4-Flash
+  - button "Stop generating"

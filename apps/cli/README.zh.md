@@ -27,6 +27,8 @@
 dsh --profile web --port 8080       # --port belongs to the web app
 dsh --profile tui --resume <id>     # example, assuming the tui profile is installed; --resume belongs to the terminal app
 dsh --profile headless "run the tests"
+dsh --profile headless --accessibility "run the tests"
+dsh --profile headless --output-format json "run the tests"
 dsh --profile web --help            # the web app's flags, not the launcher's
 dsh --help                          # the launcher's own help
 ```

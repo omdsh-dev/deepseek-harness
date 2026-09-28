@@ -1,4 +1,4 @@
-- menu:
+- menu "Session actions for {{workspace}}":
   - menuitem "Pin session"
   - menuitem "Rename"
   - menuitem "Fork session"

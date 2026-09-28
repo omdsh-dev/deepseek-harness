@@ -61,7 +61,7 @@ describe.skipIf(MODE === 'record')('web e2e: native and Client locale preference
     await compareOrRefreshGolden(join(SNAPSHOT_DIR, 'automatic.expected.md'),
       await captureStableAria(page, '[role="dialog"]', scaffold.workspaceCwd, versionCapture), MODE)
     await zhDialog.getByRole('button', { name: '中文', exact: true }).click()
-    await page.getByRole('menuitem', { name: 'English', exact: true }).click()
+    await page.getByRole('menuitemradio', { name: 'English', exact: true }).click()
     const enDialog = page.getByRole('dialog', { name: 'Settings', exact: true })
     await enDialog.getByRole('button', { name: 'English', exact: true }).waitFor()
     await expect.poll(() => reported.at(-1)).toBe('en')

@@ -63,7 +63,7 @@ export function PlanReviewPanel({ pending, review, t, renderSlot }: PlanReviewPa
           {summary.description !== '' && <p className={css.description}>{summary.description}</p>}
         </div>
         <div className={css.footer}>
-          <div className={css.feedback} role="status">{error}</div>
+          <div className={css.feedback} role="alert" aria-atomic="true">{error}</div>
           <div className={css.actions}>
             <Button
               variant="outline" className={css.discuss} icon={<IconEditOutlineRegular size={14} />}

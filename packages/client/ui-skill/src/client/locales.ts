@@ -7,6 +7,7 @@ export const NS = 'skill'
 export const zh = {
   'row.title': '加载技能',
   'row.running': '正在加载 skill',
+  'row.completed': 'skill 加载完成',
   'row.preparing': '准备加载技能',
   'row.failed': 'skill 加载失败',
   'row.stopped': 'skill 加载已中止',
@@ -22,6 +23,7 @@ export type SkillKey = keyof typeof zh
 export const en = {
   'row.title': 'Skill',
   'row.running': 'Loading skill',
+  'row.completed': 'Skill loaded',
   'row.preparing': 'Preparing to load a skill',
   'row.failed': 'Skill load failed',
   'row.stopped': 'Skill load stopped',

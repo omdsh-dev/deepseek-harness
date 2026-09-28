@@ -1,7 +1,7 @@
 /** Anchor-preserving tooltips; an optional body portal escapes clipping containers and stacking contexts that cap the bubble's z-index. */
 
-import { cloneElement, createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
-import type { FocusEventHandler, MouseEventHandler, MutableRefObject, ReactElement, Ref } from 'react'
+import { cloneElement, forwardRef, createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
+import type { FocusEventHandler, KeyboardEventHandler, MouseEventHandler, MutableRefObject, ReactElement, Ref } from 'react'
 import { createPortal } from 'react-dom'
 import { ShortcutKeys } from './ShortcutKeys.tsx'
 import css from './Tooltip.module.css'
@@ -20,15 +20,33 @@ export const TooltipSuppression = createContext<((suppressed: boolean) => void) 
 
 /** Props Tooltip injects into its anchor child; the child's own handlers are chained ahead of the tooltip's. */
 interface AnchorProps {
+  id?: string | undefined
   ref?: Ref<HTMLElement> | undefined
   onMouseEnter?: MouseEventHandler | undefined
   onMouseLeave?: MouseEventHandler | undefined
   onClick?: MouseEventHandler | undefined
   onFocus?: FocusEventHandler | undefined
   onBlur?: FocusEventHandler | undefined
+  onKeyDown?: KeyboardEventHandler<HTMLElement> | undefined
+  'aria-haspopup'?: string | undefined
+  'aria-expanded'?: boolean | undefined
+  'aria-controls'?: string | undefined
 }
 
 type TooltipLabel = string | (() => string)
+
+interface TooltipProps extends AnchorProps {
+  label: TooltipLabel
+  shortcutKeys?: readonly string[] | undefined
+  gap?: number
+  align?: 'center' | 'end'
+  portal?: boolean
+  side?: TooltipSide
+  delayMs?: number
+  disabled?: boolean
+  maxWidth?: number
+  children: ReactElement<AnchorProps>
+}
 
 /**
  * Attach a hover/focus tooltip to an anchor element.
@@ -47,13 +65,34 @@ type TooltipLabel = string | (() => string)
  * toggling never remounts it (which would cut its CSS transitions).
  * @param props.maxWidth - bubble width cap in pixels, for labels long enough that the default
  * half-viewport cap would render a slab wider than the surface the anchor sits on.
+ * @param props.id - optional anchor id forwarded through the tooltip wrapper.
+ * @param props.onKeyDown - optional owner keyboard handler chained after the anchor's handler.
+ * @param props.aria-haspopup - optional popup type forwarded to the anchor.
+ * @param props.aria-expanded - optional popup state forwarded to the anchor.
+ * @param props.aria-controls - optional controlled popup id forwarded to the anchor.
  * @param props.children - a single anchor element; its own ref (callback or object) is forwarded alongside the tooltip's.
  * @returns the cloned anchor plus a fixed-position bubble, optionally portaled to the body.
  * The bubble stays hidden until ResizeObserver supplies its size for viewport fitting; clicking the
  * anchor dismisses the bubble until the next trigger, and focus arriving after a pointer
  * interaction (a closing menu refocusing its trigger) never raises it.
  */
-export function Tooltip({ label, shortcutKeys, side = 'right', align = 'center', delayMs = 0, gap = 8, disabled = false, portal = false, maxWidth, children }: { label: TooltipLabel; shortcutKeys?: readonly string[] | undefined; side?: TooltipSide; align?: 'center' | 'end'; delayMs?: number; gap?: number; disabled?: boolean; portal?: boolean; maxWidth?: number; children: ReactElement<AnchorProps> }) {
+export const Tooltip = forwardRef<HTMLElement, TooltipProps>(function Tooltip({
+  label,
+  shortcutKeys,
+  gap = 8,
+  side = 'right',
+  align = 'center',
+  portal = false,
+  delayMs = 0,
+  disabled = false,
+  maxWidth,
+  children,
+  id,
+  onKeyDown,
+  'aria-haspopup': ariaHasPopup,
+  'aria-expanded': ariaExpanded,
+  'aria-controls': ariaControls,
+}, forwardedRef) {
   const anchor = useRef<HTMLElement | null>(null)
   // React 18 keeps the element's ref outside props; forward it so wrapping an
   // anchor in Tooltip never silently severs the owner's ref.
@@ -62,7 +101,9 @@ export function Tooltip({ label, shortcutKeys, side = 'right', align = 'center',
     anchor.current = el
     if (typeof childRef === 'function') childRef(el)
     else if (childRef != null) (childRef as MutableRefObject<HTMLElement | null>).current = el
-  }, [childRef])
+    if (typeof forwardedRef === 'function') forwardedRef(el)
+    else if (forwardedRef != null) forwardedRef.current = el
+  }, [childRef, forwardedRef])
   // The anchor's edges rather than final coordinates: a vertical flip has to
   // re-derive the bubble's own top from the opposite edge.
   const [pos, setPos] = useState<{ x: number; top: number; bottom: number } | null>(null)
@@ -197,7 +238,11 @@ export function Tooltip({ label, shortcutKeys, side = 'right', align = 'center',
   return (
     <TooltipSuppression.Provider value={setSuppressed}>
       {cloneElement(children, {
+        id: id ?? children.props.id,
         ref: mergedRef,
+        'aria-haspopup': ariaHasPopup ?? children.props['aria-haspopup'],
+        'aria-expanded': ariaExpanded ?? children.props['aria-expanded'],
+        'aria-controls': ariaControls ?? children.props['aria-controls'],
         onMouseEnter: (e) => { children.props.onMouseEnter?.(e); triggers.current.hover = true; showAfterHoverDelay() },
         onMouseLeave: (e) => { children.props.onMouseLeave?.(e); triggers.current.hover = false; cancelShow(); withdraw() },
         // Activating the anchor dismisses the bubble: the action often changes
@@ -206,8 +251,9 @@ export function Tooltip({ label, shortcutKeys, side = 'right', align = 'center',
         onClick: (e) => { children.props.onClick?.(e); triggers.current.focus = false; cancelShow(); withdraw() },
         onFocus: (e) => { children.props.onFocus?.(e); if (pointerModality()) return; triggers.current.focus = true; cancelShow(); show() },
         onBlur: (e) => { children.props.onBlur?.(e); triggers.current.focus = false; hide() },
+        onKeyDown: (e) => { children.props.onKeyDown?.(e); if (!e.defaultPrevented) onKeyDown?.(e) },
       })}
       {portal ? (content !== false && createPortal(content, document.body)) : content}
     </TooltipSuppression.Provider>
   )
-}
+})

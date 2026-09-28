@@ -101,13 +101,13 @@ function stopLinkClick(event: MouseEvent<HTMLAnchorElement>): void {
 }
 
 /** Visually hidden run-state label for color-only running and settlement cues. */
-function stateStatus(state: ToolRowState, t: TranslateNS<'conversation'>): string | null {
+function stateStatus(state: ToolRowState, t: TranslateNS<'conversation'>): string {
   switch (state) {
     case 'preparing': return t('row.preparing')
     case 'running': return t('row.running')
+    case 'ok': return t('row.completed')
     case 'error': return t('row.failed')
     case 'stopped': return t('row.stopped')
-    default: return null
   }
 }
 
@@ -198,6 +198,10 @@ export const ToolRow = memo(function ToolRow({
     }
     : undefined, [filePath, filePathLine, onOpenFile, settledWithCue])
   const linkHref = settledWithCue ? undefined : href
+  const interactiveSummary = openFile !== undefined || linkHref !== undefined
+  const disclosureLabel = interactiveSummary
+    ? [title, status, summaryText, suffix].filter(part => part !== null && part !== '').join(' ')
+    : undefined
   // Keep Enter/Space on the focused path or URL link from bubbling to the row's
   // keydown handler, which would preventDefault() the key and toggle expand
   // instead of activating the link — the keyboard analogue of the click
@@ -218,6 +222,7 @@ export const ToolRow = memo(function ToolRow({
         <button
           type="button"
           className={css.fileLink}
+          aria-label={t('row.openFile', { path: summaryText })}
           onClick={openFile}
           onKeyDown={summaryLinkKeyDown}
         >
@@ -249,7 +254,7 @@ export const ToolRow = memo(function ToolRow({
         <TextShimmer className={clsx(css.summarySuffix, suffix === diffStat && css.diffStat)} active={running}>{suffix}</TextShimmer>
       )}
     </>
-  ), [diffStat, summaryLinkKeyDown, linkHref, openFile, running, state, suffix, summaryText])
+  ), [diffStat, summaryLinkKeyDown, linkHref, openFile, running, state, suffix, summaryText, t])
   const expandedContent = useMemo(() => open ? (
     <div className={clsx(css.bodyWrap, detailsBody !== null && css.detailsBodyWrap)}>
       {askQuestionBody !== null
@@ -356,7 +361,7 @@ export const ToolRow = memo(function ToolRow({
   ])
   return (
     <div className={css.root} data-variant={variant} data-tool={toolName} data-state={state}>
-      {status !== null && <span className={css.visuallyHidden}>{status}</span>}
+      <span className={css.visuallyHidden}>{status}</span>
       <DisclosureRow
         rowClassName={css.row}
         leadingClassName={css.leading}
@@ -365,9 +370,11 @@ export const ToolRow = memo(function ToolRow({
         icon={icon}
         title={title}
         running={running}
+        accessibleLabel={disclosureLabel}
         open={open}
         expandable={expandable}
         expandOnRowClick
+        interactiveCollapsedContent={interactiveSummary}
         keepContentWhenOpen
         onToggle={toggleExpand}
         collapsedContent={collapsedContent}

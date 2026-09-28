@@ -91,13 +91,16 @@ it('closes one layer per Escape, honors local menus and IME, and restores the re
   expect(document.activeElement).toBe(settings)
 })
 
-it('keeps Tab within the top dialog and releases listeners after unmount', () => {
+it.each([
+  { label: 'Tab', altKey: false },
+  { label: 'Option+Tab', altKey: true },
+])('keeps $label within the top dialog and releases listeners after unmount', ({ altKey }) => {
   const view = render(<Nested />)
   fireEvent.click(screen.getByRole('button', { name: 'Settings' }))
   const last = screen.getByRole('button', { name: 'Reference' }); last.focus()
-  fireEvent.keyDown(last, { key: 'Tab' })
+  fireEvent.keyDown(last, { key: 'Tab', altKey })
   expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Close settings' }))
-  fireEvent.keyDown(document.activeElement!, { key: 'Tab', shiftKey: true })
+  fireEvent.keyDown(document.activeElement!, { key: 'Tab', shiftKey: true, altKey })
   expect(document.activeElement).toBe(last)
   view.unmount()
   const event = new KeyboardEvent('keydown', { key: 'Escape', cancelable: true })

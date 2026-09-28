@@ -1,6 +1,6 @@
 - tree "Sessions":
-  - treeitem "{{workspace}}" [expanded]
-  - treeitem "Review deepseek-ai/deepseek-harness#314 Session actions for Review deepseek-ai/deepseek-harness#314 Archive session Pin session" [selected]:
+  - treeitem "{{workspace}}" [expanded] [level=1]
+  - treeitem "Review deepseek-ai/deepseek-harness#314 Session actions for Review deepseek-ai/deepseek-harness#314 Archive session Pin session" [level=2] [selected]:
     - text: Review deepseek-ai/deepseek-harness#314
     - button "Session actions for Review deepseek-ai/deepseek-harness#314"
     - button "Archive session"
@@ -8,28 +8,32 @@
 
 ---
 
-- banner:
+- main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy": Review deepseek-ai/deepseek-harness#314
   - text: Standard mode
   - button "More actions"
   - button "Open right sidebar"
-  - tablist:
+  - tablist "Session views":
     - tab "Chat" [selected]
     - tab "Trajectory"
-- button "GitHub event received {{clock}}":
-  - text: GitHub event received
-  - time: {{clock}}
-- status: Worked
-- button "Took {{duration}}" [disabled]
-- paragraph: "Review complete: no actionable findings."
-- button "Copy"
-- button "Good response"
-- button "Bad response"
-- button "Branch into a new conversation"
-- text: {{clock}}
-- textbox "Message or run a task, / commands, @ files or sessions"
-- button "Add files or run commands"
-- 'button "Access mode, current: Read Only"': Read Only
-- button "Select model, current github-webhook-review-test/reply": github-webhook-review-test/reply
-- button "Send message" [disabled]
-- button "1 turns 1 steps"
+  - tabpanel "Chat":
+    - log "Conversation transcript":
+      - button "GitHub event received {{clock}}":
+        - text: GitHub event received
+        - time: {{clock}}
+      - status: Worked
+      - button "Took {{duration}}" [disabled]
+      - article "Assistant response":
+        - paragraph: "Review complete: no actionable findings."
+      - button "Copy"
+      - button "Good response"
+      - button "Bad response"
+      - button "Branch into a new conversation"
+      - text: {{clock}}
+  - textbox "Message or run a task, / commands, @ files or sessions"
+  - button "Add files or run commands"
+  - 'button "Access mode, current: Read Only"': Read Only
+  - button "Select model, current github-webhook-review-test/reply": github-webhook-review-test/reply
+  - button "Send message" [disabled]
+  - button "1 turns 1 steps"

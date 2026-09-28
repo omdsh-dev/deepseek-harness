@@ -8,7 +8,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Browser approval presentation over the Agent-scoped Remote Event waterfall. The plugin publishes each pending request through `ctx.uiSession`, takes over the Conversation composer, optionally renders correlated Tool detail, and returns the user's decision to the waiting Host request. Use it when a browser must collect approval for a waiting Host operation.
+Browser approval presentation over the Agent-scoped Remote Event waterfall. The plugin publishes each pending request through `ctx.uiSession`, takes over the Conversation composer, optionally renders correlated Tool detail, and returns the user's decision to the waiting Host request. The card exposes its detail as a named group, marks an in-flight decision busy, and announces a settlement failure before re-enabling both choices. Use it when a browser must collect approval for a waiting Host operation.
 
 ## Table of Contents
 

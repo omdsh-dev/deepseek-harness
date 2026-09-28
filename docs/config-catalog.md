@@ -16,7 +16,7 @@ Each package entry labels its data with three identifiers: `inject` lists the se
 
 - `inject`: `agents` · `llm` · `sessionPersistence` · `sessions`
 - `refs`: `Stream` (`@agentclientprotocol/sdk`)
-- `source`: [`packages/acp/acp/src/index.ts:75`](../packages/acp/acp/src/index.ts)
+- `source`: [`packages/acp/acp/src/index.ts:76`](../packages/acp/acp/src/index.ts)
 
 ```ts config-catalog
 /** Plugin config: the provider/model selection used for each ACP-created agent. */
@@ -1260,7 +1260,7 @@ export interface Config {
 ## `@deepseek-ai/dsh-headless`
 
 - `inject`: `agentDefaultModel` · `agents` · `sessions`
-- `source`: [`packages/bundle/headless/src/index.ts:42`](../packages/bundle/headless/src/index.ts)
+- `source`: [`packages/bundle/headless/src/index.ts:49`](../packages/bundle/headless/src/index.ts)
 
 ```ts config-catalog
 /** Plugin config: the task and run options resolved from this app's injected provider service. */
@@ -1271,7 +1271,14 @@ export interface Config {
   sessionId?: string
   /** Whether stdout carries the machine-readable event stream instead of final text. */
   json?: boolean
+  /** Suppress reasoning deltas and publish bounded status lines. */
+  accessibility?: boolean
+  /** Final-result format, independent from the upstream event stream. */
+  outputFormat?: HeadlessOutputFormat
 }
+
+/** One final-answer presentation selected by the invocation. */
+export type HeadlessOutputFormat = typeof HEADLESS_OUTPUT_FORMATS[number]
 ```
 <!-- END GENERATED config-catalog:@deepseek-ai/dsh-headless -->
 

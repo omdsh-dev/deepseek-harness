@@ -215,6 +215,7 @@
 
 .groupTitleRow {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   min-height: 32px;
@@ -227,11 +228,14 @@
 
 .headerEnd {
   margin-left: auto;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .groupToggle {
   display: flex;
-  flex: none;
+  min-width: 0;
+  max-width: 100%;
   align-items: center;
   gap: 8px;
   border: 0;
@@ -281,6 +285,7 @@
 /* The preset switcher trigger mirrors the General-settings selector pill. */
 .switcher {
   display: inline-flex;
+  max-width: 100%;
   flex: none;
   align-items: center;
   gap: 12px;
@@ -311,6 +316,7 @@
 }
 
 .switcherLabel {
+  min-width: 0;
   max-width: 240px;
   overflow: hidden;
   text-overflow: ellipsis;

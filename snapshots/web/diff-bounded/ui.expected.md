@@ -1,8 +1,8 @@
-- button "Edit large.txt +130 -130" [expanded]:
-  - text: Edit
-  - button "large.txt"
-  - text: +130 -130
-- text: Code block
+- text: Completed
+- button "Edit Completed large.txt +130 -130" [expanded]
+- text: Edit
+- button "Open file large.txt": large.txt
+- text: +130 -130 Code block
 - button "Wrap lines"
 - button "Copy"
 - text: large.txt - shared heading - old setting 0 - old setting 1 - old setting 2

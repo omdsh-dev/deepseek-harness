@@ -362,8 +362,26 @@ describe('web e2e: persisted subagent conversation and human continuation', () =
 
   it('expands a persisted grandchild progressively without activating either level', async () => {
     onTestFailed(() => saveFailureShot(page, 'web-e2e-subagent-tree'))
-    await page.getByRole('button', { name: '2 subagents' }).hover()
+    const catalogButton = page.getByRole('button', { name: '2 subagents' })
+    const controlledTreeId = await catalogButton.getAttribute('aria-controls')
+    expect(controlledTreeId).toBeTruthy()
+    // The preceding hover scenario can leave the physical pointer over this
+    // trigger and reopen it between tests. Establish a closed keyboard-only
+    // baseline before proving native activation and edge entry.
+    await page.mouse.move(0, 0)
+    await catalogButton.focus()
+    if (await catalogButton.getAttribute('aria-expanded') === 'true') {
+      await catalogButton.press('Escape')
+    }
+    expect(await catalogButton.getAttribute('aria-expanded')).toBe('false')
+    await catalogButton.press('Enter')
+    await page.getByRole('tree', { name: 'Subagent sessions' }).waitFor()
+    expect(await catalogButton.getAttribute('aria-expanded')).toBe('true')
+    await catalogButton.press('Escape')
+    expect(await catalogButton.getAttribute('aria-expanded')).toBe('false')
+    await catalogButton.press('ArrowDown')
     const catalogTree = page.getByRole('tree', { name: 'Subagent sessions' })
+    expect(await catalogTree.getAttribute('id')).toBe(controlledTreeId)
     expect(await catalogTree.evaluate((element) => {
       const rect = element.getBoundingClientRect()
       const hit = document.elementFromPoint(rect.left + 8, rect.top + 8)
@@ -375,14 +393,25 @@ describe('web e2e: persisted subagent conversation and human continuation', () =
     expect(await oneShotDisclosure.count()).toBe(0)
     const oneShotRow = page.getByRole('treeitem', { name: new RegExp(ONE_SHOT_LABEL) })
     expect(await oneShotRow.locator('[data-state="done"]').count()).toBe(1)
+    expect(await catalogTree.getByRole('treeitem').first()
+      .evaluate(element => document.activeElement === element)).toBe(true)
+    expect(await catalogTree.locator('[role="treeitem"]:not([aria-disabled="true"])[tabindex="0"]')
+      .count()).toBe(1)
     expect(await oneShotRow.getByText('~6mo 12d', { exact: true }).count()).toBe(1)
     expect(await oneShotRow.getAttribute('aria-label')).toContain('192d 00h 00m 00s')
-    await page.getByRole('button', { name: `Expand ${LABEL} descendants` }).click()
+    await oneShotRow.press('ArrowDown')
     const childRow = page.getByRole('treeitem', { name: new RegExp(LABEL) })
+    expect(await childRow.evaluate(element => document.activeElement === element)).toBe(true)
+    await childRow.press('ArrowRight')
     const childLabel = await childRow.getAttribute('aria-label')
     await page.waitForTimeout(1_100)
     expect(await childRow.getAttribute('aria-label')).toBe(childLabel)
-    await page.getByRole('treeitem', { name: new RegExp(NESTED_LABEL) }).waitFor({ timeout: 15_000 })
+    const nestedRow = page.getByRole('treeitem', { name: new RegExp(NESTED_LABEL) })
+    await nestedRow.waitFor({ timeout: 15_000 })
+    await childRow.press('ArrowRight')
+    expect(await nestedRow.evaluate(element => document.activeElement === element)).toBe(true)
+    await nestedRow.press('ArrowLeft')
+    expect(await childRow.evaluate(element => document.activeElement === element)).toBe(true)
     expect(scaffold.ctx.agents.get(childId)).toBeUndefined()
     expect(scaffold.ctx.agents.get(grandchildId)).toBeUndefined()
     const snapshot = await captureStableAria(
@@ -391,6 +420,10 @@ describe('web e2e: persisted subagent conversation and human continuation', () =
       scaffold.workspaceCwd,
     )
     await compareOrRefreshGolden(TREE_EXPECTED, snapshot, MODE)
+    await childRow.press('ArrowLeft')
+    expect(await nestedRow.count()).toBe(0)
+    await childRow.press('ArrowRight')
+    await nestedRow.waitFor()
     await page.getByRole('treeitem', { name: new RegExp(NESTED_LABEL) }).click()
     await page.getByText(NESTED_PROMPT).waitFor()
     const hierarchy = page.getByRole('navigation', { name: 'Session hierarchy' })
