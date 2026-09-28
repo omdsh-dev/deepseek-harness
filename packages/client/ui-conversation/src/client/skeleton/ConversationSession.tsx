@@ -114,7 +114,7 @@ export function ConversationSessionHeader({
                   const last = index === ancestry.length - 1
                   // The current crumb has no navigation, so it is plain text
                   // rather than a disabled button: on darwin desktop a button
-                  // would subtract itself from the window drag band (ui-web
+                  // would subtract itself from the header's drag row (ui-web
                   // base.css) and leave the title inert for dragging too.
                   const title = last
                     ? (

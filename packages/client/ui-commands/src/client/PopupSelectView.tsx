@@ -11,6 +11,7 @@
  * above the composer.
  */
 import { useEffect, useId, useRef } from 'react'
+import { MenuSurface } from '@deepseek-ai/dsh-client-ui-primitives'
 import { useSyncExternalStore } from 'react'
 import clsx from 'clsx'
 import { IconCheckOutlineRegular, RiskConfirmation, useAnchoredMaxHeight } from '@deepseek-ai/dsh-client-ui-primitives'
@@ -124,7 +125,7 @@ export function PopupSelectView({ popup, t }: PopupSelectViewProps) {
   return (
     <>
       {state.confirming === null && (
-        <div
+        <MenuSurface
           ref={cardRef}
           className={css.card}
           style={{ maxHeight }}
@@ -188,7 +189,7 @@ export function PopupSelectView({ popup, t }: PopupSelectViewProps) {
               ))}
             </div>
           )}
-        </div>
+        </MenuSurface>
       )}
       {confirmation !== undefined && (
         <RiskConfirmation

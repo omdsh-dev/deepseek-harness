@@ -16,7 +16,7 @@
       - button "Took {{duration}}" [expanded]
       - button "Ran code, ran commands, read files" [expanded]
       - article "Assistant response":
-        - button "Think"
+        - 'button "Think The user wants me to write a single `run_code` program that:"'
       - text: Completed
       - button "Code Run bash echo and catch missing file read"
       - button "Completed Bash Echo CODE_ROUND_OK" [expanded]
@@ -27,7 +27,7 @@
       - text: Failed
       - 'button "Read Error: cannot read \"{{cwd}}/workspace/missing.txt\": not found"'
       - article "Assistant response":
-        - button "Think"
+        - button "Think The program ran successfully. Let me now reply DONE as instructed."
       - article "Assistant response":
         - paragraph: DONE
       - button "Copy"

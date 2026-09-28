@@ -17,10 +17,10 @@
       - button "Took {{duration}}" [expanded]
       - button "Ran commands" [expanded]
       - article "Assistant response":
-        - button "Think"
+        - button "Think The user wants me to run a simple bash command and reply with \"DONE\"."
       - button "Completed Bash Echo the test string"
       - article "Assistant response":
-        - button "Think"
+        - button "Think The command executed successfully and output \"WEB_E2E_OK\". I just need to reply with \"DONE\"."
       - article "Assistant response":
         - paragraph: DONE
       - button "Copy"

@@ -15,7 +15,8 @@ import {
   terminalCardModel,
   terminalFailed,
 } from '../models/terminal-card-model.ts'
-import { formatToolBody, toolRowModel, type ToolRowState } from '../models/tool-call-model.ts'
+import { formatToolBody, toolRowModel, toolTitleKey, type ToolRowState } from '../models/tool-call-model.ts'
+import { PreparingToolRow } from '../components/PreparingToolRow.tsx'
 import { CONVERSATION_NS as NS } from '../../locale.ts'
 import css from './bash-sample.module.css'
 
@@ -26,6 +27,7 @@ const BASH_ICON = <IconApiOutlineRegular size={14} />
 /** Visually hidden status — StateDot is aria-hidden; AT needs a text label. */
 function stateStatus(state: ToolRowState, t: BashRowProps['t']): string {
   switch (state) {
+    case 'preparing': return t('row.preparing')
     case 'running': return t('bash.running')
     case 'ok': return t('bash.completed')
     case 'error': return t('bash.failed')
@@ -38,7 +40,13 @@ function stateStatus(state: ToolRowState, t: BashRowProps['t']): string {
  * @param props - tool call, Session sources, locale, and inspection callback.
  * @returns the Bash output row.
  */
-export const BashRow = memo(function BashRow({ toolName, block, sessionId, useSessions, inspect, useDisclosure, t }: BashRowProps) {
+export const BashRow = memo(function BashRow(props: BashRowProps) {
+  if (props.phase === 'preparing') return <PreparingToolRow {...props}
+    icon={BASH_ICON} title={props.t(toolTitleKey(props.toolName))} />
+  return <StartedBashRow {...props} />
+})
+
+const StartedBashRow = memo(function StartedBashRow({ toolName, block, sessionId, useSessions, inspect, useDisclosure, t }: Exclude<BashRowProps, { phase: 'preparing' }>) {
   const model = useMemo(() => toolRowModel(toolName, block), [toolName, block])
   // An omitted shell workdir is the session workspace; relative values resolve
   // against it before reaching the terminal primitive.

@@ -6,12 +6,12 @@
   - button "Took {{duration}}" [expanded]
   - button "Called tools" [expanded]
   - article "Assistant response":
-    - button "Think"
+    - button "Think The user wants me to use the workflow tool exactly once with specific parameters. Let me carefully follow the instructions:"
   - text: Completed
   - button "Run workflow snapshot-flow"
   - button "snapshot-flow 1 member Completed"
   - article "Assistant response":
-    - button "Think"
+    - button "Think The workflow returned successfully with the reply \"WF_CHILD_OK\". Now I need to reply with exactly \"WORKFLOW_DONE\" and stop."
   - article "Assistant response":
     - paragraph: WORKFLOW_DONE
   - button "Copy"

@@ -17,6 +17,7 @@
       - button "Deep diving for {{duration}}" [disabled] [expanded]
       - article "Assistant response":
         - text: ts
+        - button "Wrap lines" [pressed]
         - button "Copy"
         - code: "const first: number = 1 const second = \"two\" let tail"
   - textbox "Message or run a task, / commands, @ files or sessions"

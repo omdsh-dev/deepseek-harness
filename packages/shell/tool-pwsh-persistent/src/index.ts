@@ -9,7 +9,8 @@ import { randomUUID } from 'node:crypto'
 import type { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
 import type { Agent } from '@deepseek-ai/dsh-agent'
-import type { TerminalReadResult, TerminalSendResult, TerminalSessionId } from '@deepseek-ai/dsh-terminal'
+import { truncateWithoutSplittingSurrogatePair } from '@deepseek-ai/dsh-output-retention'
+import type { TerminalReadResult, TerminalSessionId } from '@deepseek-ai/dsh-terminal'
 import { deadline, timeoutOf } from '@deepseek-ai/dsh-timeout'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 
@@ -49,20 +50,15 @@ interface CapturedOutput {
 }
 
 interface PersistentShells {
-  get(owner: Agent, signal: AbortSignal): Promise<PersistentShell>
+  get(owner: Agent, signal: AbortSignal): Promise<TerminalSessionId>
   reset(owner: Agent, reason: string): Promise<void>
-}
-
-interface PersistentShell {
-  id: TerminalSessionId
-  prompt: string
 }
 
 function maybeTruncate(content: string, maxOutputChars: number, incomplete = false): string {
   if (content.length <= maxOutputChars && !incomplete) return content
   return content.length <= maxOutputChars
     ? content + TRUNCATED_MESSAGE
-    : content.slice(0, maxOutputChars) + TRUNCATED_MESSAGE
+    : truncateWithoutSplittingSurrogatePair(content, maxOutputChars) + TRUNCATED_MESSAGE
 }
 
 function markers(): CommandMarkers {
@@ -102,12 +98,8 @@ function wrapCommand(command: string, marker: CommandMarkers): string {
   return `Write-Output '${marker.start}'; $LASTEXITCODE = $null; $__s = 1; try { Invoke-Expression "${body}"; $__ok = $? } catch { $__ok = $false }; if ($null -ne $LASTEXITCODE) { $__s = [int]$LASTEXITCODE } else { $__s = if ($__ok) { 0 } else { 1 } }; Write-Output ('${marker.end}' + $__s)`
 }
 
-function stripPrompt(text: string, prompt: string): string {
-  let result = text.replace(/\r?\n$/, '')
-  while (prompt.length > 0 && result.endsWith(prompt)) {
-    result = result.slice(0, -prompt.length)
-  }
-  return result.endsWith('\n') ? result.slice(0, -1) : result
+function trimTrailingNewline(text: string): string {
+  return text.replace(/\r?\n$/, '')
 }
 
 function commandOutput(
@@ -134,26 +126,17 @@ function commandOutput(
   }
 }
 
-function promptCompleted(result: TerminalSendResult, prompt: string): boolean {
-  return prompt.length > 0 && (
-    result.viewport.endsWith(prompt)
-    || result.viewport.endsWith(`${prompt}\r\n`)
-    || result.viewport.endsWith(`${prompt}\n`)
-  )
-}
-
 function partialOutput(
   snapshot: RetainedOutput,
   marker: CommandMarkers,
   wrapper: string,
-  prompt: string,
   fallback: string,
   fallbackTruncated = false,
 ): CapturedOutput {
   const startMarker = snapshot.text.lastIndexOf(marker.start)
   if (startMarker >= 0) {
     return {
-      text: stripPrompt(snapshot.text.slice(startMarker + marker.start.length).replace(/^\r?\n/, ''), prompt),
+      text: trimTrailingNewline(snapshot.text.slice(startMarker + marker.start.length).replace(/^\r?\n/, '')),
       incomplete: false,
     }
   }
@@ -164,7 +147,7 @@ function partialOutput(
   const fallbackEnd = afterStart.lastIndexOf(marker.end)
   const beforeEnd = fallbackEnd < 0 ? afterStart : afterStart.slice(0, fallbackEnd)
   return {
-    text: stripPrompt(beforeEnd.replaceAll(wrapper, ''), prompt),
+    text: trimTrailingNewline(beforeEnd.replaceAll(wrapper, '')),
     incomplete: fallbackTruncated || fallbackStart < 0,
   }
 }
@@ -240,7 +223,6 @@ async function respondToSessionExit(
   shells: PersistentShells,
   owner: Agent,
   id: TerminalSessionId,
-  prompt: string,
   status: { exitCode: number | null; signal: NodeJS.Signals | null },
   marker: CommandMarkers,
   wrapped: string,
@@ -252,7 +234,7 @@ async function respondToSessionExit(
   await shells.reset(owner, 'persistent pwsh shell exited')
   return [
     renderShellExitStatus(
-      renderCaptured(partialOutput(snapshot, marker, wrapped, prompt, fallback, fallbackTruncated), config.maxOutputChars),
+      renderCaptured(partialOutput(snapshot, marker, wrapped, fallback, fallbackTruncated), config.maxOutputChars),
       status.exitCode,
       status.signal,
     ),
@@ -261,9 +243,9 @@ async function respondToSessionExit(
 }
 
 function persistentShells(ctx: Context, config: ResolvedConfig): PersistentShells {
-  const pending = new WeakMap<Agent, Promise<PersistentShell>>()
-  const live = new Map<Agent, PersistentShell>()
-  const creating = new Set<Promise<PersistentShell>>()
+  const pending = new WeakMap<Agent, Promise<TerminalSessionId>>()
+  const live = new Map<Agent, TerminalSessionId>()
+  const creating = new Set<Promise<TerminalSessionId>>()
   const ownerCleanupInstalled = new WeakSet<Agent>()
   const lifecycle = new AbortController()
 
@@ -275,19 +257,19 @@ function persistentShells(ctx: Context, config: ResolvedConfig): PersistentShell
   ctx.effect(() => async () => {
     lifecycle.abort(new Error('tool-pwsh-persistent disposed during shell creation'))
     await Promise.allSettled([...creating])
-    const closing = [...live].map(async ([owner, shell]) => { await close(owner, shell.id, 'tool-pwsh-persistent disposed') })
+    const closing = [...live].map(async ([owner, id]) => { await close(owner, id, 'tool-pwsh-persistent disposed') })
     await Promise.all(closing)
     live.clear()
   }, 'tool-pwsh-persistent shell cleanup')
 
   const reset = async (owner: Agent, reason: string): Promise<void> => {
     pending.delete(owner)
-    const shell = live.get(owner)
+    const id = live.get(owner)
     live.delete(owner)
-    if (shell !== undefined) await close(owner, shell.id, reason)
+    if (id !== undefined) await close(owner, id, reason)
   }
 
-  const get = (owner: Agent, signal: AbortSignal): Promise<PersistentShell> => {
+  const get = (owner: Agent, signal: AbortSignal): Promise<TerminalSessionId> => {
     const existing = pending.get(owner)
     if (existing !== undefined) return existing
     const combinedSignal = AbortSignal.any([signal, lifecycle.signal])
@@ -298,8 +280,7 @@ function persistentShells(ctx: Context, config: ResolvedConfig): PersistentShell
           type: config.backendType,
           ...cwd === undefined ? {} : { cwd },
         }, combinedSignal)
-        const shell = { id: spawned.sessionId, prompt: spawned.motd }
-        live.set(owner, shell)
+        live.set(owner, spawned.sessionId)
         if (!ownerCleanupInstalled.has(owner)) {
           ownerCleanupInstalled.add(owner)
           owner.ctx.effect(() => () => {
@@ -307,14 +288,7 @@ function persistentShells(ctx: Context, config: ResolvedConfig): PersistentShell
             live.delete(owner)
           }, 'tool-pwsh-persistent owner cache cleanup')
         }
-        if (spawned.status.kind === 'exited') {
-          throw new Error('persistent pwsh shell did not accept initialization')
-        }
-        // The selected PTY backend owns shell bootstrap and prompt readiness.
-        // Replacing that prompt here breaks the backend's exact completion
-        // contract on ConPTY, so retain the published prompt only for bounded
-        // output cleanup and leave shell initialization to `spawn`.
-        return shell
+        return spawned.sessionId
       } catch (error: unknown) {
         await reset(owner, 'persistent pwsh initialization failed')
         throw error
@@ -340,15 +314,14 @@ async function executeCommand(
   upstream: AbortSignal,
 ): Promise<string> {
   using commandDeadline = deadline(upstream, config.timeoutMs, TIMEOUT_CODE)
-  let shell: PersistentShell
+  let id: TerminalSessionId
   try {
-    shell = await shells.get(owner, commandDeadline.signal)
+    id = await shells.get(owner, commandDeadline.signal)
   } catch (error: unknown) {
     // Initialization owns rollback; only this caller's cancellation becomes ABORTED.
     if (upstream.aborted && error === upstream.reason) return ''
     throw error
   }
-  const { id, prompt } = shell
   const marker = markers()
   const wrapped = wrapCommand(command, marker)
   let first = true
@@ -363,7 +336,7 @@ async function executeCommand(
     const status = ctx.terminals.list(owner).find(session => session.sessionId === id)?.status
     if (status?.kind === 'exited') {
       return await respondToSessionExit(
-        ctx, shells, owner, id, prompt, status, marker, wrapped, fallback, fallbackTruncated, config,
+        ctx, shells, owner, id, status, marker, wrapped, fallback, fallbackTruncated, config,
       )
     }
     let operation
@@ -388,7 +361,7 @@ async function executeCommand(
     if (timedOut !== undefined) {
       const snapshot = retainedScrollback(ctx, owner, id, latest)
       const partial = renderCaptured(
-        partialOutput(snapshot, marker, wrapped, prompt, fallback, fallbackTruncated),
+        partialOutput(snapshot, marker, wrapped, fallback, fallbackTruncated),
         config.maxOutputChars,
       )
       await shells.reset(owner, 'persistent pwsh command timed out')
@@ -410,13 +383,17 @@ async function executeCommand(
     }
     if (result.sessionStatus.kind === 'exited') {
       return await respondToSessionExit(
-        ctx, shells, owner, id, prompt, result.sessionStatus, marker, wrapped, fallback, fallbackTruncated, config,
+        ctx, shells, owner, id, result.sessionStatus, marker, wrapped, fallback, fallbackTruncated, config,
       )
     }
-    if (promptCompleted(result, prompt)) {
+    // The shell reads stdin again (its prompt, or a foreground child's own
+    // read) without having printed the end marker — an interrupt, a replaced
+    // shell, or an interactive child. Return what was captured instead of
+    // spinning until the command deadline.
+    if (result.waitReason === 'stdin_read') {
       const snapshot = retainedScrollback(ctx, owner, id, latest)
       return renderCaptured(
-        partialOutput(snapshot, marker, wrapped, prompt, fallback, fallbackTruncated),
+        partialOutput(snapshot, marker, wrapped, fallback, fallbackTruncated),
         config.maxOutputChars,
       )
     }

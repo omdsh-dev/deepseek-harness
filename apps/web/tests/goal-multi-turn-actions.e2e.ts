@@ -154,6 +154,8 @@ describe('web e2e: Goal keeps one assistant action row per completed turn', () =
     expect(goalRounds(sessionEvents)).toEqual([1, 2])
     expect(sessionEvents.flatMap(event =>
       event.type === 'request/header' ? [event.data.reason] : [])).toEqual(['initial', 'series'])
+    expect(sessionEvents.find(event => event.type === 'request/header')?.data)
+      .toMatchObject({ reason: 'initial', startsSeries: true })
     await expect.poll(() => page.locator('[data-turn-process]').count(), { timeout: 15_000 }).toBe(2)
     expect(await page.getByRole('button', { name: 'System prompt' }).count()).toBe(0)
     expect(await page.locator(

@@ -17,7 +17,7 @@
       - button "Took {{duration}}" [disabled]
       - button "Asked questions" [expanded]
       - article "Assistant response":
-        - button "Think"
+        - button "Think The user wants me to ask them a checkpoint question first, then continue with whatever they interject. Let me do exactly that."
       - text: Completed
       - button "Ask question 1/1 answered"
       - article "User message":

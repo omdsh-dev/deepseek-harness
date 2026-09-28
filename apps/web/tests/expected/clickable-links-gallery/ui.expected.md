@@ -13,7 +13,7 @@
         - button "Copy"
       - status: Worked
       - button "Took {{duration}}" [expanded]
-      - button "Edited files, called tools, searched code, etc." [expanded]
+      - button "Wrote files, called tools, searched code, etc." [expanded]
       - text: Completed
       - button "Write Completed site/report.html +1 -0"
       - text: Write
@@ -38,9 +38,10 @@
       - button "Edit Completed src/tokens.css +1 -1" [expanded]
       - text: Edit
       - button "Open file src/tokens.css": src/tokens.css
-      - text: +1 -1
+      - text: +1 -1 css
+      - button "Wrap lines"
       - button "Copy"
-      - text: "src/tokens.css - --inline-code: #EBEEF2; + --inline-code: #F5F5F5; └ +1 -1 · 1 file"
+      - text: "src/tokens.css - --inline-code: #EBEEF2; + --inline-code: #F5F5F5;"
       - button "Inspect"
       - text: Completed
       - button "Tool call str_replace_editor · create" [expanded]
@@ -52,7 +53,8 @@
       - button "Read Completed docs/guide.md" [expanded]
       - text: Read
       - button "Open file docs/guide.md": docs/guide.md
-      - text: docs/guide.md
+      - text: Code block docs/guide.md
+      - button "Wrap lines"
       - button "Copy"
       - text: "# Link style guide guide line 2 guide line 3 guide line 4"
       - button "Expand 4 more lines": … 4 more lines
@@ -91,7 +93,10 @@
         - listitem: Mirror spec (non-http) A non-http source renders inert.
       - button "Inspect"
       - text: Completed
-      - button "Fetch https://docs.example.test/tokens" [expanded]
+      - button "Fetch Completed https://docs.example.test/tokens" [expanded]
+      - text: Fetch
+      - link "https://docs.example.test/tokens":
+        - /url: https://docs.example.test/tokens
       - link "https://docs.example.test/tokens":
         - /url: https://docs.example.test/tokens
       - text: HTTP 200
@@ -147,8 +152,10 @@
           - code: notes.md
           - text: untouched.
         - paragraph:
-          - img "Token preview"
+          - 'button "View full image: Token preview"':
+            - img "Token preview"
         - text: css
+        - button "Wrap lines" [pressed]
         - button "Copy"
         - code: "--inline-code: #F5F5F5;"
         - paragraph: LINK_GALLERY_DONE

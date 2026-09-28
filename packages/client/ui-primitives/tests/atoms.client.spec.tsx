@@ -10,6 +10,16 @@ import { POINTER_GRACE_MS } from '../src/pointer-grace.ts'
 afterEach(cleanup)
 
 describe('Button', () => {
+  it('exposes its native button for focus and releases the ref on unmount', () => {
+    const ref = createRef<HTMLButtonElement>()
+    const { unmount } = render(<Button ref={ref}>Focus</Button>)
+    expect(ref.current).toBe(screen.getByRole('button', { name: 'Focus' }))
+    ref.current?.focus()
+    expect(document.activeElement).toBe(ref.current)
+    unmount()
+    expect(ref.current).toBeNull()
+  })
+
   it('renders children, icon, and forwards clicks', () => {
     const onClick = vi.fn()
     const ref = createRef<HTMLButtonElement>()
@@ -93,18 +103,19 @@ describe('Menu', () => {
           onSelect={() => {}}
           onClose={() => { setOpen(false) }}
         >
-          <MenuItemButton separatorBefore onSelect={() => { onAction(); setOpen(false) }}>Publish</MenuItemButton>
+          <MenuItemButton separatorBefore shortcut={{ keys: ['Ctrl', 'P'], aria: 'Control+P' }} onSelect={() => { onAction(); setOpen(false) }}>Publish</MenuItemButton>
         </Menu>
       )
     }
     render(<Harness />)
     const trigger = screen.getByRole('button', { name: 'trigger' })
-    expect(screen.getAllByRole('menuitem').map(item => item.textContent)).toEqual(['Alpha', 'Publish'])
+    expect(screen.getAllByRole('menuitem').map(item => item.textContent)).toEqual(['Alpha', 'PublishCtrlP'])
     // The component row starts a group: one hairline, between the data row and it.
     const publishWrap = screen.getByRole('menuitem', { name: 'Publish' }).parentElement
     expect(screen.getByRole('separator').nextElementSibling).toBe(screen.getByRole('menuitem', { name: 'Publish' }))
     expect(publishWrap?.contains(screen.getByRole('separator'))).toBe(true)
     const publish = screen.getByRole('menuitem', { name: 'Publish' })
+    expect(publish.getAttribute('aria-keyshortcuts')).toBe('Control+P')
     trigger.focus()
     fireEvent.keyDown(trigger, { key: 'End' })
     expect(document.activeElement).toBe(publish)
@@ -323,7 +334,7 @@ describe('Menu', () => {
     expect(screen.getByRole('separator')).toBeDefined()
   })
 
-  it('Tab and Shift+Tab leave a menu without activating a row', async () => {
+  it.each([false, true])('Tab and Shift+Tab leave a menu without activating a row (Option modifier: %s)', async (altKey) => {
     const onSelect = vi.fn()
     const onClose = vi.fn()
     render(<>
@@ -332,15 +343,46 @@ describe('Menu', () => {
       <button type="button">after</button>
     </>)
     const alpha = screen.getByRole('menuitem', { name: 'Alpha' })
-    await act(async () => { fireEvent.keyDown(alpha, { key: 'Tab' }) })
+    await act(async () => { fireEvent.keyDown(alpha, { key: 'Tab', altKey }) })
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'after' }))
     alpha.focus()
-    await act(async () => { fireEvent.keyDown(alpha, { key: 'Tab', shiftKey: true }) })
+    await act(async () => { fireEvent.keyDown(alpha, { key: 'Tab', shiftKey: true, altKey }) })
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'before' }))
     expect(onSelect).not.toHaveBeenCalled()
     expect(onClose).toHaveBeenCalledTimes(2)
   })
 
+
+  it('enters from a split anchor and tabs relative to the button that opened it', async () => {
+    const onSelect = vi.fn()
+    function SplitMenu() {
+      const [open, setOpen] = useState(false)
+      return <>
+        <input aria-label="before" />
+        <Menu open={open} anchor={<span>
+          <button type="button">primary</button>
+          <button type="button" onClick={() => { setOpen(true) }}>options</button>
+        </span>} items={items} onSelect={onSelect} onClose={() => { setOpen(false) }} />
+        <button type="button" tabIndex={-1}>programmatic only</button>
+        <fieldset disabled><button type="button">unavailable</button></fieldset>
+        <input aria-label="after" />
+      </>
+    }
+    render(<SplitMenu />)
+    const trigger = screen.getByRole('button', { name: 'options' })
+    trigger.focus()
+    await act(async () => { fireEvent.click(trigger) })
+    expect(document.activeElement).toBe(screen.getByRole('menuitem', { name: 'Alpha' }))
+    await act(async () => { fireEvent.keyDown(document.activeElement!, { key: 'Tab' }) })
+    expect(screen.queryByRole('menu')).toBeNull()
+    expect(document.activeElement).toBe(screen.getByRole('textbox', { name: 'after' }))
+    trigger.focus()
+    await act(async () => { fireEvent.click(trigger) })
+    await act(async () => { fireEvent.keyDown(document.activeElement!, { key: 'Tab', shiftKey: true }) })
+    expect(screen.queryByRole('menu')).toBeNull()
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'primary' }))
+    expect(onSelect).not.toHaveBeenCalled()
+  })
 
   it('Tab from the trigger and elsewhere stays native', () => {
     render(
@@ -549,7 +591,7 @@ describe('Menu', () => {
             id: 'new',
             label: 'New Workspace',
             submenu: [
-              { id: 'ok', label: 'Create ok', selection: 'radio', icon: <svg data-testid="sub-ic" /> },
+              { id: 'ok', label: 'Create ok', selection: 'radio', icon: <svg data-testid="sub-ic" />, shortcut: { keys: ['⌘', 'N'], aria: 'Meta+N' } },
             ],
           },
         ]}
@@ -569,6 +611,8 @@ describe('Menu', () => {
     expect(screen.getByTestId('sub-ic')).toBeDefined()
     const nestedChoice = screen.getByRole('menuitemradio', { name: 'Create ok' })
     expect(nestedChoice.getAttribute('aria-checked')).toBe('true')
+    expect(nestedChoice.getAttribute('aria-keyshortcuts')).toBe('Meta+N')
+    expect(nestedChoice.querySelectorAll('kbd')).toHaveLength(2)
     expect(nestedChoice.querySelector('[aria-hidden="true"] svg')).not.toBeNull()
     fireEvent.click(nestedChoice)
     expect(onSelect).toHaveBeenCalledWith('ok')
@@ -685,6 +729,34 @@ describe('Menu', () => {
     expect(screen.queryByRole('menu')).toBeNull()
   })
 
+  it('follows an anchor moving without scroll or resize and stops tracking when closed or unmounted', () => {
+    vi.useFakeTimers({ toFake: ['requestAnimationFrame', 'cancelAnimationFrame'] })
+    let rect = new DOMRect(40, 100, 32, 28)
+    const getAnchorRect = vi.fn(() => rect)
+    const props = { portal: true, anchor: null, items, getAnchorRect, onClose: () => {} }
+    try {
+      const view = render(<Menu {...props} open />)
+      rect = new DOMRect(140, 180, 32, 28)
+      act(() => { vi.advanceTimersToNextFrame() })
+      expect(screen.getByRole('menu').style.left).toBe('140px')
+      expect(screen.getByRole('menu').style.top).toBe('212px')
+
+      view.rerender(<Menu {...props} open={false} />)
+      getAnchorRect.mockClear()
+      act(() => { vi.advanceTimersToNextFrame() })
+      expect(getAnchorRect).not.toHaveBeenCalled()
+
+      view.rerender(<Menu {...props} open />)
+      view.unmount()
+      getAnchorRect.mockClear()
+      act(() => { vi.advanceTimersToNextFrame() })
+      expect(getAnchorRect).not.toHaveBeenCalled()
+    } finally {
+      cleanup()
+      vi.useRealTimers()
+    }
+  })
+
   it('portal mode renders the list under body, positions it fixed, and still closes on outside pointerdown', () => {
     const onSelect = vi.fn()
     const onClose = vi.fn()
@@ -784,11 +856,12 @@ describe('Modal', () => {
 
   it('renders headless content without the default close chrome', () => {
     render(
-      <Modal open onClose={() => {}} title="Custom surface" labelledBy="custom-title" headless>
+      <Modal open onClose={() => {}} title="Custom surface" labelledBy="custom-title" headless backdropBlur={false}>
         <h2 id="custom-title">Custom body</h2>
       </Modal>,
     )
     expect(screen.getByRole('dialog', { name: 'Custom body' })).toBeDefined()
+    expect((screen.getByRole('dialog').previousElementSibling as HTMLElement).style.backdropFilter).toBe('none')
     expect(screen.getByText('Custom body')).toBeDefined()
     expect(screen.queryByRole('button')).toBeNull()
   })

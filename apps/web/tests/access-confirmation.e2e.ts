@@ -79,8 +79,12 @@ describe('web e2e: experimental Auto and Full access confirmation', () => {
 
     const currentTriggerBox = await access.boundingBox()
     const currentMenuBox = await currentMenu.boundingBox()
+    const currentMarkerBox = await currentMenu.locator('[role="menuitemradio"][aria-checked="true"] > [aria-hidden="true"] > svg').boundingBox()
     expect(currentTriggerBox).not.toBeNull()
     expect(currentMenuBox).not.toBeNull()
+    expect(currentMarkerBox).not.toBeNull()
+    expect(Math.abs(currentMarkerBox!.width - 14)).toBeLessThan(1)
+    expect(Math.abs(currentMarkerBox!.height - 14)).toBeLessThan(1)
     expect(Math.abs(currentMenuBox!.width - 144)).toBeLessThan(1)
     expect(currentMenuBox!.width).toBeGreaterThan(currentTriggerBox!.width)
     expect(Math.abs(currentTriggerBox!.y - currentMenuBox!.y - currentMenuBox!.height - 4)).toBeLessThan(1)

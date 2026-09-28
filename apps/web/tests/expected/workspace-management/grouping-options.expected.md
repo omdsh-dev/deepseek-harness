@@ -9,5 +9,6 @@
   - menuitemradio "Last updated" [checked]
   - separator
   - text: Filter sessions
-  - menuitemcheckbox "Show archived"
-  - menuitemcheckbox "Archived only"
+  - menuitemradio "Hide archived" [checked]
+  - menuitemradio "All conversations (show archived)"
+  - menuitemradio "Archived only"

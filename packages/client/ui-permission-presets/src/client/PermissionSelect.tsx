@@ -83,7 +83,7 @@ export function PermissionSelect({
   const [confirmation, setConfirmation] = useState<string | null>(null)
   const [acknowledged, setAcknowledged] = useState(false)
   const triggerRef = useRef<HTMLButtonElement>(null)
-  const restoreAfterSubmitRef = useRef(false)
+  const restoreTriggerRef = useRef(false)
 
   useEffect(() => {
     if (!locked && selection !== undefined && catalog !== null
@@ -91,22 +91,22 @@ export function PermissionSelect({
     setOpen(false)
     setAcknowledged(false)
     setConfirmation(null)
-    if (selection === undefined || catalog === null) restoreAfterSubmitRef.current = false
+    if (selection === undefined || catalog === null) restoreTriggerRef.current = false
   }, [catalog, confirmation, locked, selection])
 
   useEffect(() => {
-    if (pick !== null || locked || !restoreAfterSubmitRef.current) return
-    // Admission can settle before the input shell unlocks. Restore only after
-    // that commit's effects, when the durable trigger accepts focus again.
+    if (pick !== null || confirmation !== null || locked || !restoreTriggerRef.current) return
+    // Confirmation cleanup and admission can run before the trigger unlocks.
+    // Restore after the commit that makes the durable trigger focusable again.
     let cancelled = false
     queueMicrotask(() => {
       const trigger = triggerRef.current
-      if (cancelled || !restoreAfterSubmitRef.current || trigger?.isConnected !== true || trigger.disabled) return
-      restoreAfterSubmitRef.current = false
+      if (cancelled || !restoreTriggerRef.current || trigger?.isConnected !== true || trigger.disabled) return
+      restoreTriggerRef.current = false
       trigger.focus()
     })
     return () => { cancelled = true }
-  }, [locked, pick, selection, catalog])
+  }, [locked, pick, confirmation, selection, catalog])
 
   if (selection === undefined || catalog === null) return null
 
@@ -138,7 +138,7 @@ export function PermissionSelect({
   })
 
   const submit = (id: string): void => {
-    restoreAfterSubmitRef.current = true
+    restoreTriggerRef.current = true
     setPick(id)
     void select(id)
       .catch(() => false)
@@ -158,6 +158,7 @@ export function PermissionSelect({
   }
 
   const closeConfirmation = (): void => {
+    restoreTriggerRef.current = true
     setAcknowledged(false)
     setConfirmation(null)
   }

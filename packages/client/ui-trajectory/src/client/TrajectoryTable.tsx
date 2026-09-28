@@ -1543,6 +1543,10 @@ function MarkdownRecordContent({
   renderImages: RenderMessageImages
   t: TrajectoryTranslate
 }) {
+  if (record.cell.sourceBlocks?.length && record.cell.sourceBlocks.every(block =>
+    block.type === 'tool-addition' || block.type === 'tool-removal')) {
+    return <pre className={`${css.payload} ${css.toolUpdatePayload}`}>{record.cell.inputDetail}</pre>
+  }
   if (!rendered && record.cell.sourceBlocks && record.cell.sourceBlocks.length > 0) {
     return (
       <SourceBlocks
@@ -2271,7 +2275,9 @@ export function TrajectoryTable({
       : collapseAssistantRecords(turnRecords, collapsedAssistants, t)
   }, [allRecords, collapsedAssistants, collapsedTurns, requestGroups, searchMatchIndexes, t])
   const focusableRecords = useMemo(
-    () => records.filter(record => record.cell.requestOnly !== true),
+    () => records.filter(record => record.cell.requestOnly !== true
+      && !(record.cell.kind === 'context' && record.cell.sourceBlocks?.length === 1
+        && record.cell.sourceBlocks.every(block => block.type === 'tool-addition' || block.type === 'tool-removal'))),
     [records],
   )
   const focusableRecordKeys = useMemo(
@@ -2912,6 +2918,9 @@ export function TrajectoryTable({
                   const sectionActive = record.turn === null
                     ? activeSection === record.section
                     : activeTurn === record.turn
+                  const singleToolNotice = record.cell.kind === 'context'
+                    && record.cell.sourceBlocks?.length === 1
+                    && record.cell.sourceBlocks.every(block => block.type === 'tool-addition' || block.type === 'tool-removal')
                   return (
                     <tr
                       ref={(element) => {
@@ -2928,7 +2937,7 @@ export function TrajectoryTable({
                           }
                         }
                       }}
-                      tabIndex={!isRequestOnly && rowKey === effectiveRowTabStopKey ? 0 : -1}
+                      tabIndex={focusableRecordKeys.has(rowKey) && rowKey === effectiveRowTabStopKey ? 0 : -1}
                       onFocus={(event) => {
                         if (event.target !== event.currentTarget) return
                         focusedRowKey.current = rowKey
@@ -2984,7 +2993,7 @@ export function TrajectoryTable({
                       onPointerDown={() => {
                         if (pendingRowFocusKey.current === rowKey) cancelPendingRowFocus()
                       }}
-                      onClick={isRequestOnly
+                      onClick={isRequestOnly || singleToolNotice
                         ? undefined
                         : isCollapsedSummary
                           ? () => {
@@ -2994,7 +3003,7 @@ export function TrajectoryTable({
                           }
                           : () => { selectRecord(record.cell.index) }}
                       onDoubleClick={(event) => {
-                        if (isCollapsedSummary || isRequestOnly) return
+                        if (isCollapsedSummary || isRequestOnly || singleToolNotice) return
                         if (record.turn !== null && collapsedTurns.has(record.turn)) {
                           event.preventDefault()
                           onToggleTurn(record.turn)
@@ -3018,7 +3027,7 @@ export function TrajectoryTable({
                         onToggleTurn(record.turn)
                       }}
                       onKeyDown={(event) => {
-                        if (isRequestOnly || event.target !== event.currentTarget) return
+                        if (isRequestOnly || singleToolNotice || event.target !== event.currentTarget) return
                         if (pendingRowFocusKey.current === rowKey) cancelPendingRowFocus()
                         if (event.key === 'Tab') focusedRowKey.current = null
                         if (event.key === 'ArrowRight') {

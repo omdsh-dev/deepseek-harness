@@ -9,13 +9,7 @@ import css from './Button.module.css'
 /** Visual variant, each backed by its --dsw-alias-button-* token family. */
 export type ButtonVariant = 'primary' | 'ghost' | 'outline' | 'toolbar'
 
-/**
- * Render a button.
- * @param props.variant - visual family (default 'ghost').
- * @param props.size - 'md' 36px capsule (figma Button) or 'sm' 28px compact.
- * @param props.icon - optional leading 16px icon node.
- * @returns the button element; native button attributes pass through.
- */
+/** Visual options and native attributes accepted by Button. */
 export type ButtonProps = {
   variant?: ButtonVariant
   size?: 'md' | 'sm'
@@ -24,7 +18,14 @@ export type ButtonProps = {
   children?: ReactNode
 } & ButtonHTMLAttributes<HTMLButtonElement>
 
-/** Token-styled native button with its DOM focus owner exposed to consumers. */
+/**
+ * Render a button.
+ * @param props.variant - visual family (default 'ghost').
+ * @param props.size - 'md' 36px control with 12px corners or 'sm' 28px control with 8px corners.
+ * @param props.icon - optional leading 16px icon node.
+ * @param ref - native button for focus management and overlay anchors.
+ * @returns the button element; native button attributes pass through.
+ */
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button({
   variant = 'ghost', size = 'md', icon, className, children, ...rest
 }, ref) {

@@ -48,6 +48,8 @@ A `popupSelect` moves focus into its search combobox and exposes the filtered pi
 <a id="understand-the-implementation"></a>
 ## Understand the implementation
 
+Menus use the shared `MenuSurface` material, including the macOS backing for background blur; custom content follows the [menu rules](../../../docs/web-styling.md#component-rules).
+
 <details>
 <summary>Implementation internals — click to expand</summary>
 

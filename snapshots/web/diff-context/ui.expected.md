@@ -2,7 +2,8 @@
 - button "Edit Completed config.txt +1 -1" [expanded]
 - text: Edit
 - button "Open file config.txt": config.txt
-- text: +1 -1
+- text: +1 -1 Code block
+- button "Wrap lines"
 - button "Copy"
-- text: config.txt - mode=DEBUG + mode=RELEASE level=info └ +1 -1 · 1 file
+- text: config.txt - mode=DEBUG + mode=RELEASE level=info
 - button "Inspect"

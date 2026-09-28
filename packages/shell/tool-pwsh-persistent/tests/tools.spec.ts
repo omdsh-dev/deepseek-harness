@@ -93,7 +93,6 @@ type StubMode =
   | 'torn-status'
   | 'finish-torn-status'
   | 'end-only'
-  | 'init-exit'
   | 'spawn-error'
   | 'send-error'
   | 'prompt-after-idle'
@@ -108,7 +107,7 @@ const START_PATTERN = /__DSH_PERSISTENT_PWSH_START_[^_]+(?:-[^_]+)*__/
 const END_PATTERN = /__DSH_PERSISTENT_PWSH_END_[^:]+:/
 
 class StubTerminalSession implements TerminalBackendSession {
-  readonly motd = '__DSH_PERSISTENT_PWSH_PROMPT__ '
+  readonly motd = 'stub> '
   readonly pid = 123
   statusValue: TerminalSessionStatus = { kind: 'running' }
   scrollback = this.motd
@@ -118,6 +117,7 @@ class StubTerminalSession implements TerminalBackendSession {
   pendingText = ''
   historyTruncated = false
   throwOnSend = false
+  largeOutput = 'x'.repeat(100)
 
   constructor(mode: StubMode) {
     this.mode = mode
@@ -207,7 +207,7 @@ class StubTerminalSession implements TerminalBackendSession {
       return this.operation(Promise.resolve(this.result(output, 'stdin_read')))
     }
     const commandOutput = this.mode === 'large'
-      ? 'x'.repeat(100)
+      ? this.largeOutput
       : this.mode === 'nonzero' ? ''
         : this.mode === 'prompt-collision' ? this.motd
           : 'hello from stub'
@@ -293,9 +293,6 @@ function stubBackend(initialMode: StubMode = 'normal') {
     async spawn() {
       if (initialMode === 'spawn-error') throw new Error('stub spawn failed')
       const session = new StubTerminalSession(initialMode)
-      if (initialMode === 'init-exit') {
-        session.statusValue = { kind: 'exited', exitCode: 1, signal: null }
-      }
       sessions.push(session)
       return session
     },
@@ -360,7 +357,7 @@ describe('tool-pwsh-persistent', () => {
     expect(result).not.toContain('Invoke-Expression')
   })
 
-  it('preserves command output that equals the private shell prompt', async () => {
+  it("preserves command output that equals the backend's prompt text", async () => {
     const { ctx, owner, stub } = await setup({ backendType: 'stub' })
     await call(ctx, owner, 'warm up')
     const session = stub.sessions[0]!
@@ -384,7 +381,7 @@ describe('tool-pwsh-persistent', () => {
     expect(stub.sessions).toHaveLength(2)
   })
 
-  it('handles inferred idle, prompt fallback, shell exit, clipping, and cleanup', async () => {
+  it('handles inferred idle, stdin_read fallback, shell exit, clipping, and cleanup', async () => {
     const { ctx, owner, stub, fiber } = await setup({
       backendType: 'stub',
       maxOutputChars: 10,
@@ -397,18 +394,22 @@ describe('tool-pwsh-persistent', () => {
 
     session.mode = 'incremental-fallback'
     session.scrollback = ''
-    expect(text(await call(ctx, owner, 'incremental fallback'))).toBe('increment')
+    expect(text(await call(ctx, owner, 'incremental fallback'))).toContain('increment')
 
     session.mode = 'prompt-only'
     const promptFallback = text(await call(ctx, owner, 'bad {'))
     expect(promptFallback).toContain('pwsh: synt')
-    expect(promptFallback).not.toContain('DSH_PERSISTENT_PWSH_PROMPT')
 
     session.mode = 'prompt-crlf'
     session.scrollback = ''
     const crlfPromptFallback = text(await call(ctx, owner, 'bad {'))
     expect(crlfPromptFallback).toContain('pwsh: synt')
-    expect(crlfPromptFallback).not.toContain('DSH_PERSISTENT_PWSH_PROMPT')
+
+    // The stdin_read fallback returns captured output without resetting the
+    // shell, so later calls keep the same session; the README names the
+    // interactive-child consequence of that retention.
+    expect(session.closed).toEqual([])
+    expect(stub.sessions).toHaveLength(1)
 
     session.mode = 'end-only'
     session.scrollback = ''
@@ -445,6 +446,20 @@ describe('tool-pwsh-persistent', () => {
     await ctx.terminals.kill(owner, externallyClosed!, 'external cleanup')
     await fiber.dispose()
     expect(stub.sessions[2]?.closed).toEqual(['external cleanup'])
+  })
+
+  it('clips a split surrogate pair instead of leaving a lone half', async () => {
+    const { ctx, owner, stub } = await setup({ backendType: 'stub', maxOutputChars: 10 })
+    await call(ctx, owner, 'warm up')
+    const session = stub.sessions[0]!
+    session.mode = 'large'
+    // The tenth code unit is the emoji's high surrogate.
+    session.largeOutput = `${'x'.repeat(9)}😀tail`
+
+    const rendered = text(await call(ctx, owner, 'emoji'))
+
+    expect(rendered.startsWith(`${'x'.repeat(9)}<response clipped>`)).toBe(true)
+    expect(rendered).not.toContain('\uD83D')
   })
 
   it('waits for status digits after a torn completion marker', async () => {
@@ -494,7 +509,7 @@ describe('tool-pwsh-persistent', () => {
     expect(text(await call(ctx, owner, 'paged output'))).toBe('hello from stub')
   })
 
-  it('sanitizes a prompt fallback reached after multiple polling rounds', async () => {
+  it('returns a stdin_read fallback reached after multiple polling rounds', async () => {
     const { ctx, owner, stub } = await setup({ backendType: 'stub', maxOutputChars: 1_000 })
     await call(ctx, owner, 'warm up')
     const session = stub.sessions[0]!
@@ -503,7 +518,8 @@ describe('tool-pwsh-persistent', () => {
     const result = text(await call(ctx, owner, 'bad {'))
     expect(result).toContain('partial syntax output')
     expect(result).toContain('pwsh: syntax error')
-    expect(result).not.toContain('DSH_PERSISTENT_PWSH_PROMPT')
+    // The backend owns the prompt text, so the fallback retains it verbatim.
+    expect(result.endsWith('stub> ')).toBe(true)
     expect(result).not.toContain('DSH_PERSISTENT_PWSH_START')
   })
 
@@ -533,14 +549,12 @@ describe('tool-pwsh-persistent', () => {
     async (mode) => {
       const { ctx, owner, stub } = await setup({ backendType: 'stub', timeoutMs: 5_000 })
       await call(ctx, owner, 'warm up')
-      const session = stub.sessions[0]!
-      const warmupSends = session.sends
-      session.mode = mode
+      stub.sessions[0]!.mode = mode
       const controller = new AbortController()
       const cancelled = call(ctx, owner, 'hang', controller.signal)
       const queued = call(ctx, owner, 'after cancellation')
       try {
-        await expect.poll(() => session.sends).toBe(warmupSends + 1)
+        await expect.poll(() => stub.sessions[0]!.sends).toBe(2)
         controller.abort({ kind: 'user' })
 
         const result = await cancelled
@@ -563,7 +577,6 @@ describe('tool-pwsh-persistent', () => {
     const { ctx, owner, stub } = await setup({ backendType: 'stub' })
     await call(ctx, owner, 'warm up')
     const session = stub.sessions[0]!
-    const warmupSends = session.sends
     session.mode = 'wait-for-abort'
     const runningController = new AbortController()
     // Dispatch observation distinguishes the tool's queue from cancellation before tool entry.
@@ -572,14 +585,14 @@ describe('tool-pwsh-persistent', () => {
     const running = call(ctx, owner, 'hang', runningController.signal)
     const queued = call(ctx, owner, 'never sent', queuedController.signal)
     try {
-      await expect.poll(() => session.sends).toBe(warmupSends + 1)
+      await expect.poll(() => session.sends).toBe(2)
       await expect.poll(() => execute.mock.calls.length).toBe(2)
       queuedController.abort({ kind: 'user' })
       runningController.abort({ kind: 'user' })
       const result = await queued
       expect(text(result)).toBe('Error: tool call aborted')
       expect(result.error?.info).toEqual({ name: 'AbortError', code: 'ABORTED' })
-      expect(session.sends).toBe(warmupSends + 1)
+      expect(session.sends).toBe(2)
       expect(stub.sessions).toHaveLength(1)
       expect(session.closed).toContain('persistent pwsh command aborted')
     } finally {
@@ -664,14 +677,14 @@ describe('tool-pwsh-persistent', () => {
     }
   })
 
-  it.each(['initialization', 'command', 'cleanup'] as const)('preserves a distinct %s failure during cancellation', async (phase) => {
+  it.each(['command', 'cleanup'] as const)('preserves a distinct %s failure during cancellation', async (phase) => {
     const { ctx, owner } = await setup()
-    if (phase === 'command') await call(ctx, owner, 'warm up')
+    await call(ctx, owner, 'warm up')
     const controller = new AbortController()
     const failure = new Error(`${phase} failed`)
     vi.spyOn(ctx.terminals, 'startSend').mockImplementationOnce(() => {
       controller.abort({ kind: 'user' })
-      throw phase === 'cleanup' ? new Error('initialization failed') : failure
+      throw phase === 'cleanup' ? new Error('send failed') : failure
     })
     if (phase === 'cleanup') vi.spyOn(ctx.terminals, 'kill').mockRejectedValueOnce(failure)
     const result = await call(ctx, owner, 'fails', controller.signal)
@@ -696,14 +709,6 @@ describe('tool-pwsh-persistent', () => {
     expect(result.error?.info?.code).not.toBe('ABORTED')
     expect(stub.sessions).toEqual([])
   })
-
-  it('fails initialization and closes a shell published as exited',
-    async () => {
-      const { ctx, owner, stub } = await setup({ backendType: 'stub' }, 'init-exit')
-      expect((await call(ctx, owner, 'pwd')).isError).toBe(true)
-      expect(stub.sessions[0]?.closed).toContain('persistent pwsh initialization failed')
-    },
-  )
 
   it('clears a failed spawn without trying to close an unpublished shell', async () => {
     const { ctx, owner, stub } = await setup({ backendType: 'stub' }, 'spawn-error')

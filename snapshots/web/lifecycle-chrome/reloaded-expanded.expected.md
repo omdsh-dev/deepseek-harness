@@ -16,7 +16,7 @@
       - button "Took {{duration}}" [expanded]
       - button "Analysis completed" [expanded]
       - article "Assistant response":
-        - button "Think"
+        - button "Think The user wants me to reply with a single word. Let me comply."
       - article "Assistant response":
         - paragraph: LIGHTHOUSE
       - button "Copy"

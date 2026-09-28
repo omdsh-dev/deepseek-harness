@@ -1,0 +1,8 @@
+- text: Workspaces
+- button "Search sessions"
+- button "View options"
+- button "Add workspace"
+- tree "Sessions":
+  - treeitem "Ungrouped" [expanded] [level=1]
+  - treeitem "T4 source (1) now" [level=2]
+  - treeitem "T4 source 1min" [level=2] [selected]

@@ -35,6 +35,18 @@
     - definition: Scheduled
 - button "Inspect"
 - text: Completed
+- button "Update reminder Review the build and open the demo" [expanded]
+- list:
+  - listitem:
+    - text: Review the build and open the demo
+    - term: Scheduled for
+    - definition: Sep 11, 2099, {{clock}} GMT+8
+    - term: Repeat
+    - definition: Every day at {{clock}} (Asia/Shanghai)
+    - term: Status
+    - definition: Scheduled
+- button "Inspect"
+- text: Completed
 - button "View goal Ship compact tool cards" [expanded]
 - list:
   - listitem:
@@ -138,6 +150,7 @@
             - list:
               - listitem:
                 - text: json
+                - button "Wrap lines" [pressed]
                 - button "Copy"
                 - code: "{ \"type\": \"object\", \"properties\": { \"service\": { \"type\": \"string\" } } }"
           - group:
@@ -145,6 +158,7 @@
             - list:
               - listitem:
                 - text: json
+                - button "Wrap lines" [pressed]
                 - button "Copy"
                 - code: "{ \"type\": \"object\" }"
   - listitem:
@@ -163,6 +177,7 @@
             - list:
               - listitem:
                 - text: json
+                - button "Wrap lines" [pressed]
                 - button "Copy"
                 - code: "{ \"type\": \"object\", \"properties\": { \"root\": { \"type\": \"string\" } } }"
           - group:
@@ -170,6 +185,7 @@
             - list:
               - listitem:
                 - text: json
+                - button "Wrap lines" [pressed]
                 - button "Copy"
                 - code: "{ \"type\": \"object\" }"
 - button "Inspect"
@@ -236,6 +252,7 @@
       - list:
         - listitem:
           - text: javascript
+          - button "Wrap lines" [pressed]
           - button "Copy"
           - code: "return { reviewed: 12, needsDetails: [\"list_agents\", \"job_list\", \"terminal_list\"] };"
   - listitem:
@@ -252,7 +269,7 @@
           - paragraph: terminal_list
 - button "Inspect"
 - text: Completed
-- button "Run Ralph 已检查详情区域的换行和工具名称显示。" [expanded]
+- button "Run ralph loop 已检查详情区域的换行和工具名称显示。" [expanded]
 - text: Recorded result
 - list:
   - listitem:
@@ -398,7 +415,7 @@
     - paragraph: DeepSeek Reasoner
 - button "Inspect"
 - text: Completed
-- button "Delegate task 检查工具卡片布局，并列出三个最值得改进的地方。" [expanded]
+- button "Create subagent 检查工具卡片布局，并列出三个最值得改进的地方。" [expanded]
 - text: Recorded result
 - list:
   - listitem:
@@ -407,7 +424,7 @@
     - definition: agent-demo-review
 - button "Inspect"
 - text: Completed
-- button "List agents 3 agents" [expanded]
+- button "List subagents 3 agents" [expanded]
 - text: Recorded result
 - list:
   - listitem:
@@ -465,7 +482,8 @@
 - text: Recorded result
 - list:
   - listitem:
-    - text: job-demo-build Running
+    - text: job-demo-build Running Code block
+    - button "Wrap lines" [pressed]
     - button "Copy"
     - code: Building client assets… ✓ 184 modules transformed. dist/index.js 92.4 kB
 - button "Inspect"
@@ -485,6 +503,8 @@
     - text: preview Started terminal-demo-1
     - term: Type
     - definition: shell
+    - text: Code block
+    - button "Wrap lines" [pressed]
     - button "Copy"
     - code: /workspace/demo %
 - button "Inspect"
@@ -493,7 +513,8 @@
 - text: Recorded result
 - list:
   - listitem:
-    - text: terminal-demo-1 Lines 16–18 of 18
+    - text: terminal-demo-1 Lines 16–18 of 18 Code block
+    - button "Wrap lines" [pressed]
     - button "Copy"
     - code: "VITE v7.0.0 ready in {{duration}} Local: http://localhost:5173/ Watching for file changes…"
 - button "Inspect"
@@ -580,6 +601,7 @@
   - listitem:
     - button "src/tool-details.ts:24:1"
     - text: typescript
+    - button "Wrap lines" [pressed]
     - button "Copy"
     - code: "function renderToolDetails(model: ToolDetailsModel): ReactNode"
     - paragraph: Render compact fields and list rows from a recorded tool result.
@@ -601,7 +623,7 @@
     - definition: fresh
 - button "Inspect"
 - text: Completed
-- button "List agents 3 agents" [expanded]
+- button "List subagents 3 agents" [expanded]
 - text: Recorded result
 - list:
   - listitem:
@@ -736,10 +758,10 @@
           - paragraph: task-demo-1
 - button "Inspect"
 - text: Completed
-- button "Wait for teammates Teammate activity" [expanded]
+- button "Wait for subagent Subagent activity" [expanded]
 - text: Recorded result
 - list:
-  - listitem: Teammate activity Change detected
+  - listitem: Subagent activity Change detected
 - button "Inspect"
 - text: Completed
 - button "Interrupt agent ui-review" [expanded]

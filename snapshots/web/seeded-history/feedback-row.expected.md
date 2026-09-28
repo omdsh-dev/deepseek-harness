@@ -18,7 +18,7 @@
       - button "Took {{duration}}" [expanded]
       - button "Read files" [expanded]
       - article "Assistant response":
-        - button "Think"
+        - button "Think The user wants me to read a.txt and b.txt, then reply with \"DONE\". Let me do both reads in parallel."
       - text: Completed
       - button "Read Completed a.txt"
       - text: Read
@@ -28,7 +28,7 @@
       - text: Read
       - button "Open file b.txt": b.txt
       - article "Assistant response":
-        - button "Think"
+        - button "Think Both files have been read. a.txt contains \"alpha\" and b.txt contains \"beta\". I'll now reply with DONE as instructed."
       - article "Assistant response":
         - paragraph: DONE
       - button "Copy"

@@ -1,67 +1,10 @@
-import { useEffect, useId, useRef } from 'react'
-import type { ReactNode, RefObject } from 'react'
+import { useId, useRef } from 'react'
+import type { KeyboardEventHandler, ReactNode, RefObject } from 'react'
 import { createPortal } from 'react-dom'
 import clsx from 'clsx'
 import { IconCloseOutlineRegular } from './icons/index.tsx'
+import { isBehindModal, useModalLayer } from './useModalLayer.ts'
 import css from './Modal.module.css'
-
-const FOCUSABLE_SELECTOR = [
-  'a[href]',
-  'area[href]',
-  'button:not([disabled])',
-  'input:not([disabled]):not([type="hidden"])',
-  'select:not([disabled])',
-  'textarea:not([disabled])',
-  '[contenteditable="true"]',
-  '[tabindex]:not([tabindex="-1"])',
-].join(',')
-
-interface ActiveDialog {
-  element: HTMLElement
-  previousInert: boolean
-}
-
-const dialogStack: ActiveDialog[] = []
-let inertRoot: { element: HTMLElement; previous: boolean } | null = null
-
-function focusableElements(dialog: HTMLElement): HTMLElement[] {
-  return [...dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)].filter(element =>
-    !element.hidden
-    && element.getAttribute('aria-hidden') !== 'true'
-    && element.closest('[inert]') === null)
-}
-
-function topDialog(): HTMLElement | undefined {
-  return dialogStack.at(-1)?.element
-}
-
-function syncDialogInertness(): void {
-  const top = dialogStack.at(-1)
-  for (const entry of dialogStack) entry.element.inert = entry === top ? entry.previousInert : true
-}
-
-function activateDialog(dialog: HTMLElement): () => void {
-  if (dialogStack.length === 0) {
-    const appRoot = document.getElementById('root')
-    if (appRoot !== null) {
-      inertRoot = { element: appRoot, previous: appRoot.inert }
-      appRoot.inert = true
-    }
-  }
-  const entry = { element: dialog, previousInert: dialog.inert }
-  dialogStack.push(entry)
-  syncDialogInertness()
-  return () => {
-    const index = dialogStack.lastIndexOf(entry)
-    /* v8 ignore else -- every cleanup closes the dialog registered by this activation. */
-    if (index >= 0) dialogStack.splice(index, 1)
-    dialog.inert = entry.previousInert
-    syncDialogInertness()
-    if (dialogStack.length !== 0 || inertRoot === null) return
-    inertRoot.element.inert = inertRoot.previous
-    inertRoot = null
-  }
-}
 
 interface ModalBaseProps {
   open: boolean
@@ -76,6 +19,9 @@ interface ModalBaseProps {
   footer?: ReactNode
   className?: string
   contentClassName?: string
+  shortcutModal?: string
+  onKeyDownCapture?: KeyboardEventHandler<HTMLDivElement>
+  backdropBlur?: boolean
 }
 
 type ModalProps = ModalBaseProps & (
@@ -86,7 +32,7 @@ type ModalProps = ModalBaseProps & (
 /**
  * Render a centered, body-portaled modal over a blurred page mask.
  * @param props.open - whether the dialog is showing.
- * @param props.onClose - Escape or mask click; while a menu is open inside the
+ * @param props.onClose - application close command, Escape, or mask click; while a menu is open inside the
  * dialog, Escape belongs to that menu first.
  * @param props.title - dialog heading (aria-label in every mode).
  * @param props.labelledBy - optional id of a visible heading that replaces the aria-label.
@@ -97,107 +43,37 @@ type ModalProps = ModalBaseProps & (
  * falls back to the connected opening control when absent or disconnected.
  * @param props.closeLabel - localized accessible close-button label.
  * @param props.description - optional supporting sentence under the title.
- * @param props.children - body (inputs, etc.).
+ * @param props.children - dialog body; mark its initial-focus control with
+ * data-modal-autofocus instead of React autoFocus to preserve return focus.
  * @param props.footer - action row (Cancel / Create).
  * @param props.contentClassName - optional class for a scrollable content region.
+ * @param props.backdropBlur - disable when the caller already blurs the page; defaults to true.
+ * @param props.shortcutModal - command scope allowed by shortcut owners; unnamed
+ * dialogs block application commands unless their owner allows the "other" scope.
  * @param props.headless - render children directly in the card (no default
  * header/close/body chrome); mask, card, Escape, and aria-label remain.
+ * @param props.onKeyDownCapture - handle a nested dialog's keys before the document Escape listeners.
  * @returns null when closed; otherwise the overlay tree.
  */
 export function Modal({
-  open, onClose, title, labelledBy, describedBy, initialFocusRef, restoreFocusRef, closeLabel, description, children,
-  footer, className, contentClassName, headless = false,
+  open, onClose, title, labelledBy, describedBy, initialFocusRef, restoreFocusRef,
+  closeLabel, description, children, footer, className, contentClassName,
+  onKeyDownCapture, headless = false, backdropBlur = true, shortcutModal,
 }: ModalProps) {
+  const dialog = useRef<HTMLDivElement>(null)
   const generatedDescriptionId = useId()
   const descriptionId = describedBy
     ?? (description !== undefined && description !== '' ? generatedDescriptionId : undefined)
-  const dialogRef = useRef<HTMLDivElement | null>(null)
-  const onCloseRef = useRef(onClose)
-  onCloseRef.current = onClose
-  const openingInvokerRef = useRef<HTMLElement | null>(null)
-  if (!open) openingInvokerRef.current = null
-  else if (dialogRef.current === null && openingInvokerRef.current === null
-    && typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) {
-    openingInvokerRef.current = document.activeElement
-  }
-
-  useEffect(() => {
-    if (!open) return
-    const dialog = dialogRef.current
-    /* v8 ignore next -- open always renders and attaches the dialog before effects run. */
-    if (dialog === null) return
-    const opener = openingInvokerRef.current
-    const deactivate = activateDialog(dialog)
-    const requestedInitial = initialFocusRef?.current ?? null
-    const explicitInitial = requestedInitial !== null && dialog.contains(requestedInitial)
-      ? requestedInitial
-      : null
-    const current = document.activeElement instanceof HTMLElement && dialog.contains(document.activeElement)
-      ? document.activeElement
-      : null
-    const initial = explicitInitial
-      ?? current
-      ?? dialog.querySelector<HTMLElement>('[autofocus]')
-      ?? focusableElements(dialog)[0]
-      ?? dialog
-    initial.focus()
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (topDialog() !== dialog) return
-      // Nested composites (for example a portaled Menu) own their consumed
-      // Escape/Tab before the dialog's outer dismissal and focus boundary.
-      if (e.defaultPrevented) return
-      if (e.key === 'Escape') {
-        e.preventDefault()
-        onCloseRef.current()
-        return
-      }
-      if (e.key !== 'Tab') return
-      const items = focusableElements(dialog)
-      const first = items[0]
-      const last = items.at(-1)
-      if (first === undefined || last === undefined) {
-        e.preventDefault()
-        dialog.focus()
-        return
-      }
-      const active = document.activeElement
-      const activeIndex = items.findIndex(item => item === active)
-      // Firefox makes scroll containers sequentially focusable without a
-      // tabindex. Let contained native stops continue into their children.
-      if (activeIndex < 0 && (active === dialog || !dialog.contains(active) || active?.getAttribute('tabindex') === '-1')) {
-        e.preventDefault()
-        ;(e.shiftKey ? last : first).focus()
-        return
-      }
-      if (e.shiftKey ? activeIndex === 0 : activeIndex === items.length - 1) {
-        e.preventDefault()
-        ;(e.shiftKey ? last : first).focus()
-      }
-    }
-    document.addEventListener('keydown', onKeyDown)
-    return () => {
-      document.removeEventListener('keydown', onKeyDown)
-      deactivate()
-      const explicitRestore = restoreFocusRef?.current ?? null
-      if (explicitRestore?.isConnected === true) explicitRestore.focus()
-      else if (opener?.isConnected === true) opener.focus()
-    }
-  }, [initialFocusRef, open, restoreFocusRef])
+  useModalLayer(dialog, open, onClose, initialFocusRef, restoreFocusRef)
 
   if (!open) return null
 
   return createPortal((
-    <div className={css.root} role="presentation">
+    <div className={css.root} role="presentation" onKeyDownCapture={onKeyDownCapture}>
+      <div className={css.mask} style={backdropBlur ? undefined : { backdropFilter: 'none' }} aria-hidden="true" onClick={() => { if (!isBehindModal(dialog.current)) onClose() }} />
       <div
-        className={css.mask}
-        aria-hidden="true"
-        onClick={() => {
-          const dialog = dialogRef.current
-          if (dialog !== null && topDialog() === dialog) onClose()
-        }}
-      />
-      <div
-        ref={dialogRef}
+        ref={dialog}
+        data-shortcut-modal={shortcutModal}
         className={clsx(css.dialog, className)}
         role="dialog"
         aria-modal="true"

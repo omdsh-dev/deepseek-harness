@@ -112,22 +112,38 @@ async function expectFocusedAndUnobscured(page: Page): Promise<void> {
   })
 }
 
-async function pressForwardTab(page: Page): Promise<void> {
-  await page.keyboard.press(browserName === 'webkit' && process.platform === 'darwin' ? 'Alt+Tab' : 'Tab')
+async function pressTab(page: Page, backward: boolean): Promise<void> {
+  const tab = browserName === 'webkit' && process.platform === 'darwin' ? 'Alt+Tab' : 'Tab'
+  await page.keyboard.press(backward ? `Shift+${tab}` : tab)
 }
 
 async function tabTo(page: Page, target: Locator, limit = 80): Promise<void> {
   const targetElement = await target.elementHandle()
   if (targetElement === null) throw new Error(`${browserName}: keyboard target is not attached`)
-  await page.evaluate(() => {
-    document.body.tabIndex = -1
-    document.body.focus({ preventScroll: true })
+  if (await targetElement.evaluate(element => document.activeElement === element)) return
+  // Firefox does not wrap native Tab traversal at the document edge. Follow
+  // document order from the current control without synthesizing body focus.
+  const backward = await targetElement.evaluate((element) => {
+    const active = document.activeElement
+    return active !== null && active !== document.body
+      && (active.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_PRECEDING) !== 0
   })
+  const focusPath: string[] = []
   for (let index = 0; index < limit; index++) {
-    await pressForwardTab(page)
+    await pressTab(page, backward)
     if (await targetElement.evaluate(element => document.activeElement === element)) return
+    focusPath.push(await page.evaluate(() => {
+      const active = document.activeElement
+      return `${active?.tagName}:${active?.getAttribute('role') ?? ''}:${active?.getAttribute('aria-label') ?? active?.textContent?.trim().slice(0, 60) ?? ''}`
+    }))
   }
-  throw new Error(`${browserName}: keyboard focus did not reach target after ${String(limit)} Tab presses`)
+  const targetState = await targetElement.evaluate(element => ({
+    attached: element.isConnected,
+    tag: element.tagName,
+    label: element.getAttribute('aria-label'),
+    hiddenAncestor: element.closest('[inert], [hidden], [aria-hidden="true"]')?.tagName,
+  }))
+  throw new Error(`${browserName}: keyboard focus did not reach target after ${String(limit)} ${backward ? 'Shift+Tab' : 'Tab'} presses; target=${JSON.stringify(targetState)}; focusPath=${JSON.stringify(focusPath)}`)
 }
 
 async function openSeededSession(page: Page): Promise<void> {
@@ -339,7 +355,7 @@ describe(`assembled accessibility environments: ${browserName}`, () => {
       // trap wraps retain a visible indicator.
       await focusPage.keyboard.press('ArrowDown')
       for (let index = 0; index < 16; index++) {
-        await pressForwardTab(focusPage)
+        await pressTab(focusPage, false)
         expect(await dialog.evaluate(element => element.contains(document.activeElement))).toBe(true)
         await expectFocusedAndUnobscured(focusPage)
       }

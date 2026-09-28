@@ -125,6 +125,30 @@ const FOLD_PROPS = {
 }
 
 describe('TrajectoryTable', () => {
+  it.each(['tool-addition', 'tool-removal'] as const)('skips a non-interactive %s notice during keyboard navigation', (type) => {
+    const cells = TURNS[0]!.groups[0]!.cells
+    const turns: readonly TrajectoryTurnModel[] = [{
+      turn: 1,
+      groups: [{ title: 'Step 1', cells: [
+        cells[0]!,
+        { index: 4, kind: 'context', text: 'Tool changed', timeSeconds: 0,
+          sourceBlocks: [{ type, toolName: 'search', content: '' }] },
+        cells[1]!,
+      ] }],
+    }]
+    render(<TrajectoryTable turns={turns} {...FOLD_PROPS} />)
+    const [first, notice, last] = screen.getAllByRole('row')
+    expect(notice?.getAttribute('tabindex')).toBe('-1')
+    first!.focus()
+    fireEvent.keyDown(first!, { key: 'ArrowDown' })
+    expect(document.activeElement).toBe(last)
+    fireEvent.keyDown(last!, { key: 'ArrowUp' })
+    expect(document.activeElement).toBe(first)
+    fireEvent.keyDown(notice!, { key: 'Enter' })
+    expect(notice?.getAttribute('aria-selected')).not.toBe('true')
+    expect(screen.queryByRole('tablist', { name: 'Event details' })).toBeNull()
+  })
+
   it('shows known standalone prompt text without a fabricated tool catalog or request options', () => {
     const turns = deriveTrajectoryLayout({
       nodes: [], partial: null, runningCalls: [],

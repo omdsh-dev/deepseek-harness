@@ -61,6 +61,22 @@ function trigger(): HTMLButtonElement {
 }
 
 describe('PermissionSelect', () => {
+  it.each(['完全权限', 'Auto review EXP'])('returns focus after cancelling %s risk acknowledgement', async (name) => {
+    const { select } = setup()
+    trigger().focus()
+    fireEvent.keyDown(trigger(), { key: 'ArrowDown' })
+    await act(async () => {})
+    fireEvent.click(screen.getByRole('menuitemradio', { name }))
+    expect(trigger().disabled).toBe(true)
+    expect(document.activeElement).toBe(screen.getByRole('checkbox'))
+
+    await act(async () => { fireEvent.keyDown(document.activeElement!, { key: 'Escape' }) })
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(trigger().disabled).toBe(false)
+    expect(document.activeElement).toBe(trigger())
+    expect(select).not.toHaveBeenCalled()
+  })
+
   it('restores the permission trigger after submission settles before the input unlocks', async () => {
     const submitted = Promise.withResolvers<boolean>()
     const { props, view } = setup({ selection: { currentValue: 'read-only' }, select: () => submitted.promise })
