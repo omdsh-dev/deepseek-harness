@@ -319,7 +319,14 @@ describe('web e2e: message IconActions and clocks on settled history', () => {
     await page.getByText(/Cache hit \d+%/u).first().waitFor({ timeout: 10_000 })
     // Keep a footer focused so opacity-hidden actions stay in the a11y tree
     // as an active/focused control during the capture.
-    await page.getByRole('button', { name: 'Copy' }).first().focus()
+    const copy = page.getByRole('button', { name: 'Copy', exact: true }).first()
+    await copy.focus()
+    // The preceding geometry probe uses the pointer; re-enter this control
+    // through keyboard traversal so the focused-tooltip golden is meaningful.
+    await copy.press('Tab')
+    await page.keyboard.press('Shift+Tab')
+    await expect.poll(() => copy.evaluate(button => button === document.activeElement)).toBe(true)
+    await page.getByRole('tooltip', { name: 'Copy', exact: true }).waitFor({ state: 'visible' })
     const snapshot = (await captureStableAria(page, '[class*="centerCol"]', scaffold.workspaceCwd))
       .split(SEED_ID).join('{{seededId}}')
     await compareOrRefreshGolden(UI_EXPECTED, snapshot, MODE)
