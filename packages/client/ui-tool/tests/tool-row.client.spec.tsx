@@ -307,17 +307,21 @@ describe('ToolRow', () => {
   })
 
   it('shows totals once and shared context once when an edit expands', () => {
-    const view = render(<ToolRow {...rowProps} variant="edit" title="Edit" summary="settings.ts" diff={{
-      card: { diffs: [{
-        path: 'settings.ts',
-        oldText: 'start\nsecond\nthird\nold\nfourth\nfifth\nend',
-        newText: 'start\nsecond\nthird\nnew\nfourth\nfifth\nend',
-      }] },
-    }} />)
-    expect(view.getByText('+1 -1')).toBeTruthy()
+    const view = render(<ToolRow {...rowProps} variant="edit" title="Edit" summary="settings.ts"
+      filePath="settings.ts" onOpenFile={vi.fn()} diff={{
+        card: { diffs: [{
+          path: 'settings.ts',
+          oldText: 'start\nsecond\nthird\nold\nfourth\nfifth\nend',
+          newText: 'start\nsecond\nthird\nnew\nfourth\nfifth\nend',
+        }] },
+      }} />)
+    expect(view.container.querySelector('[data-disclosure-row]')?.textContent).toContain('+1 -1')
     expect(view.container.querySelector('[data-diff]')).toBeNull()
-    fireEvent.click(view.getByRole('button'))
-    expect(view.getAllByText('+1 -1')).toHaveLength(1)
+    const disclosure = view.getByRole('button', { name: /Edit.*settings\.ts.*\+1 -1/ })
+    expect(disclosure.getAttribute('aria-label')).not.toContain('[object Object]')
+    fireEvent.click(disclosure)
+    expect(view.getAllByText('+1')).toHaveLength(1)
+    expect(view.getAllByText('-1')).toHaveLength(1)
     expect(view.getAllByText('start')).toHaveLength(1)
     expect(view.getAllByText('end')).toHaveLength(1)
     expect(view.getByText('old', { exact: true })).toBeTruthy()

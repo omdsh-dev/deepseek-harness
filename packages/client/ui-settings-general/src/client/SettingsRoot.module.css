@@ -56,20 +56,20 @@
   white-space: nowrap;
 }
 
+
 /* Settings uses a shared 800×800 panel; longer sections scroll
    inside the options column; the navigation scrolls independently. One height for
    every section, taken from the viewport rather than the content, because a
    content-sized panel would resize under the pointer on every nav click.
    The viewport height leaves 24px of air above and below, widened to the
-   frame's published top clearance (the macOS window strip, where clicks drag
-   the window) on both sides, so the panel sits centered and clear of the
-   strip. */
+   frame's published overlay inset on both sides, so the panel sits centered
+   and clear of the strip. */
 .panel {
   display: flex;
   flex-direction: row;
   gap: 0;
   width: 800px;
-  height: min(800px, calc(100vh - 2 * max(24px, var(--dsh-frame-top-clearance, 24px))));
+  height: min(800px, calc(100vh - 2 * max(24px, var(--dsh-frame-overlay-top, 24px))));
   max-width: calc(100vw - 48px);
   padding: 0;
   border: none;

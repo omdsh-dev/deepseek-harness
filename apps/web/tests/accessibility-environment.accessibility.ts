@@ -276,6 +276,8 @@ describe(`assembled accessibility environments: ${browserName}`, () => {
         await expect.poll(() => focusPage.getByRole('button', {
           name: 'Open sidebar', exact: true,
         }).isVisible()).toBe(true)
+        expect(await sidebarSplitter.evaluate(element => getComputedStyle(element).transitionProperty))
+          .toBe('none')
         await expectFocusedAndUnobscured(focusPage)
       }
 

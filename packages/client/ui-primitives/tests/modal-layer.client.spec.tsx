@@ -146,6 +146,29 @@ it('keeps focus in a headless empty dialog and leaves portaled menu traversal to
   } finally { menu.remove() }
 })
 
+it.each([undefined, -1])('respects an editable region with tabindex %s when entering a dialog', (tabIndex) => {
+  render(<Modal open headless title="Editor" onClose={() => {}}>
+    <div contentEditable tabIndex={tabIndex} suppressContentEditableWarning
+      ref={(node) => {
+        // jsdom does not implement isContentEditable; model only that browser property.
+        if (node !== null) Object.defineProperty(node, 'isContentEditable', { value: true })
+      }}>Draft</div>
+    <button>Last control</button>
+  </Modal>)
+  const dialog = screen.getByRole('dialog', { name: 'Editor' })
+  const editable = screen.getByText('Draft')
+  const focus = vi.spyOn(editable, 'focus')
+  try {
+    dialog.focus()
+    expect(fireEvent.keyDown(dialog, { key: 'Tab' })).toBe(false)
+    if (tabIndex === undefined) expect(focus).toHaveBeenCalledTimes(1)
+    else {
+      expect(focus).not.toHaveBeenCalled()
+      expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Last control' }))
+    }
+  } finally { focus.mockRestore() }
+})
+
 it('does not steal focus when a lower layer disappears and restores a remaining parent after opener removal', () => {
   const tree = (parent: boolean, child: boolean, opener: boolean) => <>
     <Modal open={parent} title="Parent" closeLabel="Close parent" onClose={() => {}}>

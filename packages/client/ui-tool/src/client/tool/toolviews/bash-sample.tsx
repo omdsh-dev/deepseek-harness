@@ -111,16 +111,18 @@ const StartedBashRow = memo(function StartedBashRow({ toolName, block, sessionId
         onKeyDown={expandable ? toggleFromKeyboard : undefined}
       >
         <span className={css.leading}>{leading}</span>
-        <span className={css.visuallyHidden}>{status}</span>
-        <TextShimmer className={css.title} active={running}>{t(model.titleKey)}</TextShimmer>
-        <span className={css.sep} aria-hidden />
-        <span className={clsx(
-          css.summary,
-          state === 'error' && css.errorSummary,
-          state === 'stopped' && css.stoppedSummary,
-        )}>
-          <TextShimmer active={running}>{settlementLine ?? normalSummary}</TextShimmer>
-        </span>
+        {status !== '' && <span className={css.visuallyHidden}>{status}</span>}
+        <TextShimmer active={running}>
+          <TextShimmer className={css.title}>{t(model.titleKey)}</TextShimmer>
+          <span className={css.sep} data-shimmer-decoration aria-hidden />
+          <span className={clsx(
+            css.summary,
+            state === 'error' && css.errorSummary,
+            state === 'stopped' && css.stoppedSummary,
+          )}>
+            <TextShimmer>{settlementLine ?? normalSummary}</TextShimmer>
+          </span>
+        </TextShimmer>
       </div>
       {expandable && (
         <div id={bodyId} className={css.bodyWrap} hidden={!open}>
