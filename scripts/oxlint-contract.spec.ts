@@ -47,7 +47,7 @@ async function createOwnedFixture(): Promise<void> {
   // Bound concurrency to the six source roots and root config files. Settle
   // every copy before reporting an error so teardown cannot race a producer.
   const results = await Promise.allSettled(copies)
-  const failures = results.filter(result => result.status === 'rejected').map(result => result.reason)
+  const failures = results.filter(result => result.status === 'rejected').map((result): unknown => result.reason)
   if (failures.length > 0) throw new AggregateError(failures, 'Cannot create isolated lint source graph')
   await symlink(join(sourceRepositoryRoot, 'node_modules'), join(repositoryRoot, 'node_modules'),
     process.platform === 'win32' ? 'junction' : 'dir')
