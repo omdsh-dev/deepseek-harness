@@ -11,8 +11,8 @@
       - article "User message":
         - text: Render this mathematical proof. {{clock}}
         - button "Copy"
-      - status: Worked
-      - button "Took {{duration}}" [disabled]
+      - status: Completed
+      - button "Completed in {{duration}}" [disabled]
       - article "Assistant response":
         - heading "Math rendering" [level=2]
         - paragraph:

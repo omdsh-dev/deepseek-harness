@@ -30,8 +30,8 @@
       - article "User message":
         - text: Now give the final answer. {{clock}}
         - button "Copy"
-      - status: Worked
-      - button "Took {{duration}}" [disabled]
+      - status: Completed
+      - button "Completed in {{duration}}" [disabled]
       - article "Assistant response":
         - paragraph: DONE
       - button "Copy"
@@ -42,8 +42,8 @@
       - article "User message":
         - text: Keep this later input in the original conversation. {{clock}}
         - button "Copy"
-      - status: Worked
-      - button "Took {{duration}}" [disabled]
+      - status: Completed
+      - button "Completed in {{duration}}" [disabled]
       - article "Assistant response":
         - paragraph: ORIGINAL ONLY
       - button "Copy"

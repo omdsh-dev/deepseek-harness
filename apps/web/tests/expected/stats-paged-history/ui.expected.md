@@ -40,8 +40,8 @@
       - article "User message":
         - text: m1 7/25 {{clock}}
         - button "Copy"
-      - status: Worked
-      - button "Took {{duration}}" [disabled]
+      - status: Completed
+      - button "Completed in {{duration}}" [disabled]
       - article "Assistant response":
         - paragraph: r1
       - button "Copy"
@@ -52,8 +52,8 @@
       - article "User message":
         - text: m2 7/25 {{clock}}
         - button "Copy"
-      - status: Worked
-      - button "Took {{duration}}" [disabled]
+      - status: Completed
+      - button "Completed in {{duration}}" [disabled]
       - article "Assistant response":
         - paragraph: r2
       - button "Copy"
@@ -64,8 +64,8 @@
       - article "User message":
         - text: m3 7/25 {{clock}}
         - button "Copy"
-      - status: Worked
-      - button "Took {{duration}}" [disabled]
+      - status: Completed
+      - button "Completed in {{duration}}" [disabled]
       - article "Assistant response":
         - paragraph: r3
       - button "Copy"
@@ -76,8 +76,8 @@
       - article "User message":
         - text: m4 7/25 {{clock}}
         - button "Copy"
-      - status: Worked
-      - button "Took {{duration}}" [disabled]
+      - status: Completed
+      - button "Completed in {{duration}}" [disabled]
       - article "Assistant response":
         - paragraph: r4
       - button "Copy"
@@ -88,8 +88,8 @@
       - article "User message":
         - text: m5 7/25 {{clock}}
         - button "Copy"
-      - status: Worked
-      - button "Took {{duration}}" [disabled]
+      - status: Completed
+      - button "Completed in {{duration}}" [disabled]
       - article "Assistant response":
         - paragraph: r5
       - button "Copy"
@@ -100,8 +100,8 @@
       - article "User message":
         - text: m6 7/25 {{clock}}
         - button "Copy"
-      - status: Worked
-      - button "Took {{duration}}" [disabled]
+      - status: Completed
+      - button "Completed in {{duration}}" [disabled]
       - article "Assistant response":
         - paragraph: r6
       - button "Copy"
@@ -112,8 +112,8 @@
       - article "User message":
         - text: m7 7/25 {{clock}}
         - button "Copy"
-      - status: Worked
-      - button "Took {{duration}}" [disabled]
+      - status: Completed
+      - button "Completed in {{duration}}" [disabled]
       - article "Assistant response":
         - paragraph: r7
       - button "Copy"
@@ -124,8 +124,8 @@
       - article "User message":
         - text: m8 7/25 {{clock}}
         - button "Copy"
-      - status: Worked
-      - button "Took {{duration}}" [disabled]
+      - status: Completed
+      - button "Completed in {{duration}}" [disabled]
       - article "Assistant response":
         - paragraph: r8
       - button "Copy"
@@ -136,8 +136,8 @@
       - article "User message":
         - text: m9 7/25 {{clock}}
         - button "Copy"
-      - status: Worked
-      - button "Took {{duration}}" [disabled]
+      - status: Completed
+      - button "Completed in {{duration}}" [disabled]
       - article "Assistant response":
         - paragraph: r9
       - button "Copy"
@@ -148,8 +148,8 @@
       - article "User message":
         - text: m10 7/25 {{clock}}
         - button "Copy"
-      - status: Worked
-      - button "Took {{duration}}" [disabled]
+      - status: Completed
+      - button "Completed in {{duration}}" [disabled]
       - article "Assistant response":
         - paragraph: r10
       - button "Copy"
@@ -160,8 +160,8 @@
       - article "User message":
         - text: m11 7/25 {{clock}}
         - button "Copy"
-      - status: Worked
-      - button "Took {{duration}}" [disabled]
+      - status: Completed
+      - button "Completed in {{duration}}" [disabled]
       - article "Assistant response":
         - paragraph: r11
       - button "Copy"
@@ -172,8 +172,8 @@
       - article "User message":
         - text: m12 7/25 {{clock}}
         - button "Copy"
-      - status: Worked
-      - button "Took {{duration}}" [disabled]
+      - status: Completed
+      - button "Completed in {{duration}}" [disabled]
       - article "Assistant response":
         - paragraph: r12
       - button "Copy"
@@ -184,8 +184,8 @@
       - article "User message":
         - text: m13 7/25 {{clock}}
         - button "Copy"
-      - status: Worked
-      - button "Took {{duration}}" [disabled]
+      - status: Completed
+      - button "Completed in {{duration}}" [disabled]
       - article "Assistant response":
         - paragraph: r13
       - button "Copy"
@@ -196,8 +196,8 @@
       - article "User message":
         - text: m14 7/25 {{clock}}
         - button "Copy"
-      - status: Worked
-      - button "Took {{duration}}" [disabled]
+      - status: Completed
+      - button "Completed in {{duration}}" [disabled]
       - article "Assistant response":
         - paragraph: r14
       - button "Copy"
@@ -208,8 +208,8 @@
       - article "User message":
         - text: m15 7/25 {{clock}}
         - button "Copy"
-      - status: Worked
-      - button "Took {{duration}}" [disabled]
+      - status: Completed
+      - button "Completed in {{duration}}" [disabled]
       - article "Assistant response":
         - paragraph: r15
       - button "Copy"
@@ -220,8 +220,8 @@
       - article "User message":
         - text: m16 7/25 {{clock}}
         - button "Copy"
-      - status: Worked
-      - button "Took {{duration}}" [disabled]
+      - status: Completed
+      - button "Completed in {{duration}}" [disabled]
       - article "Assistant response":
         - paragraph: r16
       - button "Copy"
@@ -232,8 +232,8 @@
       - article "User message":
         - text: m17 7/25 {{clock}}
         - button "Copy"
-      - status: Worked
-      - button "Took {{duration}}" [disabled]
+      - status: Completed
+      - button "Completed in {{duration}}" [disabled]
       - article "Assistant response":
         - paragraph: r17
       - button "Copy"
@@ -244,8 +244,8 @@
       - article "User message":
         - text: m18 7/25 {{clock}}
         - button "Copy"
-      - status: Worked
-      - button "Took {{duration}}" [disabled]
+      - status: Completed
+      - button "Completed in {{duration}}" [disabled]
       - article "Assistant response":
         - paragraph: r18
       - button "Copy"
@@ -256,8 +256,8 @@
       - article "User message":
         - text: m19 7/25 {{clock}}
         - button "Copy"
-      - status: Worked
-      - button "Took {{duration}}" [disabled]
+      - status: Completed
+      - button "Completed in {{duration}}" [disabled]
       - article "Assistant response":
         - paragraph: r19
       - button "Copy"
@@ -268,8 +268,8 @@
       - article "User message":
         - text: m20 7/25 {{clock}}
         - button "Copy"
-      - status: Worked
-      - button "Took {{duration}}" [disabled]
+      - status: Completed
+      - button "Completed in {{duration}}" [disabled]
       - article "Assistant response":
         - paragraph: r20
       - button "Copy"
@@ -280,8 +280,8 @@
       - article "User message":
         - text: m21 7/25 {{clock}}
         - button "Copy"
-      - status: Worked
-      - button "Took {{duration}}" [disabled]
+      - status: Completed
+      - button "Completed in {{duration}}" [disabled]
       - article "Assistant response":
         - paragraph: r21
       - button "Copy"
@@ -292,8 +292,8 @@
       - article "User message":
         - text: m22 7/25 {{clock}}
         - button "Copy"
-      - status: Worked
-      - button "Took {{duration}}" [disabled]
+      - status: Completed
+      - button "Completed in {{duration}}" [disabled]
       - article "Assistant response":
         - paragraph: r22
       - button "Copy"
@@ -304,8 +304,8 @@
       - article "User message":
         - text: m23 7/25 {{clock}}
         - button "Copy"
-      - status: Worked
-      - button "Took {{duration}}" [disabled]
+      - status: Completed
+      - button "Completed in {{duration}}" [disabled]
       - article "Assistant response":
         - paragraph: r23
       - button "Copy"
@@ -316,8 +316,8 @@
       - article "User message":
         - text: m24 7/25 {{clock}}
         - button "Copy"
-      - status: Worked
-      - button "Took {{duration}}" [disabled]
+      - status: Completed
+      - button "Completed in {{duration}}" [disabled]
       - article "Assistant response":
         - paragraph: r24
       - button "Copy"
@@ -328,8 +328,8 @@
       - article "User message":
         - text: m25 7/25 {{clock}}
         - button "Copy"
-      - status: Worked
-      - button "Took {{duration}}" [disabled]
+      - status: Completed
+      - button "Completed in {{duration}}" [disabled]
       - article "Assistant response":
         - paragraph: r25
       - button "Copy"
@@ -340,8 +340,8 @@
       - article "User message":
         - text: m26 7/25 {{clock}}
         - button "Copy"
-      - status: Worked
-      - button "Took {{duration}}" [disabled]
+      - status: Completed
+      - button "Completed in {{duration}}" [disabled]
       - article "Assistant response":
         - paragraph: r26
       - button "Copy"
@@ -352,8 +352,8 @@
       - article "User message":
         - text: m27 7/25 {{clock}}
         - button "Copy"
-      - status: Worked
-      - button "Took {{duration}}" [disabled]
+      - status: Completed
+      - button "Completed in {{duration}}" [disabled]
       - article "Assistant response":
         - paragraph: r27
       - button "Copy"
@@ -364,8 +364,8 @@
       - article "User message":
         - text: m28 7/25 {{clock}}
         - button "Copy"
-      - status: Worked
-      - button "Took {{duration}}" [disabled]
+      - status: Completed
+      - button "Completed in {{duration}}" [disabled]
       - article "Assistant response":
         - paragraph: r28
       - button "Copy"

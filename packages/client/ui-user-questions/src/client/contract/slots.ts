@@ -224,6 +224,9 @@ export interface QuestionCardSnapshot {
  * removed only when the projection no longer lists the call.
  */
 export class PendingQuestion {
+  /** Recorded-answer reviews do not require a new user response. */
+  get readOnly(): boolean { return this.review !== undefined }
+
   /** Presentation discriminator used by Session pending-interaction consumers. */
   readonly kind: 'question' | 'plan-review'
   /** Render identity and request key for the Session-scoped draft store. */

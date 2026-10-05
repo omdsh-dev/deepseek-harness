@@ -11,8 +11,8 @@
       - article "User message":
         - text: "Assemble the link gallery: write the report and styles, inspect the sources, and summarize. {{clock}}"
         - button "Copy"
-      - status: Worked
-      - button "Took {{duration}}" [expanded]
+      - status: Completed
+      - button "Completed in {{duration}}" [expanded]
       - button "Wrote files, called tools, searched code, etc." [expanded]
       - text: Completed
       - button "Write Completed site/report.html +1 -0"

@@ -488,7 +488,7 @@ function makeHarness(
     setNodeRenderer: (renderer: React.ComponentProps<typeof ChatNodeSeat>['renderSlot']) => {
       nodeSlotOverride = renderer
     },
-    setPendingInteraction: (interaction?: { readonly key: string; readonly kind: string }) => {
+    setPendingInteraction: (interaction?: { readonly key: string; readonly kind: string; readonly readOnly?: boolean }) => {
       pendingInteractions.set(interaction === undefined
         ? new Map()
         : new Map([[SID, {
@@ -3443,6 +3443,16 @@ describe('ChatView', () => {
     await waitFor(() => { expect(live.textContent).toBe('需要你审阅计划。') })
     act(() => { h.setPendingInteraction({ key: 'plugin:1', kind: 'plugin-request' }) })
     await waitFor(() => { expect(live.textContent).toBe('需要你处理一项请求。') })
+  })
+
+  it('does not request a new response when recorded answers are reopened', async () => {
+    const h = makeHarness()
+    const view = render(<h.ChatView {...h.props} />)
+    const live = view.container.querySelector('[data-chat-announcer]') as HTMLElement
+    act(() => { h.setPendingInteraction({ key: 'question:review', kind: 'question', readOnly: true }) })
+    expect(live.textContent).toBe('')
+    act(() => { h.setPendingInteraction({ key: 'question:new', kind: 'question' }) })
+    await waitFor(() => { expect(live.textContent).toBe('需要你回答问题。') })
   })
 
   it('baselines loading history instead of replaying it as new activity', () => {

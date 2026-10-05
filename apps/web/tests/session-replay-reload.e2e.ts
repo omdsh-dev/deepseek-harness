@@ -10,7 +10,7 @@ import {
 import { connectFreshWorkspace, newEnglishPage, saveFailureShot } from './support.ts'
 
 const FIXTURE = fileURLToPath(new URL('../../../snapshots/web/fresh-round-trip/session.v3.jsonl', import.meta.url))
-const UI_EXPECTED = fileURLToPath(new URL('../../../snapshots/web/fresh-round-trip/ui-expanded.expected.md', import.meta.url))
+const UI_EXPECTED = fileURLToPath(new URL('../../../snapshots/web/fresh-round-trip/reloaded-expanded.expected.md', import.meta.url))
 
 describe.skipIf(webSnapshotMode() === 'record')('web session replay', () => {
   it.each([{ name: 'Chromium', engine: chromium }, { name: 'WebKit', engine: webkit }])(
@@ -63,6 +63,7 @@ describe.skipIf(webSnapshotMode() === 'record')('web session replay', () => {
       await page.reload()
       await page.getByText('DONE', { exact: true }).waitFor({ timeout: 15_000 })
       acknowledgeReloadConnectionLoss(tripwire, warningStart)
+      expect(await page.locator('[data-chat-announcer]').textContent()).toBe('')
       await compareOrRefreshGolden(UI_EXPECTED,
         await captureExpandedTurnProcessAria(page, '[class*="centerCol"]', scaffold.workspaceCwd), 'replay')
 
@@ -70,6 +71,7 @@ describe.skipIf(webSnapshotMode() === 'record')('web session replay', () => {
       await page.getByText('Into the Unknown', { exact: true }).waitFor()
       await page.getByRole('treeitem').filter({ has: page.getByText('Use the bash tool to', { exact: true }) }).click()
       await page.getByText('DONE', { exact: true }).waitFor({ timeout: 15_000 })
+      expect(await page.locator('[data-chat-announcer]').textContent()).toBe('')
       await compareOrRefreshGolden(UI_EXPECTED,
         await captureExpandedTurnProcessAria(page, '[class*="centerCol"]', scaffold.workspaceCwd), 'replay')
       expect(tripwire.pageErrors).toEqual([])

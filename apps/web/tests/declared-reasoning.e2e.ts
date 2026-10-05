@@ -137,7 +137,8 @@ describe.skipIf(MODE === 'record').each([
   it('opens from the pointer with keyboard focus and closes from the trigger in every pane', async () => {
     onTestFailed(() => saveFailureShot(page, `web-e2e-model-trigger-${engine.name()}`))
     const trigger = page.getByRole('button', { name: /^选择模型/ })
-    const menu = page.getByRole('menu')
+    const menu = page.getByRole('menu', { name: '模型与推理等级', exact: true })
+      .or(page.getByRole('group', { name: '模型与推理等级', exact: true }))
     for (const pane of ['root', 'model', 'effort']) {
       await page.locator('[data-composer-input][contenteditable="true"]').focus()
       await trigger.click()
@@ -146,7 +147,7 @@ describe.skipIf(MODE === 'record').each([
       if (pane !== 'root') {
         await page.getByRole('menuitem', { name: pane === 'model' ? /^模型/ : /推理等级/ }).click()
         const focused = pane === 'model'
-          ? page.getByRole('searchbox', { name: '搜索模型…' })
+          ? page.getByRole('combobox', { name: '搜索模型…' })
           : page.locator('[role="menuitemradio"][aria-checked="true"]')
         await expect.poll(() => focused.evaluate(element => element === element.ownerDocument.activeElement)).toBe(true)
       }
@@ -166,12 +167,13 @@ describe.skipIf(MODE === 'record').each([
     page.on('request', countSelection)
     onTestFinished(() => { page.off('request', countSelection) })
     const trigger = page.getByRole('button', { name: /^选择模型/ })
-    const menu = page.getByRole('menu')
+    const menu = page.getByRole('menu', { name: '模型与推理等级', exact: true })
+      .or(page.getByRole('group', { name: '模型与推理等级', exact: true }))
     await trigger.click()
     await page.getByRole('menuitem', { name: /^模型/ }).click()
-    const current = page.getByRole('menuitemradio', { name: 'Acme Think', exact: true })
-    const target = page.getByRole('menuitemradio', { name: 'Acme Swift', exact: true })
-    const search = page.getByRole('searchbox', { name: '搜索模型…' })
+    const current = page.getByRole('option', { name: 'Acme Think', exact: true })
+    const target = page.getByRole('option', { name: 'Acme Swift', exact: true })
+    const search = page.getByRole('combobox', { name: '搜索模型…' })
     await expect.poll(() => search.evaluate(element => element === element.ownerDocument.activeElement)).toBe(true)
     expect(await search.getAttribute('aria-activedescendant')).toBe(await current.getAttribute('id'))
 
@@ -234,6 +236,10 @@ describe.skipIf(MODE === 'record').each([
     await compareOrRefreshGolden(POINTER_EXPECTED,
       await captureStableAria(page, '[role="group"][aria-label="模型与推理等级"]', scaffold.workspaceCwd), MODE)
     await expect.poll(() => trigger.evaluate(element => element === document.activeElement)).toBe(true)
+    // Rejection retains the offered choices; the first trigger click closes
+    // that pane before a fresh open returns to the root menu.
+    await trigger.click()
+    await menu.waitFor({ state: 'detached' })
     await trigger.click()
     await page.getByRole('menuitem', { name: /^模型/ }).click()
     await expect.poll(() => search.evaluate(element => element === element.ownerDocument.activeElement)).toBe(true)

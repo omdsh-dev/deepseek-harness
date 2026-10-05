@@ -11,8 +11,8 @@
       - article "User message":
         - text: Load the editing-cordis-compositions skill with the skill tool, then reply DONE. {{date}} {{clock}}
         - button "Copy"
-      - status: Worked
-      - button "Took {{duration}}" [expanded]
+      - status: Completed
+      - button "Completed in {{duration}}" [expanded]
       - button "Called tools" [expanded]
       - article "Assistant response":
         - button "Think Load the requested skill."

@@ -668,6 +668,7 @@ describe.skipIf(MODE === 'record')('web e2e: late-answered question transcript',
     const review = latePage.locator('[data-question-key]')
     await review.waitFor({ timeout: 10_000 })
     await review.getByText('Answered', { exact: true }).waitFor({ timeout: 10_000 })
+    expect(await latePage.locator('[data-chat-announcer]').textContent()).toBe('')
     const recorded = review.getByRole('checkbox', { name: 'Green' })
     expect(await recorded.getAttribute('aria-checked')).toBe('true')
     expect(await recorded.isDisabled()).toBe(true)

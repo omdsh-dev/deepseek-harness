@@ -38,6 +38,18 @@ describe('createWaterfallRequest', () => {
 })
 
 describe('PendingQuestion', () => {
+  it('distinguishes a recorded-answer review from a live question', () => {
+    const live = new PendingQuestion(SID, QUESTIONS, CALL)
+    const review = new PendingQuestion(SID, QUESTIONS, CALL, undefined, ANSWER.answers)
+    try {
+      expect(live.readOnly).toBe(false)
+      expect(review.readOnly).toBe(true)
+    } finally {
+      live.close()
+      review.close()
+    }
+  })
+
   it.each([true, false])('retains focus before a deadline arrives only while still focused: %s', (stillFocused) => {
     vi.useFakeTimers()
     const card = new PendingQuestion(SID, QUESTIONS, CALL)

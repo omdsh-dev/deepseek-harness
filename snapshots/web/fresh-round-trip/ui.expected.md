@@ -13,8 +13,8 @@
       - article "User message":
         - text: "Use the bash tool to run exactly: echo WEB_E2E_OK. Then reply with the single word DONE and stop. {{clock}}"
         - button "Copy"
-      - status: Worked
-      - button "Took {{duration}}"
+      - status: Completed
+      - button "Completed in {{duration}}"
       - article "Assistant response":
         - paragraph: DONE
       - button "Copy"

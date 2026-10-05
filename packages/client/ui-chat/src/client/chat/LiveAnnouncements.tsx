@@ -214,7 +214,8 @@ export function LiveAnnouncements({
       next.responseStartMarker = terminal.marker
       next.awaitingResponseEnd = false
     }
-    if (pendingInteraction !== undefined && prior.pendingKey !== pendingInteraction.key) {
+    if (pendingInteraction !== undefined && pendingInteraction.readOnly !== true
+      && prior.pendingKey !== pendingInteraction.key) {
       announcements.push(pendingAnnouncement(pendingInteraction, t))
     }
     if (announcements.length === 0) return

@@ -13,8 +13,8 @@
       - article "User message":
         - text: Reply with the single word LIGHTHOUSE and stop. {{clock}}
         - button "Copy"
-      - status: Worked
-      - button "Took {{duration}}" [expanded]
+      - status: Completed
+      - button "Completed in {{duration}}" [expanded]
       - button "Analysis completed" [expanded]
       - article "Assistant response":
         - button "Think The user wants me to reply with a single word. Let me comply."

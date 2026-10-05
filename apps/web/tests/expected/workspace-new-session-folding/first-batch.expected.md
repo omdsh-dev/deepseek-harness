@@ -1,18 +1,18 @@
 - tree "Sessions":
   - treeitem "{{workspace}}" [expanded] [level=1]
   - treeitem "New Session" [level=2] [selected]
-  - treeitem "{{workspace}} 1min" [level=2]
-  - treeitem "{{workspace}} 1min" [level=2]
-  - treeitem "{{workspace}} 1min" [level=2]
-  - treeitem "{{workspace}} 1min" [level=2]
-  - treeitem "{{workspace}} 1min" [level=2]
-  - treeitem "{{workspace}} Session actions for {{workspace}} Archive session Pin session" [level=2]:
-    - text: {{workspace}}
-    - button "Session actions for {{workspace}}"
+  - treeitem "Untitled 1min" [level=2]
+  - treeitem "Untitled 1min" [level=2]
+  - treeitem "Untitled 1min" [level=2]
+  - treeitem "Untitled 1min" [level=2]
+  - treeitem "Untitled 1min" [level=2]
+  - treeitem "Untitled Session actions for Untitled Archive session Pin session" [level=2]:
+    - text: Untitled
+    - button "Session actions for Untitled"
     - button "Archive session"
     - button "Pin session"
-  - treeitem "{{workspace}} 1min" [level=2]
-  - treeitem "{{workspace}} 1min" [level=2]
-  - treeitem "{{workspace}} 1min" [level=2]
-  - treeitem "{{workspace}} 1min" [level=2]
+  - treeitem "Untitled 1min" [level=2]
+  - treeitem "Untitled 1min" [level=2]
+  - treeitem "Untitled 1min" [level=2]
+  - treeitem "Untitled 1min" [level=2]
   - button "Show 6 more sessions"

@@ -18,8 +18,8 @@
       - button "Continuing goal {{clock}}":
         - text: Continuing goal
         - time: {{clock}}
-      - status: Worked
-      - button "Took {{duration}}"
+      - status: Completed
+      - button "Completed in {{duration}}"
       - article "Assistant response":
         - paragraph:
           - strong: Turn 1 / 2
@@ -43,8 +43,8 @@
       - button "Continuing goal {{clock}}":
         - text: Continuing goal
         - time: {{clock}}
-      - status: Worked
-      - button "Took {{duration}}"
+      - status: Completed
+      - button "Completed in {{duration}}"
       - article "Assistant response"
       - article "Assistant response"
       - article "Assistant response":

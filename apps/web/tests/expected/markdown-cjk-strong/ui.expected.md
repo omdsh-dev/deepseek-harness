@@ -11,8 +11,8 @@
       - article "User message":
         - text: Render adjacent CJK strong emphasis. {{clock}}
         - button "Copy"
-      - status: Worked
-      - button "Took {{duration}}" [disabled]
+      - status: Completed
+      - button "Completed in {{duration}}" [disabled]
       - article "Assistant response":
         - heading "CJK strong emphasis" [level=2]
         - paragraph:

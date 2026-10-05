@@ -1,2 +1,4 @@
+- text: Automation task
+
 - article "Assistant response":
   - paragraph: "Reminder: Check the deployment log."

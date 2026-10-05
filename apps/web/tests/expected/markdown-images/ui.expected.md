@@ -11,8 +11,8 @@
       - article "User message":
         - text: Show the Markdown image policy. {{clock}}
         - button "Copy"
-      - status: Worked
-      - button "Took {{duration}}" [disabled]
+      - status: Completed
+      - button "Completed in {{duration}}" [disabled]
       - article "Assistant response":
         - heading "Markdown images" [level=2]
         - paragraph:

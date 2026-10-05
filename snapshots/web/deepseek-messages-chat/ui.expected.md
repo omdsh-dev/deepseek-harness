@@ -13,8 +13,8 @@
       - article "用户消息":
         - text: 只回复 MESSAGES_WEB_READY，不调用工具。 {{clock}}
         - button "复制"
-      - status: 已完成工作
-      - button "用时 {{duration}}" [disabled]
+      - status: 已完成
+      - button "已完成，用时 {{duration}}" [disabled]
       - article "Assistant 回复":
         - paragraph: MESSAGES_WEB_READY
       - button "复制"
