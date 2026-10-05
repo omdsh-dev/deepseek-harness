@@ -12,37 +12,55 @@ import { removeFixtureSafely } from './test-fixture-cleanup.ts'
 const sourceRepositoryRoot = fileURLToPath(new URL('..', import.meta.url))
 let repositoryRoot: string
 let fixtureRoot: string | undefined
+let fixtureSetup: Promise<void> | undefined
 const oxlintCli = fileURLToPath(new URL('../node_modules/oxlint/bin/oxlint', import.meta.url))
 const tsxCli = fileURLToPath(new URL('../node_modules/tsx/dist/cli.mjs', import.meta.url))
 
 // These probes need the actual project graph and lint configuration, but must
 // not publish short-lived source files to concurrent repository scanners.
-beforeAll(async () => {
+beforeAll(() => {
+  fixtureSetup = createOwnedFixture()
+  return fixtureSetup
+})
+
+async function createOwnedFixture(): Promise<void> {
   fixtureRoot = await mkdtemp(join(tmpdir(), 'dsh-oxlint-contract-'))
   repositoryRoot = await realpath(fixtureRoot)
   const sourceDirectories = new Set(['packages', 'apps', 'vendor', 'native', 'scripts', 'website'])
   const excludedDirectories = new Set(['node_modules', 'lib', 'target', 'dist', '.git', '.sessions', '.generated'])
+  const copies: Array<Promise<void>> = []
   for (const entry of await readdir(sourceRepositoryRoot, { withFileTypes: true })) {
     const source = join(sourceRepositoryRoot, entry.name)
     const target = join(repositoryRoot, entry.name)
     if (entry.isDirectory() && sourceDirectories.has(entry.name)) {
-      await cp(source, target, {
+      copies.push(cp(source, target, {
         recursive: true,
         filter: (path) => {
           if (relative(sourceRepositoryRoot, path).split(sep).some(part => excludedDirectories.has(part))) return false
           return lstatSync(path).isDirectory() || /\.(?:[cm]?ts|tsx|json|[cm]?js)$/.test(path)
         },
-      })
+      }))
     } else if (entry.isFile() && (/\.(?:[cm]?ts|json|[cm]?js)$/.test(entry.name) || entry.name === 'lefthook.yml')) {
-      await cp(source, target)
+      copies.push(cp(source, target))
     }
   }
+  // Bound concurrency to the six source roots and root config files. Settle
+  // every copy before reporting an error so teardown cannot race a producer.
+  const results = await Promise.allSettled(copies)
+  const failures = results.filter(result => result.status === 'rejected').map(result => result.reason)
+  if (failures.length > 0) throw new AggregateError(failures, 'Cannot create isolated lint source graph')
   await symlink(join(sourceRepositoryRoot, 'node_modules'), join(repositoryRoot, 'node_modules'),
     process.platform === 'win32' ? 'junction' : 'dir')
-})
+}
 
-afterAll(() => {
-  if (fixtureRoot !== undefined) removeFixtureSafely(fixtureRoot)
+afterAll(async () => {
+  // A timed-out hook does not cancel filesystem work. Join that work before
+  // unlinking junctions and removing the private tree, including failed setup.
+  try {
+    await fixtureSetup
+  } finally {
+    if (fixtureRoot !== undefined) removeFixtureSafely(fixtureRoot)
+  }
 })
 
 function isRecord(value: unknown): value is Record<string, unknown> {
