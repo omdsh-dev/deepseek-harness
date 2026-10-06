@@ -336,14 +336,27 @@ describe.skipIf(!hasPwsh)('terminal-bash pwsh real shell', () => {
         { timeout: 8_000 }).toContain('dsh> ')
 
       const releaseFile = join(root, 'release-command')
-      // Hold the command across the silence settlement without relying on host load.
+      // Release the held command only after child output proves it started.
+      // The controlled pwsh prompt, not shell silence, owns completion.
+      const heldMarker = 'held-command-ready'
       const barrier = holdCommand
-        ? `while (-not [IO.File]::Exists('${releaseFile.replaceAll("'", "''")}')) { [Threading.Thread]::Sleep(10) }; `
+        ? `Write-Output ('held-command-' + 'ready'); while (-not [IO.File]::Exists('${releaseFile.replaceAll("'", "''")}')) { [Threading.Thread]::Sleep(10) }; `
         : ''
+      expect(barrier).not.toContain(heldMarker)
       const first = ctx.terminals.startSend(agent, created.sessionId, {
         text: barrier + '$env:KEEP = "ok"; Set-Location /',
         submit: true,
       })
+      if (holdCommand) {
+        let settled = false
+        void first.done.then(() => { settled = true })
+        try {
+          await waitForOutput(first, heldMarker, 8_000)
+          expect(settled).toBe(false)
+        } finally {
+          writeFileSync(releaseFile, '')
+        }
+      }
       expect(['stdin_read', 'inferred_idle']).toContain((await first.done).waitReason)
       const expected = 'keep=ok cwd=/ secret=END'
       const command = "Write-Output ('keep={0} cwd={1} secret={2}END' -f $env:KEEP, (Get-Location).Path, $env:DSH_TEST_SECRET)"
@@ -351,14 +364,7 @@ describe.skipIf(!hasPwsh)('terminal-bash pwsh real shell', () => {
       const second = ctx.terminals.startSend(agent, created.sessionId, { text: command, submit: true })
       const result = await second.done
       expect(['stdin_read', 'inferred_idle']).toContain(result.waitReason)
-      if (holdCommand) {
-        expect(result.waitReason).toBe('inferred_idle')
-        expect(result.viewport).not.toContain(expected)
-        writeFileSync(releaseFile, '')
-      }
-
-      // A silence-settled send stops collecting output; scrollback still receives
-      // the command's later output. Only the child can produce this formatted token.
+      // Only the child can produce this formatted token; command echo cannot.
       const read = () => ctx.terminals.read(agent, created.sessionId, { offset: 0, count: 100 }).text
       await expect.poll(read, { timeout: 8_000 }).toContain(expected)
       expect(read()).not.toContain('must-not-leak')

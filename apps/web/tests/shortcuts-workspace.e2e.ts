@@ -307,13 +307,21 @@ it.skipIf(mode === 'record').each([
     await page.keyboard.press(`${primary}+Alt+K`)
     const search = page.getByPlaceholder('Search session names', { exact: true })
     await expect.poll(() => search.evaluate(element => element === document.activeElement)).toBe(true)
+    // Border color transitions into the focus color; the shadow changes
+    // immediately. Compare their settled appearance, not an animation frame.
+    await expect.poll(() => search.evaluate((element) => {
+      const surface = getComputedStyle(element.parentElement!)
+      return surface.boxShadow === `${surface.borderTopColor} 0px 0px 0px 1px`
+    })).toBe(true)
     const searchAppearance = await search.evaluate((element) => {
       const input = getComputedStyle(element)
       const surface = getComputedStyle(element.parentElement!)
       return { outline: input.outlineStyle, shadow: input.boxShadow,
-        surfaceOutline: surface.outlineStyle, surfaceShadow: surface.boxShadow }
+        surfaceOutline: surface.outlineStyle, surfaceShadow: surface.boxShadow,
+        surfaceBorder: surface.borderTopColor }
     })
-    expect(searchAppearance).toEqual({ outline: 'none', shadow: 'none', surfaceOutline: 'none', surfaceShadow: 'none' })
+    expect(searchAppearance).toEqual({ outline: 'none', shadow: 'none', surfaceOutline: 'none',
+      surfaceShadow: `${searchAppearance.surfaceBorder} 0px 0px 0px 1px`, surfaceBorder: searchAppearance.surfaceBorder })
     await page.keyboard.press('Escape')
     expect(await search.evaluate(element => getComputedStyle(element).boxShadow)).toBe(searchAppearance.shadow)
     await page.keyboard.press(`${primary}+Alt+B`)

@@ -319,7 +319,14 @@ describe('web e2e: message IconActions and clocks on settled history', () => {
     await page.getByText(/Cache hit \d+%/u).first().waitFor({ timeout: 10_000 })
     // Keep a footer focused so opacity-hidden actions stay in the a11y tree
     // as an active/focused control during the capture.
-    await page.getByRole('button', { name: 'Copy' }).first().focus()
+    const copy = page.getByRole('button', { name: 'Copy', exact: true }).first()
+    await copy.focus()
+    // The preceding geometry probe uses the pointer; re-enter this control
+    // through keyboard traversal so the focused-tooltip golden is meaningful.
+    await copy.press('Tab')
+    await page.keyboard.press('Shift+Tab')
+    await expect.poll(() => copy.evaluate(button => button === document.activeElement)).toBe(true)
+    await page.getByRole('tooltip', { name: 'Copy', exact: true }).waitFor({ state: 'visible' })
     const snapshot = (await captureStableAria(page, '[class*="centerCol"]', scaffold.workspaceCwd))
       .split(SEED_ID).join('{{seededId}}')
     await compareOrRefreshGolden(UI_EXPECTED, snapshot, MODE)
@@ -331,8 +338,8 @@ describe('web e2e: message IconActions and clocks on settled history', () => {
     await openSettings(page, 'en')
     const dialog = page.getByRole('dialog', { name: 'Settings', exact: true })
     const row = dialog.getByText('Performance & usage', { exact: true }).locator('../..')
-    await row.getByRole('button', { name: 'Detailed', exact: true }).click()
-    await page.getByRole('menuitem', { name: 'Compact', exact: true }).click()
+    await row.getByRole('button', { name: 'Performance & usage: Detailed', exact: true }).click()
+    await page.getByRole('menuitemradio', { name: 'Compact', exact: true }).click()
     await expect.poll(() => scaffold.ctx.settings.describe().find(row => row.ns === 'ui-chat')?.value).toMatchObject({ performanceUsage: 'compact' })
     await dialog.getByRole('button', { name: 'Close', exact: true }).click()
     await expect.poll(() => stats.locator('button').count()).toBe(0)
@@ -344,10 +351,10 @@ describe('web e2e: message IconActions and clocks on settled history', () => {
     const warningStart = tripwire.warnings.length
     await page.reload()
     await openSettings(page, 'en')
-    await row.getByRole('button', { name: 'Compact', exact: true }).waitFor()
+    await row.getByRole('button', { name: 'Performance & usage: Compact', exact: true }).waitFor()
     acknowledgeReloadConnectionLoss(tripwire, warningStart)
-    await row.getByRole('button', { name: 'Compact', exact: true }).click()
-    await page.getByRole('menuitem', { name: 'Detailed', exact: true }).click()
+    await row.getByRole('button', { name: 'Performance & usage: Compact', exact: true }).click()
+    await page.getByRole('menuitemradio', { name: 'Detailed', exact: true }).click()
     await expect.poll(() => scaffold.ctx.settings.describe().find(row => row.ns === 'ui-chat')?.value).toMatchObject({ performanceUsage: 'detailed' })
     await dialog.getByRole('button', { name: 'Close', exact: true }).click()
     await expect.poll(() => stats.locator('button').count()).toBe(2)
@@ -383,14 +390,15 @@ describe('web e2e: message IconActions and clocks on settled history', () => {
     // The row action owns a distinct ui-workspace injection from the message
     // action above, so exercise both through the loaded app before capture.
     const sourceRow = page.locator('[role="treeitem"][aria-selected="true"]')
-    const rowBox = await sourceRow.boundingBox()
-    if (rowBox === null) throw new Error('fork source row has no layout box')
     const actionButton = sourceRow.locator('button[aria-label^="Session actions for "]')
-    await sourceRow.hover({ position: { x: rowBox.width - 16, y: rowBox.height / 2 } })
-    await expect.poll(() => actionButton.isVisible(), { timeout: 2_000 }).toBe(true)
-    const buttonBox = await actionButton.boundingBox()
-    if (buttonBox === null) throw new Error('fork source row action has no layout box')
-    await page.mouse.click(buttonBox.x + buttonBox.width / 2, buttonBox.y + buttonBox.height / 2)
+    // The fork projection may replace the selected row after the first hover.
+    // Re-resolve and re-hover until the replacement exposes its action rather
+    // than treating a 2s render race as product evidence.
+    await expect.poll(async () => {
+      await sourceRow.hover()
+      return await actionButton.isVisible()
+    }, { timeout: 10_000 }).toBe(true)
+    await actionButton.click()
     await page.getByRole('menuitem', { name: 'Fork session' }).click()
     await expect.poll(
       () => scaffold.ctx.agents.list().filter(agent => agent.session.header.parentSession !== undefined).length,

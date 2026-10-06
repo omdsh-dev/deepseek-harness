@@ -25,5 +25,5 @@ export function focusWithoutRing(element: HTMLElement, options?: FocusOptions): 
   element.addEventListener('blur', release)
   element.addEventListener('keydown', navigate, true)
   element.focus(options)
-  if (!element.matches(':focus')) release()
+  if (element.ownerDocument.activeElement === null || !element.matches(':focus')) release()
 }

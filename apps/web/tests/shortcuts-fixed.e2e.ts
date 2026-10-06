@@ -34,7 +34,7 @@ describe('web e2e: fixed approval rejection keys', () => {
       await page.goto(scaffold.authenticatedUrl, { waitUntil: 'load' })
       await connectFreshWorkspace(page, scaffold.workspaceCwd)
       await page.locator('[aria-label^="Access mode"]').click()
-      await page.getByRole('menuitem', { name: 'Read Only' }).click()
+      await page.getByRole('menuitemradio', { name: 'Read Only' }).click()
       await page.locator('[aria-label="Access mode, current: Read Only"]').waitFor()
       const input = page.locator('[data-composer-input]').first()
       const prompts = fixtureUserPrompts(await readFile(FIXTURE, 'utf8'))

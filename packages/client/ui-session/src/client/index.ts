@@ -44,6 +44,8 @@ export interface SessionPendingInteractionBase {
   readonly kind: string
   /** Session whose UI can answer this interaction. */
   readonly sessionId: SessionId
+  /** A read-only review occupies the same seat but must not request a new response. */
+  readonly readOnly?: boolean
 }
 
 /** Declaration-merged map of domain keys to their pending-interaction values. */

@@ -11,12 +11,12 @@
  * to the step, so a mounted-but-deciding step paints nothing here.
  */
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
 import clsx from 'clsx'
 import {
-  ConnectionIndicator, Tooltip, useModalLayer,
+  ConnectionIndicator, Tooltip,
   IconAgentPresetOutlineMedium, IconArchiveOutlineMedium, IconCloseOutlineRegular, IconDataOutlineMedium,
   IconPersonalizationOutlineMedium, IconSettingsOutlineMedium, IconUserOutlineMedium,
+  Modal,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { ConnectionIndicatorState } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { SettingsRootComponentProps, SettingsSectionRow } from './shell-contract.ts'
@@ -47,9 +47,9 @@ type PanelProps = {
 }
 
 /**
- * Body-portaled modal layer: full-viewport mask + centered panel. Close paths: the
- * header button, a mask click, and document-level Escape (mounted only while
- * open, so the listener lifetime is the panel's).
+ * The modal layer: full-viewport mask + centered panel. The shared Modal owns
+ * focus containment, background inertness, trigger restoration, mask click,
+ * and Escape; this component owns the settings navigation and close control.
  */
 function SettingsPanel({ rows, renderSlot, activeId, onSelect, onClose }: PanelProps) {
   // Entries can unmount underneath the requested id, so the render-time
@@ -57,51 +57,59 @@ function SettingsPanel({ rows, renderSlot, activeId, onSelect, onClose }: PanelP
   const active = rows.find(r => r.id === activeId)?.id ?? rows[0]?.id
   const titleId = useId()
 
-  const panel = useRef<HTMLDivElement>(null)
-  useModalLayer(panel, true, onClose)
-
-  // Portalled beside #root like the Modal primitive: a covering surface mounted
-  // inside the root would precede the columns' chrome in document order, so a
-  // chrome row that declares window drag after it would override its subtraction.
-  // Beside the root, base.css's `body > :not(#root)` rule subtracts it instead.
-  return createPortal((
-    <div className={css.overlay} role="presentation">
-      <div className={css.mask} aria-hidden="true" onClick={onClose} />
-      <div ref={panel} tabIndex={-1} data-shortcut-modal="settings" className={css.panel} role="dialog" aria-modal="true" aria-labelledby={titleId}>
-        <nav className={css.nav}>
-          <div className={css.navTitle} id={titleId} tabIndex={-1}
-            data-modal-autofocus={active === undefined ? '' : undefined}>{renderSlot('settings.header', {})}</div>
-          <div className={css.navList}>
-            {rows.map(row => (
-              <button
-                key={row.id}
-                type="button"
-                className={clsx(css.navCell, row.id === active && css.active)}
-                aria-current={row.id === active ? 'true' : undefined}
-                data-modal-autofocus={row.id === active ? '' : undefined}
-                onClick={() => { onSelect(row.id) }}
-              >
-                {navIcon(row.id)}
-                <span className={css.navLabel}>{row.label}</span>
-              </button>
-            ))}
-          </div>
-        </nav>
-        <div className={css.content}>
-          <div className={css.header}>
-            <div className={css.actions}>{renderSlot('settings.action', {})}</div>
-            <button type="button" className={css.close} onClick={onClose}>
-              <IconCloseOutlineRegular size={14} />
-              <span className={css.hiddenLabel}>{renderSlot('settings.close', {})}</span>
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title=""
+      labelledBy={titleId}
+      headless
+      shortcutModal="settings"
+      className={clsx(css.panel)}
+    >
+      <nav className={css.nav}>
+        <div className={css.navTitle} id={titleId} tabIndex={-1}
+          data-modal-autofocus={active === undefined ? '' : undefined}>{renderSlot('settings.header', {})}</div>
+        <div className={css.navList}>
+          {rows.map(row => (
+            <button
+              key={row.id}
+              type="button"
+              className={clsx(css.navCell, row.id === active && css.active)}
+              aria-current={row.id === active ? 'true' : undefined}
+              data-modal-autofocus={row.id === active ? '' : undefined}
+              onClick={() => { onSelect(row.id) }}
+            >
+              {navIcon(row.id)}
+              <span className={css.navLabel}>{row.label}</span>
             </button>
-          </div>
-          <div className={css.options}>
-            {active !== undefined && renderSlot('settings.section', { close: onClose }, { only: active })}
-          </div>
+          ))}
+        </div>
+      </nav>
+      <div className={css.content}>
+        <div className={css.header}>
+          <div className={css.actions}>{renderSlot('settings.action', {})}</div>
+          <button type="button" className={css.close} onClick={onClose}>
+            <IconCloseOutlineRegular size={14} />
+            <span className={css.hiddenLabel}>{renderSlot('settings.close', {})}</span>
+          </button>
+        </div>
+        <div
+          className={css.options}
+          onFocusCapture={(event) => {
+            const target = event.target
+            requestAnimationFrame(() => {
+              if (target.matches(':focus')) {
+                target.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+              }
+            })
+          }}
+        >
+          {active !== undefined && renderSlot('settings.section', { close: onClose }, { only: active })}
         </div>
       </div>
-    </div>
-  ), document.body)
+    </Modal>
+  )
 }
 
 /**

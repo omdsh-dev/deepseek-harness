@@ -14,9 +14,17 @@ Running status comes from Host list baselines or status events. Subagent catalog
 
 ## Table of Contents
 
+- [Use pending interactions](#use-pending-interactions)
 - [Model Experience](#model-experience)
 - [Known Limitations and Deferred Work](#known-limitations-and-deferred-work)
 - [Dev Note](#dev-note)
+
+-----
+
+<a id="use-pending-interactions"></a>
+## Use pending interactions
+
+Pending interaction carriers may set `readOnly: true` when presenting recorded answers. Such a review still occupies the composer seat but does not announce a request for a new response. An absent flag preserves the live-request behavior.
 
 -----
 

@@ -1,15 +1,67 @@
 import { spawnSync } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
-import { existsSync } from 'node:fs'
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
-import { join, relative } from 'node:path'
+import { existsSync, lstatSync } from 'node:fs'
+import { cp, mkdir, mkdtemp, readFile, readdir, realpath, rm, symlink, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { isAbsolute, join, relative, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { flattenDiagnosticMessageText, parseConfigFileTextToJson } from 'typescript'
-import { describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { removeFixtureSafely } from './test-fixture-cleanup.ts'
 
-const repositoryRoot = fileURLToPath(new URL('..', import.meta.url))
+const sourceRepositoryRoot = fileURLToPath(new URL('..', import.meta.url))
+let repositoryRoot: string
+let fixtureRoot: string | undefined
+let fixtureSetup: Promise<void> | undefined
 const oxlintCli = fileURLToPath(new URL('../node_modules/oxlint/bin/oxlint', import.meta.url))
 const tsxCli = fileURLToPath(new URL('../node_modules/tsx/dist/cli.mjs', import.meta.url))
+
+// These probes need the actual project graph and lint configuration, but must
+// not publish short-lived source files to concurrent repository scanners.
+beforeAll(() => {
+  fixtureSetup = createOwnedFixture()
+  return fixtureSetup
+})
+
+async function createOwnedFixture(): Promise<void> {
+  fixtureRoot = await mkdtemp(join(tmpdir(), 'dsh-oxlint-contract-'))
+  repositoryRoot = await realpath(fixtureRoot)
+  const sourceDirectories = new Set(['packages', 'apps', 'vendor', 'native', 'scripts', 'website'])
+  const excludedDirectories = new Set(['node_modules', 'lib', 'target', 'dist', '.git', '.sessions', '.generated'])
+  const copies: Array<Promise<void>> = []
+  for (const entry of await readdir(sourceRepositoryRoot, { withFileTypes: true })) {
+    const source = join(sourceRepositoryRoot, entry.name)
+    const target = join(repositoryRoot, entry.name)
+    if (entry.isDirectory() && sourceDirectories.has(entry.name)) {
+      copies.push(cp(source, target, {
+        recursive: true,
+        filter: (path) => {
+          if (relative(sourceRepositoryRoot, path).split(sep).some(part => excludedDirectories.has(part))) return false
+          return lstatSync(path).isDirectory() || /\.(?:[cm]?ts|tsx|json|[cm]?js)$/.test(path)
+        },
+      }))
+    } else if (entry.isFile() && (/\.(?:[cm]?ts|json|[cm]?js)$/.test(entry.name) || entry.name === 'lefthook.yml')) {
+      copies.push(cp(source, target))
+    }
+  }
+  // Bound concurrency to the six source roots and root config files. Settle
+  // every copy before reporting an error so teardown cannot race a producer.
+  const results = await Promise.allSettled(copies)
+  const failures = results.filter(result => result.status === 'rejected').map((result): unknown => result.reason)
+  if (failures.length > 0) throw new AggregateError(failures, 'Cannot create isolated lint source graph')
+  await symlink(join(sourceRepositoryRoot, 'node_modules'), join(repositoryRoot, 'node_modules'),
+    process.platform === 'win32' ? 'junction' : 'dir')
+}
+
+afterAll(async () => {
+  // A timed-out hook does not cancel filesystem work. Join that work before
+  // unlinking junctions and removing the private tree, including failed setup.
+  try {
+    await fixtureSetup
+  } finally {
+    if (fixtureRoot !== undefined) removeFixtureSafely(fixtureRoot)
+  }
+})
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -46,6 +98,15 @@ async function writeContractConfig(suffix: string): Promise<string> {
 }
 
 describe('Oxlint executable contract', () => {
+  it('owns its source probes outside the checkout without sharing writable source directories', () => {
+    const path = relative(sourceRepositoryRoot, repositoryRoot)
+    expect(path.startsWith(`..${sep}`) || isAbsolute(path)).toBe(true)
+    for (const directory of ['packages', 'apps', 'scripts', 'vendor']) {
+      expect(lstatSync(join(repositoryRoot, directory)).isSymbolicLink(), directory).toBe(false)
+    }
+    expect(lstatSync(join(repositoryRoot, 'node_modules')).isSymbolicLink()).toBe(true)
+  })
+
   it('discovers the owning TypeScript project for every file class', async () => {
     const suffix = randomUUID()
     const configPath = await writeContractConfig(suffix)

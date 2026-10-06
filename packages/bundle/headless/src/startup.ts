@@ -1,6 +1,6 @@
 /**
  * The one-shot app's command-line provider: it parses the task positional,
- * `--session-id`, `--json`, and `--help`, then publishes
+ * `--session-id`, `--json`, accessibility/output flags, and `--help`, then publishes
  * {@link HEADLESS_STARTUP_SERVICE}. The runner is an ordinary consumer whose
  * lazy config waits for that service.
  * @module @deepseek-ai/dsh-headless/startup
@@ -21,6 +21,12 @@ export const inject = ['cmdlineArgs']
 /** Service provided by this plugin and injected by the one-shot runner. */
 export const HEADLESS_STARTUP_SERVICE = 'headlessStartup'
 
+/** Product output formats accepted by the headless command. */
+export const HEADLESS_OUTPUT_FORMATS = ['text', 'json'] as const
+
+/** One final-answer presentation selected by the invocation. */
+export type HeadlessOutputFormat = typeof HEADLESS_OUTPUT_FORMATS[number]
+
 /** What the runner row reads from {@link HEADLESS_STARTUP_SERVICE}. */
 export interface HeadlessStartupValues {
   /** The task text this invocation asked for; absent when the runner reads stdin. */
@@ -29,6 +35,10 @@ export interface HeadlessStartupValues {
   sessionId: string | undefined
   /** Whether stdout carries the machine-readable event stream instead of final text. */
   json: boolean
+  /** Low-noise assistive-technology presentation. */
+  accessibility: boolean
+  /** Final result format. */
+  outputFormat: HeadlessOutputFormat
 }
 
 /**
@@ -42,6 +52,8 @@ function headlessCommand(): Command {
     .helpOption('-h, --help', 'show this help')
     .option('--json', 'write newline-delimited run events to stdout instead of the final message')
     .option('--session-id <id>', 'adopt the persisted Session with this id; an unknown id is an error')
+    .option('--accessibility', 'use stable line-oriented status and suppress reasoning deltas')
+    .option('--output-format <format>', 'stdout format: text or json', 'text')
     .argument('[task...]', 'the task text; multiple words are joined by spaces, and `-` reads stdin')
     .addHelpText('after', `
 Examples:
@@ -49,6 +61,10 @@ Examples:
   echo "run the tests" | dsh --profile headless   read the task from stdin
   dsh --profile headless --json "run the tests"   emit machine-readable run events
   dsh --profile headless --session-id session-… "continue"   resume an existing Session
+  dsh --profile headless --accessibility "run the tests"
+                                               use low-noise screen-reader output
+  dsh --profile headless --output-format json "run the tests"
+                                               print one versioned JSON result
 `)
 }
 
@@ -104,17 +120,25 @@ export function apply(ctx: Context): void {
     if (task === undefined && internals.stdinIsTty()) {
       program.error('error: a task is required, for example: dsh --profile headless "run the tests"')
     }
-    const options = program.opts<{ json?: boolean; sessionId?: string }>()
+    const options = program.opts<{ json?: boolean; sessionId?: string; accessibility?: boolean; outputFormat: string }>()
     // A SessionId is opaque, so whitespace is part of the identity: validate
     // emptiness on the trimmed value but hand the runner the exact string.
     const sessionId = options.sessionId
     if (sessionId !== undefined && sessionId.trim() === '') {
       program.error('error: --session-id requires a non-empty session id')
     }
+    if (!HEADLESS_OUTPUT_FORMATS.includes(options.outputFormat as HeadlessOutputFormat)) {
+      program.error(`error: --output-format must be text or json, got ${JSON.stringify(options.outputFormat)}`)
+    }
+    if (options.json === true && options.outputFormat === 'json') {
+      program.error('error: --json event streaming cannot be combined with --output-format json')
+    }
     ctx.provide(HEADLESS_STARTUP_SERVICE, {
       task,
       sessionId,
       json: options.json === true,
+      accessibility: options.accessibility ?? false,
+      outputFormat: options.outputFormat as HeadlessOutputFormat,
     } satisfies HeadlessStartupValues)
   })
   parseCmdline(ctx, program)

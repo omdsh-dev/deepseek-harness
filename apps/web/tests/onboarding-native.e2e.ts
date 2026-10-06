@@ -66,6 +66,8 @@ describe.skipIf(MODE === 'record').each([false, true])('web e2e: native credenti
         await accountMenu.click()
         const menu = page.getByRole('menu')
         await menu.waitFor()
+        const menuAria = await captureStableAria(page, '[role="menu"]', scaffold.workspaceCwd)
+        await compareOrRefreshGolden(SIGNED_OUT_MENU_EXPECTED, menuAria, MODE)
         expect(await menu.getByRole('menuitem').allTextContents()).toEqual(['设置', '意见反馈', '登录'])
         const menuBox = (await menu.boundingBox())!
         expect(Math.abs(menuBox.width - 124)).toBeLessThan(1)
@@ -79,8 +81,6 @@ describe.skipIf(MODE === 'record').each([false, true])('web e2e: native credenti
           expect(Math.abs(glyph.width - 16)).toBeLessThan(1)
           expect(Math.abs(glyph.height - 16)).toBeLessThan(1)
         }
-        const menuAria = await captureStableAria(page, '[role="menu"]', scaffold.workspaceCwd)
-        await compareOrRefreshGolden(SIGNED_OUT_MENU_EXPECTED, menuAria, MODE)
         await page.keyboard.press('Escape')
         await menu.waitFor({ state: 'detached' })
       } else {

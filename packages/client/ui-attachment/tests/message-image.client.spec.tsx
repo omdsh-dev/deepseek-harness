@@ -189,7 +189,7 @@ describe('MessageImage', () => {
     opener.focus()
     fireEvent.click(opener)
     expect(view.getByRole('dialog')).toBeTruthy()
-    fireEvent.keyDown(window, { key: 'Escape' })
+    fireEvent.keyDown(document, { key: 'Escape' })
     expect(view.queryByRole('dialog')).toBeNull()
     expect(document.activeElement).toBe(opener)
     expect(load).toHaveBeenLastCalledWith(unnamed)

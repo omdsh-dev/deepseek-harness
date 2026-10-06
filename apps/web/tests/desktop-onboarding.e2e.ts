@@ -135,12 +135,13 @@ describe.skipIf(MODE === 'record')('web e2e: App-only desktop onboarding', () =>
         }), `${name}: primary action receives clicks across its height`).toBe(true)
       }
       if (name.includes('-en-')) {
-        const headingFont = await page.locator('h1').evaluate(element => ({
+        const heading = page.locator('[data-desktop-onboarding]').getByRole('heading', { level: 1 })
+        const headingFont = await heading.evaluate(element => ({
           font: getComputedStyle(element).fontFamily, weight: getComputedStyle(element).fontWeight,
         }))
         expect(headingFont.font).toContain('Montserrat')
         expect(headingFont.weight).toBe('300')
-        const brandWeights = await page.locator('h1 em').evaluateAll(elements => elements.map(element => getComputedStyle(element).fontWeight))
+        const brandWeights = await heading.locator('em').evaluateAll(elements => elements.map(element => getComputedStyle(element).fontWeight))
         expect(brandWeights.every(weight => weight === '500')).toBe(true)
         expect(await page.evaluate(async () => (await document.fonts.load('500 28px Montserrat')).length)).toBeGreaterThan(0)
         const copyFonts = await page.locator('[class*="heroDescription"], [class*="subtitle"], [class*="cardTitle"], [class*="cardDescription"]')

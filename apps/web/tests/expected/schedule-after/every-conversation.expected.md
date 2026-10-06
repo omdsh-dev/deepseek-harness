@@ -1,1 +1,2 @@
-- paragraph: "Reminders: Check primary metrics; Check secondary metrics."
+- article "Assistant response":
+  - paragraph: "Reminders: Check primary metrics; Check secondary metrics."

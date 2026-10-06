@@ -1,5 +1,4 @@
-- textbox "筛选选项":
-  - /placeholder: 搜索模型…
+- combobox "筛选选项" [expanded]
 - listbox "/model 匹配项":
   - group "DeepSeek":
     - text: DeepSeek

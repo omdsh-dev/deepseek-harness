@@ -536,6 +536,23 @@ describe.skipIf(!isWin32 || !pwshAvailable())('windows-acl runner', () => {
     const granted = join(scratchRoot, 'fullcontrol-root')
     const child = join(granted, 'child')
     mkdirSync(granted)
+    // Own the fixture ACL: an inherited CREATOR OWNER rule from the runner's
+    // temp directory can materialize an explicit child allow ahead of a deny.
+    const prepare = spawnSync(resolvePwshPath(), ['-NoLogo', '-NonInteractive', '-NoProfile', '-Command', `
+$ErrorActionPreference='Stop'
+$acl = [System.Security.AccessControl.DirectorySecurity]::new()
+$acl.SetAccessRuleProtection($true, $false)
+$acl.AddAccessRule([System.Security.AccessControl.FileSystemAccessRule]::new(
+  [System.Security.Principal.WindowsIdentity]::GetCurrent().User,
+  [System.Security.AccessControl.FileSystemRights]::FullControl,
+  [System.Security.AccessControl.InheritanceFlags]'ContainerInherit,ObjectInherit',
+  [System.Security.AccessControl.PropagationFlags]::None,
+  [System.Security.AccessControl.AccessControlType]::Allow))
+Set-Acl -LiteralPath '${granted.replaceAll("'", "''")}' -AclObject $acl
+`], { encoding: 'utf8', timeout: 60_000 })
+    expect(prepare.error).toBeUndefined()
+    expect(prepare.signal).toBeNull()
+    expect(prepare.status, prepare.stderr).toBe(0)
     mkdirSync(child)
     writeFileSync(join(granted, 'file.txt'), 'x')
     writeFileSync(join(child, 'deep.txt'), 'x')
@@ -559,6 +576,8 @@ TryOpen 'NESTED-FILE' '${join(child, 'deep.txt')}'
 TryOpen 'DIRECTORY' '${child}'
 `
       const result = spawnSync('pwsh', ['-NoLogo', '-NonInteractive', '-NoProfile', '-Command', probe], { encoding: 'utf8', timeout: 60_000 })
+      expect(result.error).toBeUndefined()
+      expect(result.signal).toBeNull()
       expect(result.status, `stderr: ${result.stderr}`).toBe(0)
       expect(result.stdout).toContain('FILE: OK')
       expect(result.stdout).toContain('NESTED-FILE: OK')

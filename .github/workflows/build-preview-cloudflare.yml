@@ -32,6 +32,8 @@ env:
 
 jobs:
   preview:
+    # Public forks do not inherit the upstream deployment credentials.
+    if: github.repository == 'deepseek-ai/deepseek-harness'
     runs-on: ubuntu-24.04
     name: cloudflare pages preview
     steps:

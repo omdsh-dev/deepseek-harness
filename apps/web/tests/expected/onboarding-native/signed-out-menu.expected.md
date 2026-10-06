@@ -1,4 +1,4 @@
-- menu:
+- menu "账号菜单":
   - menuitem "设置"
   - menuitem "意见反馈"
   - menuitem "登录"

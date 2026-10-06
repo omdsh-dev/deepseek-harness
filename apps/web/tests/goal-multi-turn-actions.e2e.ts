@@ -154,6 +154,8 @@ describe('web e2e: Goal keeps one assistant action row per completed turn', () =
     expect(goalRounds(sessionEvents)).toEqual([1, 2])
     expect(sessionEvents.flatMap(event =>
       event.type === 'request/header' ? [event.data.reason] : [])).toEqual(['initial', 'series'])
+    expect(sessionEvents.find(event => event.type === 'request/header')?.data)
+      .toMatchObject({ reason: 'initial', startsSeries: true })
     await expect.poll(() => page.locator('[data-turn-process]').count(), { timeout: 15_000 }).toBe(2)
     const trigger = page.locator('[data-turn-trigger]').first()
     const process = page.locator('[data-turn-process]').first()
@@ -190,6 +192,10 @@ describe('web e2e: Goal keeps one assistant action row per completed turn', () =
     expect(await branchButtons.evaluateAll(buttons => buttons.map(button => button.getAttribute('aria-disabled'))))
       .toEqual([null, null])
     await branchButtons.last().focus()
+    // Tooltip follows keyboard modality, not programmatic focus after pointer use.
+    await branchButtons.last().press('Tab')
+    await page.keyboard.press('Shift+Tab')
+    await page.getByRole('tooltip', { name: 'Branch into a new conversation', exact: true }).waitFor()
     const snapshot = await captureStableAria(page, '[class*="centerCol"]', scaffold!.workspaceCwd)
     await compareOrRefreshGolden(UI_EXPECTED, snapshot, MODE)
     const expanded = await captureExpandedTurnProcessAria(

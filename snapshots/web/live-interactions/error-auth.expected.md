@@ -1,21 +1,26 @@
-- banner:
+- main:
+  - heading "DSH application" [level=1]
   - navigation "Session hierarchy": Reply with a one-sentence description
   - text: Standard mode
   - button "More actions"
   - button "Open right sidebar"
-  - tablist:
+  - tablist "Session views":
     - tab "Chat" [selected]
     - tab "Trajectory"
-- text: Reply with a one-sentence description of event sourcing, then stop. {{clock}}
-- button "Copy"
-- status: Failed
-- button "Failed" [disabled]
-- status:
-  - text: This turn failedAPI key is invalid
-  - code: AUTH
-- textbox "Message or run a task, / commands, @ files or sessions"
-- button "Add files or run commands"
-- 'button "Access mode, current: Workspace Write"': Workspace Write
-- button "Select model, current DeepSeek-V4-Flash": DeepSeek-V4-Flash
-- button "Send message" [disabled]
-- text: 1 turns 1 steps
+  - tabpanel "Chat":
+    - text: Response failed.
+    - log "Conversation transcript":
+      - article "User message":
+        - text: Reply with a one-sentence description of event sourcing, then stop. {{clock}}
+        - button "Copy"
+      - status: Failed
+      - button "Failed" [disabled]
+      - status:
+        - text: This turn failedAPI key is invalid
+        - code: AUTH
+  - textbox "Message or run a task, / commands, @ files or sessions"
+  - button "Add files or run commands"
+  - 'button "Access mode, current: Workspace Write"': Workspace Write
+  - button "Select model, current DeepSeek-V4-Flash": DeepSeek-V4-Flash
+  - button "Send message" [disabled]
+  - text: 1 turns 1 steps

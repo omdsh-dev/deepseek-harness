@@ -31,6 +31,12 @@ Use the sidebar to browse Workspaces and their Sessions, reorder them, and start
 
 History rows without a stored title use the localized unnamed label (未命名 / Untitled), rather than a directory name. The current blank row remains New Session; other blank rows remain hidden. Rename drafts use the stored title, or start empty when unnamed; unnamed rows do not offer title copying.
 
+### Keyboard and screen-reader navigation
+
+Grouped, flat, and search presentations expose a single-selection tree. When focus enters the tree, the selected current Session is preferred as its one sequential Tab entry; otherwise exactly one row remains tabbable. Use Up and Down to move between visible rows, Home and End to reach the boundary, Right to expand a Workspace or move to its first child, Left to collapse it or return to its parent, and Enter or Space to activate a row. Printable characters perform label typeahead, including repeated-character cycling. Pointer or focus interaction promotes that row to the active tree entry. When an active row has actions, Tab moves into them and their focus indication remains visible without requiring pointer hover.
+
+In Workspace Tree mode, each row reports its displayed depth to assistive technology. Root Workspaces are level 1, nested Workspaces sit one level below their nearest visible ancestor, and Sessions sit one level below their Workspace. Deletion or archive filtering can remove an intermediate ancestor; both the reported level and Left/Right navigation follow the remaining visible hierarchy. Flat lists and search results stay at level 1.
+
 ### Reordering and view options
 
 Pinned Sessions lead ordinary Sessions in both grouped and flat views. **Last updated** sorts each partition strictly by the latest user prompt or steer time, newest first; pin time does not affect it. **Manual** uses the relative positions in one complete Session sequence, including hidden archives. Returning to Last updated discards the manual layout, and entering Manual again freezes the then-current chronological order. The browser defaults to Last updated and remembers the selected mode across reloads.

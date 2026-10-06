@@ -1,4 +1,4 @@
-- menu:
+- menu "Session actions for T4 source":
   - menuitem "Pin session"
   - menuitem "Rename"
   - menuitem "Fork session"

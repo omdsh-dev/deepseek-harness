@@ -84,7 +84,11 @@ it('activates the actual default Client registry without experimental packages',
       })
       const navigation = await page.goto(url)
       expect(navigation?.status()).toBe(200)
-      await page.getByRole('tree', { name: 'Sessions' }).waitFor({ state: 'visible' })
+      // Registry readiness does not require a non-empty workspace/session tree.
+      await page.waitForFunction(() => {
+        const observed = Reflect.get(globalThis, '__dshIsolationObservation') as ClientObservation
+        return observed.ctx !== undefined && observed.modules !== undefined
+      })
       const roster = await page.evaluate(readClientRoster)
       const host = await request('roster')
       expect(roster.entries.map(entry => entry.name).sort()).toEqual(host.client.entries.map(entry => entry.id).sort())

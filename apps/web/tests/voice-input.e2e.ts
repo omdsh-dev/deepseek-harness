@@ -157,7 +157,7 @@ it.skipIf(webSnapshotMode() === 'record')('guides voice setup, records from stan
       return micRect !== null && meterRect !== null && meterRect.y >= micRect.y + micRect.height
     }).toBe(true)
     await meter.click()
-    await page.getByRole('dialog', { name: 'of context used', exact: true }).waitFor()
+    await page.getByRole('region', { name: 'of context used', exact: true }).waitFor()
     await page.keyboard.press('Escape')
   }
   await mic.hover()
@@ -182,7 +182,7 @@ it.skipIf(webSnapshotMode() === 'record')('guides voice setup, records from stan
   await mic.waitFor()
   await meter.waitFor()
   await meter.click()
-  await page.getByRole('dialog', { name: 'of context used', exact: true }).waitFor()
+  await page.getByRole('region', { name: 'of context used', exact: true }).waitFor()
   await page.keyboard.press('Escape')
   await mic.click()
   await stop.waitFor()

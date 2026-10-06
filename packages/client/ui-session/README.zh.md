@@ -14,9 +14,17 @@ kind: "package-reference"
 
 ## 目录
 
+- [使用待处理交互](#use-pending-interactions)
 - [模型体验](#model-experience)
 - [已知限制与暂缓事项](#known-limitations-and-deferred-work)
 - [开发备注](#dev-note)
+
+-----
+
+<a id="use-pending-interactions"></a>
+## 使用待处理交互
+
+Pending interaction 载体在展示已记录的答案时可设置 `readOnly: true`。这类回看仍占用 composer 席位，但不会播报要求用户重新作答；未设置此标记时保留实时请求行为。
 
 -----
 

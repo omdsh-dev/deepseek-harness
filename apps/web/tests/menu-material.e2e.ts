@@ -84,7 +84,7 @@ it('shares menu transparency and blur across palettes and follows native menu bo
       await settings.waitFor()
       const mask = await settings.locator('..').locator(':scope > [aria-hidden="true"]').evaluate((node) => {
         const style = getComputedStyle(node)
-        return { fill: style.backgroundColor, blur: style.backdropFilter }
+        return { fill: getComputedStyle(node, '::after').backgroundColor, blur: style.backdropFilter }
       })
       expect(mask).toEqual({ fill: dark ? 'rgba(0, 0, 0, 0.5)' : 'rgba(0, 0, 0, 0.24)', blur: 'none' })
       masks[`${platform}-${dark ? 'dark' : 'light'}`] = mask

@@ -1,5 +1,5 @@
 import {
-  useEffect, useMemo, useRef, useState,
+  useEffect, useLayoutEffect, useMemo, useRef, useState,
   type ChangeEvent, type FocusEvent, type KeyboardEvent,
 } from 'react'
 import clsx from 'clsx'
@@ -75,6 +75,8 @@ interface AnswerFieldProps {
   value: string
   /** Empty-field prompt. */
   placeholder: string
+  /** Programmatic name that does not disappear when the placeholder does. */
+  ariaLabel: string
   /** Whether a submission in flight has frozen the field. */
   disabled: boolean
   /** Whether this field takes focus on mount. */
@@ -114,6 +116,7 @@ function AnswerField(props: AnswerFieldProps) {
         disabled={props.disabled}
         rows={1}
         placeholder={props.placeholder}
+        aria-label={props.ariaLabel}
         onFocus={props.onFocus}
         onChange={props.onChange}
         onKeyDown={props.onKeyDown}
@@ -230,6 +233,8 @@ function QuestionFlow({ pending, t, useStore, useQuestionCard, actions }: Questi
   // Collapsed to the header strip so the conversation above stays readable
   // while the user decides; answer drafts live in the Session store above.
   const [minimized, setMinimized] = useState(false)
+  const cardRef = useRef<HTMLElement>(null)
+  const pendingQuestionFocus = useRef<number | null>(null)
   // The free-form textarea autofocuses on first presentation; re-expanding a
   // collapsed question must not steal focus from the expand toggle back into
   // the input, so focus is granted once per question index.
@@ -241,6 +246,18 @@ function QuestionFlow({ pending, t, useStore, useQuestionCard, actions }: Questi
   // oxlint-disable-next-line typescript/no-non-null-assertion
   const draft = drafts[index]!
   const hasOptions = (question.options?.length ?? 0) > 0
+  const questionHeadingId = `question-${pending.key}-${String(index)}`
+
+  // Actions that change pages deliberately move focus into the next question.
+  // Initial presentation and collapse/expand do not use this path, so they do
+  // not unexpectedly steal focus from the surrounding conversation.
+  useLayoutEffect(() => {
+    if (pendingQuestionFocus.current !== index || minimized) return
+    pendingQuestionFocus.current = null
+    cardRef.current?.querySelector<HTMLElement>(
+      '[role="radio"][tabindex="0"], [role="checkbox"], textarea',
+    )?.focus()
+  }, [index, minimized])
 
   const replaceProgress = (nextIndex: number, nextDrafts: QuestionDraftAnswer[]): void => {
     actions.replace(pending.key, {
@@ -323,7 +340,11 @@ function QuestionFlow({ pending, t, useStore, useQuestionCard, actions }: Questi
     setError(null)
   }
 
-  const choose = (label: string): void => {
+  const choose = (label: string, advance = true): void => {
+    const nextIndex = advance && question.multiSelect !== true && index < questions.length - 1
+      ? index + 1
+      : index
+    if (nextIndex !== index) pendingQuestionFocus.current = nextIndex
     updateDraft((current) => {
       if (question.multiSelect === true) {
         const selected = current.selected.includes(label)
@@ -332,7 +353,7 @@ function QuestionFlow({ pending, t, useStore, useQuestionCard, actions }: Questi
         return { ...current, selected, skipped: false }
       }
       return { selected: [label], custom: '', skipped: false }
-    }, question.multiSelect !== true && index < questions.length - 1 ? index + 1 : index)
+    }, nextIndex)
   }
 
   const answered = (item: QuestionDraftAnswer): boolean =>
@@ -343,6 +364,7 @@ function QuestionFlow({ pending, t, useStore, useQuestionCard, actions }: Questi
   const submitDrafts = (values: QuestionDraftAnswer[]): void => {
     const missing = values.findIndex(item => !completed(item))
     if (missing >= 0) {
+      pendingQuestionFocus.current = missing
       replaceProgress(missing, values)
       setError({ key: 'error.incomplete' })
       return
@@ -390,6 +412,7 @@ function QuestionFlow({ pending, t, useStore, useQuestionCard, actions }: Questi
       return
     }
     if (index < questions.length - 1) {
+      pendingQuestionFocus.current = index + 1
       replaceProgress(index + 1, drafts)
       setError(null)
       return
@@ -421,6 +444,7 @@ function QuestionFlow({ pending, t, useStore, useQuestionCard, actions }: Questi
     const nextDrafts = drafts.map((item, itemIndex) => itemIndex === index
       ? { selected: [], custom: '', skipped: true }
       : item)
+    if (index < questions.length - 1) pendingQuestionFocus.current = index + 1
     replaceProgress(index < questions.length - 1 ? index + 1 : index, nextDrafts)
     setError(null)
     if (index < questions.length - 1) {
@@ -432,13 +456,15 @@ function QuestionFlow({ pending, t, useStore, useQuestionCard, actions }: Questi
   return (
     <div className={css.frame} data-question-key={pending.key}>
       <section
+        ref={cardRef}
         className={clsx(css.card, minimized && css.cardMinimized)}
-        aria-labelledby={`question-${pending.key}-${String(index)}`}
+        aria-labelledby={questionHeadingId}
+        aria-busy={busy !== null || undefined}
       >
         <header className={css.header}>
           <div className={css.headingBlock}>
             {question.header !== undefined && <div className={css.eyebrow}>{question.header}</div>}
-            <h2 className={css.title} id={`question-${pending.key}-${String(index)}`}>
+            <h2 className={css.title} id={questionHeadingId}>
               {question.question}
             </h2>
           </div>
@@ -495,7 +521,11 @@ function QuestionFlow({ pending, t, useStore, useQuestionCard, actions }: Questi
               {question.detail !== undefined && (
                 <div className={css.detail}><MarkdownText text={question.detail} labels={markdownLabels} /></div>
               )}
-              <div className={css.options} role={question.multiSelect === true ? 'group' : 'radiogroup'}>
+              <div
+                className={css.options}
+                role={question.multiSelect === true ? 'group' : 'radiogroup'}
+                aria-labelledby={questionHeadingId}
+              >
                 {(question.options ?? []).map((option, optionIndex) => {
                   const selected = draft.selected.includes(option.label)
                   const display = parseRecommendedLabel(option.label)
@@ -506,9 +536,34 @@ function QuestionFlow({ pending, t, useStore, useQuestionCard, actions }: Questi
                       role={question.multiSelect === true ? 'checkbox' : 'radio'}
                       aria-checked={selected}
                       aria-label={display.label}
+                      tabIndex={question.multiSelect === true
+                        ? 0
+                        : selected || (draft.selected.length === 0 && optionIndex === 0) ? 0 : -1}
                       disabled={locked}
                       onClick={() => { choose(option.label) }}
                       onKeyDown={(event) => {
+                        if (question.multiSelect !== true) {
+                          const options = question.options ?? []
+                          let nextOptionIndex: number | null = null
+                          if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+                            nextOptionIndex = (optionIndex - 1 + options.length) % options.length
+                          } else if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+                            nextOptionIndex = (optionIndex + 1) % options.length
+                          } else if (event.key === 'Home') {
+                            nextOptionIndex = 0
+                          } else if (event.key === 'End') {
+                            nextOptionIndex = options.length - 1
+                          }
+                          if (nextOptionIndex !== null) {
+                            event.preventDefault()
+                            const radios = event.currentTarget.parentElement
+                              ?.querySelectorAll<HTMLButtonElement>('[role="radio"]')
+                            radios?.item(nextOptionIndex).focus()
+                            const nextOption = options[nextOptionIndex]
+                            if (nextOption !== undefined) choose(nextOption.label, false)
+                            return
+                          }
+                        }
                         if (event.key !== 'Enter') return
                         event.preventDefault()
                         submitDrafts(drafts)
@@ -565,6 +620,7 @@ function QuestionFlow({ pending, t, useStore, useQuestionCard, actions }: Questi
                         value={draft.custom}
                         disabled={locked}
                         placeholder={t('custom.placeholder')}
+                        ariaLabel={t('custom.label')}
                         onChange={draftCustom}
                         onKeyDown={continueFromCustom}
                       />
@@ -579,6 +635,7 @@ function QuestionFlow({ pending, t, useStore, useQuestionCard, actions }: Questi
                       value={draft.custom}
                       disabled={locked}
                       placeholder={t('custom.placeholder')}
+                      ariaLabel={t('custom.label')}
                       onFocus={() => { focusedQuestions.current.add(index) }}
                       onChange={draftCustom}
                       onKeyDown={continueFromCustom}
@@ -592,7 +649,11 @@ function QuestionFlow({ pending, t, useStore, useQuestionCard, actions }: Questi
                 <button
                   type="button" className={css.iconButton} aria-label={t('nav.prev')}
                   disabled={index === 0 || busy !== null}
-                  onClick={() => { replaceProgress(index - 1, drafts); setError(null) }}
+                  onClick={() => {
+                    pendingQuestionFocus.current = index - 1
+                    replaceProgress(index - 1, drafts)
+                    setError(null)
+                  }}
                 >
                   <IconChevronLeftOutlineRegular />
                 </button>
@@ -600,12 +661,16 @@ function QuestionFlow({ pending, t, useStore, useQuestionCard, actions }: Questi
                 <button
                   type="button" className={css.iconButton} aria-label={t('nav.next')}
                   disabled={index === questions.length - 1 || busy !== null}
-                  onClick={() => { replaceProgress(index + 1, drafts); setError(null) }}
+                  onClick={() => {
+                    pendingQuestionFocus.current = index + 1
+                    replaceProgress(index + 1, drafts)
+                    setError(null)
+                  }}
                 >
                   <IconChevronRightOutlineRegular />
                 </button>
               </div>
-              <div className={css.feedback} role="status">
+              <div className={css.feedback} role="alert" aria-atomic="true">
                 {error === null ? null : 'key' in error ? t(error.key) : error.text}
               </div>
               {/* A review card has nothing to send: the pager alone walks the record. */}

@@ -176,13 +176,15 @@
 }
 
 .itemIcon svg,
-.check {
+.check,
+.check svg {
   width: 14px;
   height: 14px;
 }
 
 .compactList .itemIcon svg,
-.compactList .check {
+.compactList .check,
+.compactList .check svg {
   width: 12px;
   height: 12px;
 }
@@ -207,6 +209,7 @@
 }
 
 .check {
+  display: inline-flex;
   flex: none;
   color: var(--dsw-alias-label-primary);
 }

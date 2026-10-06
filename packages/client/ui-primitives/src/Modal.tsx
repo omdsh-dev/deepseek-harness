@@ -1,15 +1,19 @@
-import { useRef } from 'react'
-import type { KeyboardEventHandler, ReactNode } from 'react'
+import { useId, useRef } from 'react'
+import type { KeyboardEventHandler, ReactNode, RefObject } from 'react'
 import { createPortal } from 'react-dom'
 import clsx from 'clsx'
 import { IconCloseOutlineRegular } from './icons/index.tsx'
-import { useModalLayer } from './useModalLayer.ts'
+import { isBehindModal, useModalLayer } from './useModalLayer.ts'
 import css from './Modal.module.css'
 
 interface ModalBaseProps {
   open: boolean
   onClose: () => void
   title: string
+  labelledBy?: string
+  describedBy?: string
+  initialFocusRef?: RefObject<HTMLElement | null> | undefined
+  restoreFocusRef?: RefObject<HTMLElement | null> | undefined
   description?: string
   children?: ReactNode
   footer?: ReactNode
@@ -31,6 +35,12 @@ type ModalProps = ModalBaseProps & (
  * @param props.onClose - application close command, Escape, or mask click; while a menu is open inside the
  * dialog, Escape belongs to that menu first.
  * @param props.title - dialog heading (aria-label in every mode).
+ * @param props.labelledBy - optional id of a visible heading that replaces the aria-label.
+ * @param props.describedBy - optional id of visible supporting content; the
+ * built-in description receives a generated id when this is omitted.
+ * @param props.initialFocusRef - optional contained target focused when the dialog opens.
+ * @param props.restoreFocusRef - optional durable target focused when the dialog closes;
+ * falls back to the connected opening control when absent or disconnected.
  * @param props.closeLabel - localized accessible close-button label.
  * @param props.description - optional supporting sentence under the title.
  * @param props.children - dialog body; mark its initial-focus control with
@@ -46,25 +56,31 @@ type ModalProps = ModalBaseProps & (
  * @returns null when closed; otherwise the overlay tree.
  */
 export function Modal({
-  open, onClose, title, closeLabel, description, children, footer, className, contentClassName,
+  open, onClose, title, labelledBy, describedBy, initialFocusRef, restoreFocusRef,
+  closeLabel, description, children, footer, className, contentClassName,
   onKeyDownCapture, headless = false, backdropBlur = true, shortcutModal,
 }: ModalProps) {
   const dialog = useRef<HTMLDivElement>(null)
-  useModalLayer(dialog, open, onClose)
+  const generatedDescriptionId = useId()
+  const descriptionId = describedBy
+    ?? (description !== undefined && description !== '' ? generatedDescriptionId : undefined)
+  useModalLayer(dialog, open, onClose, initialFocusRef, restoreFocusRef)
 
   if (!open) return null
 
   return createPortal((
     <div className={css.root} role="presentation" onKeyDownCapture={onKeyDownCapture}>
-      <div className={css.mask} style={backdropBlur ? undefined : { backdropFilter: 'none' }} aria-hidden="true" onClick={onClose} />
+      <div className={css.mask} style={backdropBlur ? undefined : { backdropFilter: 'none' }} aria-hidden="true" onClick={() => { if (!isBehindModal(dialog.current)) onClose() }} />
       <div
         ref={dialog}
-        tabIndex={-1}
         data-shortcut-modal={shortcutModal}
         className={clsx(css.dialog, className)}
         role="dialog"
         aria-modal="true"
-        aria-label={title}
+        aria-label={labelledBy === undefined ? title : undefined}
+        aria-labelledby={labelledBy}
+        aria-describedby={descriptionId}
+        tabIndex={-1}
       >
         {headless
           ? children
@@ -78,7 +94,7 @@ export function Modal({
                   </button>
                 </div>
                 {description !== undefined && description !== '' && (
-                  <p className={css.description}>{description}</p>
+                  <p id={generatedDescriptionId} className={css.description}>{description}</p>
                 )}
                 {children !== undefined && <div className={css.body}>{children}</div>}
               </div>

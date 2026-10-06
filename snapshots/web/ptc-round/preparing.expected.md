@@ -1,2 +1,3 @@
-- 'button "Think The user wants me to write a single `run_code` program that:"'
+- article "Assistant response":
+  - 'button "Think The user wants me to write a single `run_code` program that:"'
 - text: Preparing tool call Code

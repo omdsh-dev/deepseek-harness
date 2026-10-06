@@ -12,24 +12,24 @@ env:
   DSH_TELEMETRY_DISABLED: '1'
 
 # Cancel a superseded pull-request run on a new push so a fresh head does not
-# queue a second full 9-job run behind a stale one (paid enterprise runners
-# would otherwise stack with no auto-cancellation).
+# queue a second full required run behind a stale one (resource-intensive
+# required runners would otherwise stack with no auto-cancellation).
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
 
-  # Three enterprise jobs isolate coverage, static analysis, and the
-  # build-backed consumer tail. The consumer job owns the only Linux build so
-  # all three jobs enter runner allocation independently.
+  # Four required Linux jobs isolate coverage, static analysis, the build-backed
+  # consumer tail, and focused assembled-app accessibility contracts. The
+  # latter two build independently so browser failures stay attributable.
   #
   # FAILOVER (Linux): each Linux enterprise job resolves its pool through the
   # DSH_CI_FAILOVER_LINUX repository variable. Unset (normal), the expressions
   # pick the hosted enterprise pools below. Setting the variable to
   # 'selfhosted' (repo Settings → Actions → Variables; writer-manageable
   # repository state — not PR-editable, no merge required) retargets all
-  # three onto the in-house
+  # four onto the in-house
   # vm-backup pool and re-running the failed jobs is the entire switch —
   # see .agents/notes/implemented/process/2026-07-26-ci-failover-runbook.md.
   # Setting the variable to 'blacksmith' instead routes the same jobs onto
@@ -42,7 +42,9 @@ jobs:
   node-24:
     if: github.event_name == 'pull_request'
     runs-on: >-
-      ${{ vars.DSH_CI_FAILOVER_LINUX == 'blacksmith' && 'blacksmith-8vcpu-ubuntu-2404'
+      ${{ github.repository != 'deepseek-ai/deepseek-harness'
+          && 'ubuntu-24.04'
+          || vars.DSH_CI_FAILOVER_LINUX == 'blacksmith' && 'blacksmith-8vcpu-ubuntu-2404'
           || vars.DSH_CI_FAILOVER_LINUX == 'selfhosted'
           && github.event.pull_request.user.login != 'dependabot[bot]'
           && fromJSON('["self-hosted", "linux", "x64", "vm-backup"]')
@@ -110,7 +112,9 @@ jobs:
   node-24-coverage:
     if: github.event_name == 'pull_request'
     runs-on: >-
-      ${{ vars.DSH_CI_FAILOVER_LINUX == 'blacksmith' && 'blacksmith-16vcpu-ubuntu-2404'
+      ${{ github.repository != 'deepseek-ai/deepseek-harness'
+          && 'ubuntu-24.04'
+          || vars.DSH_CI_FAILOVER_LINUX == 'blacksmith' && 'blacksmith-16vcpu-ubuntu-2404'
           || vars.DSH_CI_FAILOVER_LINUX == 'selfhosted'
           && github.event.pull_request.user.login != 'dependabot[bot]'
           && fromJSON('["self-hosted", "linux", "x64", "vm-backup"]')
@@ -118,9 +122,9 @@ jobs:
     name: node 24 / coverage
     env:
       # Shared hosts expose host CPUs, not an isolated allocation.
-      DSH_COVERAGE_MAX_WORKERS: ${{ vars.DSH_CI_FAILOVER_LINUX == 'selfhosted' && github.event.pull_request.user.login != 'dependabot[bot]' && '6' || '' }}
-      DSH_COVERAGE_PARTITIONS: ${{ vars.DSH_CI_FAILOVER_LINUX == 'selfhosted' && github.event.pull_request.user.login != 'dependabot[bot]' && '4' || '' }}
-      DSH_GATE_CONCURRENCY: ${{ vars.DSH_CI_FAILOVER_LINUX == 'selfhosted' && github.event.pull_request.user.login != 'dependabot[bot]' && '3' || '' }}
+      DSH_COVERAGE_MAX_WORKERS: ${{ github.repository != 'deepseek-ai/deepseek-harness' && '2' || vars.DSH_CI_FAILOVER_LINUX == 'selfhosted' && github.event.pull_request.user.login != 'dependabot[bot]' && '6' || '' }}
+      DSH_COVERAGE_PARTITIONS: ${{ github.repository != 'deepseek-ai/deepseek-harness' && '2' || vars.DSH_CI_FAILOVER_LINUX == 'selfhosted' && github.event.pull_request.user.login != 'dependabot[bot]' && '4' || '' }}
+      DSH_GATE_CONCURRENCY: ${{ github.repository != 'deepseek-ai/deepseek-harness' && '1' || vars.DSH_CI_FAILOVER_LINUX == 'selfhosted' && github.event.pull_request.user.login != 'dependabot[bot]' && '3' || '' }}
       # Managed-scope teardown cases run past the default per-test budget when
       # this lane's partitions, workers, and sibling gates share one host: the
       # disposal cases in subprocess-local and bash-sandbox exceeded 5000ms on
@@ -239,7 +243,9 @@ jobs:
   node-24-consumers:
     if: github.event_name == 'pull_request'
     runs-on: >-
-      ${{ vars.DSH_CI_FAILOVER_LINUX == 'blacksmith' && 'blacksmith-16vcpu-ubuntu-2404'
+      ${{ github.repository != 'deepseek-ai/deepseek-harness'
+          && 'ubuntu-24.04'
+          || vars.DSH_CI_FAILOVER_LINUX == 'blacksmith' && 'blacksmith-16vcpu-ubuntu-2404'
           || vars.DSH_CI_FAILOVER_LINUX == 'selfhosted'
           && github.event.pull_request.user.login != 'dependabot[bot]'
           && fromJSON('["self-hosted", "linux", "x64", "vm-backup"]')
@@ -247,11 +253,11 @@ jobs:
     name: node 24 / snapshots and artifacts
     env:
       # Shared hosts expose host CPUs, not an isolated allocation.
-      DSH_GATE_CONCURRENCY: ${{ vars.DSH_CI_FAILOVER_LINUX == 'selfhosted' && github.event.pull_request.user.login != 'dependabot[bot]' && '10' || '' }}
-      DSH_OXLINT_THREADS: ${{ vars.DSH_CI_FAILOVER_LINUX == 'selfhosted' && github.event.pull_request.user.login != 'dependabot[bot]' && '8' || '' }}
-      DSH_PUBLINT_CONCURRENCY: ${{ vars.DSH_CI_FAILOVER_LINUX == 'selfhosted' && github.event.pull_request.user.login != 'dependabot[bot]' && '8' || '' }}
-      DSH_WEB_SNAPSHOT_WORKERS: ${{ vars.DSH_CI_FAILOVER_LINUX == 'selfhosted' && github.event.pull_request.user.login != 'dependabot[bot]' && '6' || '' }}
-      DSH_SNAPSHOT_MAX_CONCURRENCY: ${{ vars.DSH_CI_FAILOVER_LINUX == 'selfhosted' && github.event.pull_request.user.login != 'dependabot[bot]' && '12' || '' }}
+      DSH_GATE_CONCURRENCY: ${{ github.repository != 'deepseek-ai/deepseek-harness' && '2' || vars.DSH_CI_FAILOVER_LINUX == 'selfhosted' && github.event.pull_request.user.login != 'dependabot[bot]' && '10' || '' }}
+      DSH_OXLINT_THREADS: ${{ github.repository != 'deepseek-ai/deepseek-harness' && '2' || vars.DSH_CI_FAILOVER_LINUX == 'selfhosted' && github.event.pull_request.user.login != 'dependabot[bot]' && '8' || '' }}
+      DSH_PUBLINT_CONCURRENCY: ${{ github.repository != 'deepseek-ai/deepseek-harness' && '2' || vars.DSH_CI_FAILOVER_LINUX == 'selfhosted' && github.event.pull_request.user.login != 'dependabot[bot]' && '8' || '' }}
+      DSH_WEB_SNAPSHOT_WORKERS: ${{ github.repository != 'deepseek-ai/deepseek-harness' && '2' || vars.DSH_CI_FAILOVER_LINUX == 'selfhosted' && github.event.pull_request.user.login != 'dependabot[bot]' && '6' || '' }}
+      DSH_SNAPSHOT_MAX_CONCURRENCY: ${{ github.repository != 'deepseek-ai/deepseek-harness' && '2' || vars.DSH_CI_FAILOVER_LINUX == 'selfhosted' && github.event.pull_request.user.login != 'dependabot[bot]' && '12' || '' }}
       DSH_NODE_COMPAT_SKIP_TYPECHECK: '1'
       # A failing gate aborts its running siblings: a failing build stops the
       # independent Node compatibility smoke, and a failing reader (e.g.
@@ -362,6 +368,82 @@ jobs:
 
       - name: Run compatibility, snapshot, and artifact gates
         run: pnpm run check:ci:consumers
+
+  node-24-accessibility:
+    if: github.event_name == 'pull_request'
+    runs-on: >-
+      ${{ github.repository != 'deepseek-ai/deepseek-harness'
+          && 'ubuntu-24.04'
+          || vars.DSH_CI_FAILOVER_LINUX == 'blacksmith' && 'blacksmith-16vcpu-ubuntu-2404'
+          || vars.DSH_CI_FAILOVER_LINUX == 'selfhosted'
+          && github.event.pull_request.user.login != 'dependabot[bot]'
+          && fromJSON('["self-hosted", "linux", "x64", "vm-backup"]')
+          || 'dsh-ubuntu-24-04-16core' }}
+    name: node 24 / accessibility browser contracts
+    timeout-minutes: 30
+    env:
+      TZ: Asia/Shanghai
+      DSH_SNAPSHOT: replay
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          dest: ${{ runner.temp }}/setup-pnpm-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.PRIMARY_NODE_VERSION }}
+
+      - name: Configure pnpm store path
+        id: pnpm-store
+        run: |
+          store_root="$HOME/.local/share/pnpm/store"
+          echo "PNPM_CONFIG_STORE_DIR=$store_root" >> "$GITHUB_ENV"
+          store_path=$(PNPM_CONFIG_STORE_DIR="$store_root" pnpm store path --silent)
+          echo "path=$store_path" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache/restore@v4
+        if: vars.DSH_CI_FAILOVER_LINUX != 'selfhosted' || github.event.pull_request.user.login == 'dependabot[bot]'
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: ${{ runner.os }}-node-${{ env.PRIMARY_NODE_VERSION }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-node-${{ env.PRIMARY_NODE_VERSION }}-pnpm-
+
+      - uses: actions/cache/restore@v4
+        if: vars.DSH_CI_FAILOVER_LINUX != 'selfhosted' || github.event.pull_request.user.login == 'dependabot[bot]'
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+
+      - name: Install (immutable)
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browser matrix and hosted dependencies
+        if: vars.DSH_CI_FAILOVER_LINUX != 'selfhosted' || github.event.pull_request.user.login == 'dependabot[bot]'
+        run: pnpm --filter @deepseek-ai/dsh-web-frontend exec playwright install --with-deps chromium firefox webkit
+
+      # The persistent VM image owns Playwright's Linux system packages; do
+      # not mutate the shared host with apt on every failover run.
+      - name: Install Playwright browser matrix on the failover VM
+        if: vars.DSH_CI_FAILOVER_LINUX == 'selfhosted' && github.event.pull_request.user.login != 'dependabot[bot]'
+        run: pnpm --filter @deepseek-ai/dsh-web-frontend exec playwright install chromium firefox webkit
+
+      - name: Run versioned assembled-app accessibility evidence
+        run: pnpm run test:web:accessibility:evidence
+
+      - name: Retain exact-revision accessibility evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: dsh-core-browser-accessibility-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .artifacts/accessibility/core-browser-evidence.json
+          if-no-files-found: error
+          retention-days: 7
 
 
   node-compat:
@@ -503,7 +585,9 @@ jobs:
   windows-build:
     if: github.event_name == 'pull_request'
     runs-on: >-
-      ${{ vars.DSH_CI_FAILOVER_WINDOWS == 'blacksmith' && 'blacksmith-16vcpu-windows-2025'
+      ${{ github.repository != 'deepseek-ai/deepseek-harness'
+          && 'windows-2025'
+          || vars.DSH_CI_FAILOVER_WINDOWS == 'blacksmith' && 'blacksmith-16vcpu-windows-2025'
           || vars.DSH_CI_FAILOVER_WINDOWS == 'selfhosted'
           && github.event.pull_request.user.login != 'dependabot[bot]'
           && fromJSON('["self-hosted", "dsh-win-ci", "windows"]')
@@ -565,7 +649,9 @@ jobs:
   windows-coverage:
     if: github.event_name == 'pull_request'
     runs-on: >-
-      ${{ vars.DSH_CI_FAILOVER_WINDOWS == 'blacksmith' && 'blacksmith-16vcpu-windows-2025'
+      ${{ github.repository != 'deepseek-ai/deepseek-harness'
+          && 'windows-2025'
+          || vars.DSH_CI_FAILOVER_WINDOWS == 'blacksmith' && 'blacksmith-16vcpu-windows-2025'
           || vars.DSH_CI_FAILOVER_WINDOWS == 'selfhosted'
           && github.event.pull_request.user.login != 'dependabot[bot]'
           && fromJSON('["self-hosted", "dsh-win-ci", "windows"]')
@@ -574,9 +660,9 @@ jobs:
     timeout-minutes: 120
     env:
       # Shared hosts expose host CPUs, not an isolated allocation.
-      DSH_COVERAGE_MAX_WORKERS: ${{ vars.DSH_CI_FAILOVER_WINDOWS == 'selfhosted' && github.event.pull_request.user.login != 'dependabot[bot]' && '6' || '' }}
-      DSH_COVERAGE_PARTITIONS: ${{ vars.DSH_CI_FAILOVER_WINDOWS == 'selfhosted' && github.event.pull_request.user.login != 'dependabot[bot]' && '4' || '' }}
-      DSH_GATE_CONCURRENCY: ${{ vars.DSH_CI_FAILOVER_WINDOWS == 'selfhosted' && github.event.pull_request.user.login != 'dependabot[bot]' && '3' || '' }}
+      DSH_COVERAGE_MAX_WORKERS: ${{ github.repository != 'deepseek-ai/deepseek-harness' && '2' || vars.DSH_CI_FAILOVER_WINDOWS == 'selfhosted' && github.event.pull_request.user.login != 'dependabot[bot]' && '6' || '' }}
+      DSH_COVERAGE_PARTITIONS: ${{ github.repository != 'deepseek-ai/deepseek-harness' && '2' || vars.DSH_CI_FAILOVER_WINDOWS == 'selfhosted' && github.event.pull_request.user.login != 'dependabot[bot]' && '4' || '' }}
+      DSH_GATE_CONCURRENCY: ${{ github.repository != 'deepseek-ai/deepseek-harness' && '1' || vars.DSH_CI_FAILOVER_WINDOWS == 'selfhosted' && github.event.pull_request.user.login != 'dependabot[bot]' && '3' || '' }}
       DSH_COVERAGE_TEST_TIMEOUT_MS: '90000'
       # A gate failure aborts the sibling gate instead of waiting out its
       # multi-minute instrumented run.
@@ -643,7 +729,9 @@ jobs:
   windows-native-tests:
     if: github.event_name == 'pull_request'
     runs-on: >-
-      ${{ vars.DSH_CI_FAILOVER_WINDOWS == 'blacksmith' && 'blacksmith-2vcpu-windows-2025'
+      ${{ github.repository != 'deepseek-ai/deepseek-harness'
+          && 'windows-2025'
+          || vars.DSH_CI_FAILOVER_WINDOWS == 'blacksmith' && 'blacksmith-2vcpu-windows-2025'
           || vars.DSH_CI_FAILOVER_WINDOWS == 'selfhosted'
           && github.event.pull_request.user.login != 'dependabot[bot]'
           && fromJSON('["self-hosted", "dsh-win-ci", "windows"]')
@@ -688,7 +776,6 @@ jobs:
           packages/workflow/workflow-ptc/tests/workflow-ptc.spec.ts
           packages/workflow/tool-ralph/tests/integration.spec.ts
           packages/subprocess/subprocess-local/tests/process-exit.spec.ts
-
   # Single stable required check for branch protection: require "all checks
   # passed" instead of enumerating matrix legs whose names change as lanes and
   # node versions evolve. Every blocking job in THIS workflow must be listed in
@@ -714,7 +801,7 @@ jobs:
           && github.event.pull_request.user.login != 'dependabot[bot]'
           && fromJSON('["self-hosted", "linux", "x64", "vm-backup"]')
           || 'ubuntu-latest' }}
-    needs: [node-24, node-24-coverage, node-24-bench, node-24-consumers, node-compat, python-sdk, python-runtime, windows-build, windows-native-tests]
+    needs: [node-24, node-24-coverage, node-24-bench, node-24-consumers, node-24-accessibility, node-compat, python-sdk, python-runtime, windows-build, windows-native-tests]
     if: ${{ !cancelled() && github.event_name == 'pull_request' }}
     steps:
       - name: Fail if any needed job did not succeed

@@ -11,7 +11,7 @@
 // are host RPCs with no model involvement, and the one session row the
 // flat/hover/menu/archive scenarios need comes from a seeded fixture (the
 // seeded-history seed reused verbatim — no new recording).
-import { mkdir, readFile, stat, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { join, sep } from 'node:path'
 import type { Browser, Locator, Page } from 'playwright'
@@ -180,6 +180,46 @@ describe('web e2e: workspace management (create / rename / grouping / hover affo
     // each titled after the folder the dialog made.
     const titles = scaffold.ctx.workspaceRegistry.list().map(workspace => workspace.title)
     expect(titles.slice(0, 2)).toEqual(['beta-ws', 'alpha-ws'])
+    expect(tripwire.pageErrors).toEqual([])
+  }, 90_000)
+
+  it('describes an adoption failure and restores the durable Add workspace trigger', async () => {
+    onTestFailed(() => saveFailureShot(page, 'web-e2e-ws-adoption-error'))
+    const workspaceIdsBefore = scaffold.ctx.workspaceRegistry.list().map(workspace => workspace.id)
+    const disappearing = join(scaffold.workspaceCwd, 'disappearing-before-adoption')
+    await mkdir(disappearing, { recursive: true })
+    const picker = await browseTo(disappearing)
+    const open = picker.getByRole('button', { name: 'Open', exact: true })
+    // Enter submits the path before directory selection has necessarily
+    // reached the rendered picker. Prove the selection is accepted before
+    // deleting the fixture that adoption must then reject host-side.
+    await expect.poll(() => open.isEnabled(), { timeout: 10_000 }).toBe(true)
+    // The browse flow has accepted and rendered the directory, but the Host
+    // must still canonicalize it when Workspace adoption starts. Removing this
+    // task-owned fixture creates a real wire refusal without mocking the flow.
+    await rm(disappearing, { recursive: true, force: true })
+    await open.click()
+
+    const errorDialog = page.getByRole('dialog', { name: 'Couldn’t open folder' })
+    await errorDialog.waitFor({ timeout: 10_000 })
+    const alert = errorDialog.getByRole('alert')
+    const alertId = await alert.getAttribute('id')
+    expect(alertId).not.toBeNull()
+    expect(await errorDialog.getAttribute('aria-describedby')).toBe(alertId)
+    const cancel = errorDialog.getByRole('button', { name: 'Cancel' })
+    const activeName = await page.locator(':focus').evaluate(element =>
+      element.getAttribute('aria-label') ?? element.textContent?.trim() ?? '')
+    expect(activeName).toBe('Cancel')
+
+    await cancel.click()
+    await expect.poll(() => page.evaluate(() => {
+      const active = document.activeElement
+      return active?.getAttribute('aria-label') ?? active?.textContent?.trim() ?? ''
+    }), { timeout: 5_000 }).toBe('Add workspace')
+    // A missing path makes resolveByPath reject during its documented
+    // canonicalization step, so compare the durable registry identity set
+    // instead of trying to canonicalize this intentionally absent fixture.
+    expect(scaffold.ctx.workspaceRegistry.list().map(workspace => workspace.id)).toEqual(workspaceIdsBefore)
     expect(tripwire.pageErrors).toEqual([])
   }, 90_000)
 
@@ -416,7 +456,7 @@ describe('web e2e: workspace management (create / rename / grouping / hover affo
     await expect.poll(() => page.getByText('Workspaces', { exact: true }).count(), { timeout: 10_000 }).toBe(1)
     // Grouping and ordering moved into the View options menu.
     await page.getByRole('button', { name: 'View options' }).click()
-    await page.getByRole('menuitem', { name: 'In one list' }).click()
+    await page.getByRole('menuitemradio', { name: 'In one list' }).click()
     // Flat mode: the section label flips and the seeded session is a
     // top-level row with no group headers above it.
     await expect.poll(() => page.getByText('Sessions', { exact: true }).count(), { timeout: 10_000 }).toBeGreaterThanOrEqual(1)
@@ -430,7 +470,7 @@ describe('web e2e: workspace management (create / rename / grouping / hover affo
     acknowledgeReloadConnectionLoss(tripwire, warningStart)
     await expect.poll(() => page.getByText('Ungrouped', { exact: true }).count(), { timeout: 15_000 }).toBe(0)
     await page.getByRole('button', { name: 'View options' }).click()
-    await page.getByRole('menuitem', { name: 'WorkSpace', exact: true }).click()
+    await page.getByRole('menuitemradio', { name: 'WorkSpace', exact: true }).click()
     await expect.poll(() => page.getByText('Ungrouped', { exact: true }).count(), { timeout: 10_000 }).toBeGreaterThanOrEqual(1)
     expect(tripwire.pageErrors).toEqual([])
   }, 90_000)
@@ -685,7 +725,7 @@ describe('web e2e: workspace management (create / rename / grouping / hover affo
     await page.getByRole('button', { name: 'View options', exact: true }).click()
     const optionsExpected = fileURLToPath(new URL('./expected/workspace-management/grouping-options.expected.md', import.meta.url))
     await compareOrRefreshGolden(optionsExpected, await captureStableAria(page, '[role="menu"]', scaffold.workspaceCwd), MODE)
-    await page.getByRole('menuitem', { name: 'Workspace Tree', exact: true }).click()
+    await page.getByRole('menuitemradio', { name: 'Workspace Tree', exact: true }).click()
     await section.getByText('project-one', { exact: true }).waitFor()
     await addNewFolderWorkspace(parentPath, 'project-two')
     const project = section.getByRole('treeitem', { name: 'project-two', exact: true })
@@ -737,11 +777,11 @@ describe('web e2e: workspace management (create / rename / grouping / hover affo
     await parent.click()
     await section.getByText('project-two', { exact: true }).waitFor()
     await page.getByRole('button', { name: 'View options', exact: true }).click()
-    await page.getByRole('menuitem', { name: 'WorkSpace', exact: true }).click()
+    await page.getByRole('menuitemradio', { name: 'WorkSpace', exact: true }).click()
     await page.getByRole('tree', { name: 'Sessions', exact: true }).getByText('project-two', { exact: true }).waitFor()
     expect(await section.getByText('project-two', { exact: true }).count()).toBe(0)
     await page.getByRole('button', { name: 'View options', exact: true }).click()
-    await page.getByRole('menuitem', { name: 'Workspace Tree', exact: true }).click()
+    await page.getByRole('menuitemradio', { name: 'Workspace Tree', exact: true }).click()
     await section.getByText('project-two', { exact: true }).waitFor()
     await clickHoverAction(parent, 'New session in folder-group')
     await expect.poll(() => section.locator('[aria-selected="true"]').evaluate(row =>

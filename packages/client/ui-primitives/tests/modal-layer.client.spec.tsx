@@ -91,13 +91,16 @@ it('closes one layer per Escape, honors local menus and IME, and restores the re
   expect(document.activeElement).toBe(settings)
 })
 
-it('keeps Tab within the top dialog and releases listeners after unmount', () => {
+it.each([
+  { label: 'Tab', altKey: false },
+  { label: 'Option+Tab', altKey: true },
+])('keeps $label within the top dialog and releases listeners after unmount', ({ altKey }) => {
   const view = render(<Nested />)
   fireEvent.click(screen.getByRole('button', { name: 'Settings' }))
   const last = screen.getByRole('button', { name: 'Reference' }); last.focus()
-  fireEvent.keyDown(last, { key: 'Tab' })
+  fireEvent.keyDown(last, { key: 'Tab', altKey })
   expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Close settings' }))
-  fireEvent.keyDown(document.activeElement!, { key: 'Tab', shiftKey: true })
+  fireEvent.keyDown(document.activeElement!, { key: 'Tab', shiftKey: true, altKey })
   expect(document.activeElement).toBe(last)
   view.unmount()
   const event = new KeyboardEvent('keydown', { key: 'Escape', cancelable: true })
@@ -141,6 +144,29 @@ it('keeps focus in a headless empty dialog and leaves portaled menu traversal to
     expect(fireEvent.keyDown(button, { key: 'Tab' })).toBe(true)
     fireEvent.blur(window)
   } finally { menu.remove() }
+})
+
+it.each([undefined, -1])('respects an editable region with tabindex %s when entering a dialog', (tabIndex) => {
+  render(<Modal open headless title="Editor" onClose={() => {}}>
+    <div contentEditable tabIndex={tabIndex} suppressContentEditableWarning
+      ref={(node) => {
+        // jsdom does not implement isContentEditable; model only that browser property.
+        if (node !== null) Object.defineProperty(node, 'isContentEditable', { value: true })
+      }}>Draft</div>
+    <button>Last control</button>
+  </Modal>)
+  const dialog = screen.getByRole('dialog', { name: 'Editor' })
+  const editable = screen.getByText('Draft')
+  const focus = vi.spyOn(editable, 'focus')
+  try {
+    dialog.focus()
+    expect(fireEvent.keyDown(dialog, { key: 'Tab' })).toBe(false)
+    if (tabIndex === undefined) expect(focus).toHaveBeenCalledTimes(1)
+    else {
+      expect(focus).not.toHaveBeenCalled()
+      expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Last control' }))
+    }
+  } finally { focus.mockRestore() }
 })
 
 it('does not steal focus when a lower layer disappears and restores a remaining parent after opener removal', () => {
