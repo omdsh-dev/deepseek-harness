@@ -27,9 +27,13 @@ export function installExternalBrowserHooks() {
       if (fixture !== undefined) return { url: fixture, shortCircuit: true }
       const parentURL = parents.get(context.parentURL)
       if (parentURL !== undefined) context = { ...context, parentURL }
-      if (specifier !== '@browserbasehq/stagehand') return nextResolve(specifier, context)
-      const actual = nextResolve(specifier, context).url
-      const proxy = `export * from ${JSON.stringify(sources.get(sdkFixture))}; export { StagehandClientCreateConfigSchema } from ${JSON.stringify(actual)};`
+      const actual = nextResolve(specifier, context)
+      if (specifier !== '@browserbasehq/stagehand') {
+        // Relative fixture imports must share the same transpiled module identity.
+        const source = sources.get(actual.url)
+        return source === undefined ? actual : { url: source, shortCircuit: true }
+      }
+      const proxy = `export * from ${JSON.stringify(sources.get(sdkFixture))}; export { StagehandClientCreateConfigSchema } from ${JSON.stringify(actual.url)};`
       return { url: `data:text/javascript,${encodeURIComponent(proxy)}`, shortCircuit: true }
     },
   })
