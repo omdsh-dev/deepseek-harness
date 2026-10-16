@@ -130,6 +130,21 @@ function normalized(path: string, lines: readonly string[]): string[] {
   })
 }
 
+describe('icacls display comparison', () => {
+  it('preserves an ACE comparison when it moves onto the directory-labelled first line', () => {
+    const path = 'C:\\owned fixture\\inherit-only'
+    const inheritedOnly = 'BUILTIN\\Users:(OI)(CI)(IO)(F)'
+    const before = [`${path} fixture-user:(M)`, `    ${inheritedOnly}`]
+    const after = [`${path} ${inheritedOnly}`, '    fixture-user:(F)']
+    const inheritOnlyEntries = (lines: readonly string[]) => normalized(path, lines)
+      .filter(line => line.includes('(IO)'))
+    expect(inheritOnlyEntries(before)).toEqual([inheritedOnly])
+    expect(inheritOnlyEntries(after)).toEqual(inheritOnlyEntries(before))
+    expect(inheritOnlyEntries([`${path} BUILTIN\\Users:(OI)(CI)(IO)(RX)`]))
+      .not.toEqual(inheritOnlyEntries(before))
+  })
+})
+
 describe.skipIf(!isWin32 || !pwshAvailable())('diagnose-windows-sandbox-acl script', { timeout }, () => {
   let meSid!: string
 
@@ -450,14 +465,14 @@ $observed = Get-Acl -LiteralPath $path
       const target = makeDir(scratch, 'inherit-only')
       setFixtureDacl(target)
       icacls(target, '/grant', '*S-1-5-32-545:(OI)(CI)(IO)(F)')
-      const inheritOnlyBefore = aclLines(target).filter(line => line.includes('(IO)'))
+      const inheritOnlyBefore = normalized(target, aclLines(target)).filter(line => line.includes('(IO)'))
       expect(inheritOnlyBefore).toHaveLength(1)
 
       const run = runScript(['-Path', target, '-AllowRoot', scratch, '-Out', join(scratch, 'out')])
       expect(run.code, run.output).toBe(0)
       expect(run.output).toContain(`GRANTED ${target} SID=${meSid}`)
       expect(reports(run)).toContainEqual(containingObject({ kind: 'verification', operation: 'grant', path: target, status: 'verified' }))
-      expect(aclLines(target).filter(line => line.includes('(IO)'))).toEqual(inheritOnlyBefore)
+      expect(normalized(target, aclLines(target)).filter(line => line.includes('(IO)'))).toEqual(inheritOnlyBefore)
       expect(aclLines(target).join('\n')).toMatch(/\(F\)/u)
     } finally {
       dispose(scratch)
