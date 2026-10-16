@@ -8,7 +8,7 @@
   - button "New tab"
   - button "Split"
   - button "Fullscreen"
-  - button "Collapse right sidebar"
+  - button "Collapse right sidebar" [expanded]
 - button "Back" [disabled]
 - button "Forward" [disabled]
 - button "Reload" [disabled]

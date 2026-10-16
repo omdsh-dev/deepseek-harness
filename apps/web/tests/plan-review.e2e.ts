@@ -92,6 +92,8 @@ describe('web e2e: plan review takeover round trip', () => {
     expect(await card.getByRole('heading').textContent()).toContain('--greeting')
     expect(await card.getByText('View full plan', { exact: true }).isVisible()).toBe(true)
     expect(await card.getByRole('list').count()).toBe(0)
+    expect(await card.getByRole('region', { name: 'Approve this plan and leave plan mode?' }).count()).toBe(1)
+    expect(await card.locator('[aria-busy="true"]').count()).toBe(0)
 
     const selectedRow = page.locator('[role="treeitem"][aria-selected="true"]')
     await expect.poll(() => selectedRow.locator('[data-state="warning"]').count(), { timeout: 10_000 }).toBe(1)

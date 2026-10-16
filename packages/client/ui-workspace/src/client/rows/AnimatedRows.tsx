@@ -1,5 +1,6 @@
 /** React-commit-driven movement and entry/exit fades for the sidebar's keyed rows. */
 import { Component, createRef, type ReactNode } from 'react'
+import type { useTreeKeyboardNavigation } from './tree-navigation.ts'
 import css from './AnimatedRows.module.css'
 
 const ROW_FADE_MS = 100
@@ -14,6 +15,9 @@ interface AnimatedRowsProps {
   ready: boolean
   /** Changes that replace the view or reveal hidden rows settle immediately. */
   resetKey: string
+  /** Keyboard behavior composed with row animation input tracking. */
+  treeNavigation?: ReturnType<typeof useTreeKeyboardNavigation> | undefined
+  empty?: boolean
 }
 
 interface RowPosition {
@@ -44,7 +48,11 @@ function intersects(row: DOMRect, viewport: DOMRect): boolean {
  */
 export class AnimatedRows extends Component<AnimatedRowsProps> {
   private armed = false
-  private readonly list = createRef<HTMLDivElement>()
+  private readonly list: { current: HTMLDivElement | null } = { current: null }
+  private readonly setList = (node: HTMLDivElement | null): void => {
+    this.list.current = node
+    if (this.props.treeNavigation !== undefined) this.props.treeNavigation.ref.current = node
+  }
   private readonly overlay = createRef<HTMLDivElement>()
   private readonly movements = new Map<HTMLElement, Animation>()
   private readonly exits = new Map<string, { element: HTMLElement; animation: Animation }>()
@@ -168,11 +176,16 @@ export class AnimatedRows extends Component<AnimatedRowsProps> {
   override render(): ReactNode {
     return <>
       <div
-        ref={this.list}
+        ref={this.setList}
         className={this.props.className}
-        role="tree"
-        aria-label={this.props.label}
-        onPointerDownCapture={() => { this.armed = true }}
+        role={this.props.empty === true ? undefined : 'tree'}
+        aria-label={this.props.empty === true ? undefined : this.props.label}
+        onPointerDownCapture={(event) => {
+          this.armed = true
+          this.props.treeNavigation?.onPointerDownCapture(event)
+        }}
+        onFocusCapture={this.props.treeNavigation?.onFocusCapture}
+        onKeyDown={this.props.treeNavigation?.onKeyDown}
         onKeyDownCapture={() => { this.armed = true }}
       >
         {this.props.children}

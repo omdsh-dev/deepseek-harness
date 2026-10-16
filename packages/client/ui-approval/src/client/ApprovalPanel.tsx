@@ -25,6 +25,7 @@ function ApprovalFlow({ pending, reason, detail, t }: {
   t: ApprovalComposerProps['t']
 }) {
   const [answered, setAnswered] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const waiting = useRef(false)
   const active = useRef(true)
   const composing = useRef(false)
@@ -37,10 +38,12 @@ function ApprovalFlow({ pending, reason, detail, t }: {
     if (waiting.current || !pending.answerable) return
     waiting.current = true
     setAnswered(true)
-    void pending.answer(outcome).catch(() => {
+    setError(null)
+    void pending.answer(outcome).catch((cause: unknown) => {
       if (!active.current || !pending.answerable) return
       waiting.current = false
       setAnswered(false)
+      setError(cause instanceof Error ? cause.message : String(cause))
     })
   }
   const keydown = (event: KeyboardEvent<HTMLDivElement>): void => {
@@ -74,6 +77,9 @@ function ApprovalFlow({ pending, reason, detail, t }: {
           <div className={css.headline}>{reason ?? t('escalation', { toolName: pending.toolName })}</div>
           {detail !== null && <div className={css.command}>{detail}</div>}
         </div>
+        {error === null
+          ? null
+          : <div className={css.feedback} role="alert" aria-atomic="true">{error}</div>}
         <div className={css.actionRow}>
           <Button variant="outline" className={css.reject} disabled={answered} onClick={() => { answer('rejected') }}>
             {t('reject')}

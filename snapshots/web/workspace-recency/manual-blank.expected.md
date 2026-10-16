@@ -1,6 +1,6 @@
 - tree "Sessions":
-  - treeitem "{{workspace}}" [expanded]
-  - treeitem "New Session" [selected]
-  - treeitem "Newest conversation now"
-  - treeitem "Middle conversation 1min"
-  - treeitem "Oldest conversation 2min"
+  - treeitem "{{workspace}}" [expanded] [level=1]
+  - treeitem "New Session" [level=2] [selected]
+  - treeitem "Newest conversation now" [level=2]
+  - treeitem "Middle conversation 1min" [level=2]
+  - treeitem "Oldest conversation 2min" [level=2]

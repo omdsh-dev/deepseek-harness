@@ -1,0 +1,22 @@
+# Bilingual-pair consistency record for 2026-08-31-alpha2-accessibility-core-migration.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/proposed/feature/2026-08-31-alpha2-accessibility-core-migration.md
+/agent-note-alpha-2-accessibility-core-migration:
+  en: 7054557d9e1ff87f
+  zh: 71cfb2d57e3ef507
+/agent-note-alpha-2-accessibility-core-migration/problem:
+  en: 362791eb0e291136
+  zh: 120458159772565b
+/agent-note-alpha-2-accessibility-core-migration/proposal:
+  en: 135e435e6aea1140
+  zh: c6dc2fa5ca93b971
+/agent-note-alpha-2-accessibility-core-migration/alternatives-considered:
+  en: 15920428a1cd23b8
+  zh: 781a07c516051e58
+/agent-note-alpha-2-accessibility-core-migration/acceptance-criteria:
+  en: cea536659fa505b0
+  zh: a87b12e47a1040c3
+/agent-note-alpha-2-accessibility-core-migration/risks:
+  en: 0456793e3f6f847a
+  zh: c636df017faff30f

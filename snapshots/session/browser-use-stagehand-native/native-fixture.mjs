@@ -13,24 +13,28 @@ const chromiumFixture = new URL('tests/fixtures/chromium.ts', packageRoot).href
 
 /** Install external browser mocks in one real Node isolate. */
 export function installExternalBrowserHooks() {
+  // Resolve fixtures to module sources without a synchronous load hook: mixing
+  // that hook with the asynchronous tsx loader breaks real CommonJS dependencies.
+  const sources = new Map([sdkFixture, chromiumFixture].map(url => [url,
+    `data:text/javascript,${encodeURIComponent(ts.transpileModule(readFileSync(new URL(url), 'utf8'), {
+      compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
+    }).outputText)}`,
+  ]))
+  const parents = new Map([...sources].map(([url, source]) => [source, url]))
   const hooks = registerHooks({
     resolve(specifier, context, nextResolve) {
-      if (specifier === '@puppeteer/browsers') return { url: chromiumFixture, shortCircuit: true }
-      if (specifier !== '@browserbasehq/stagehand') return nextResolve(specifier, context)
-      const actual = nextResolve(specifier, context).url
-      const proxy = `export * from ${JSON.stringify(sdkFixture)}; export { StagehandClientCreateConfigSchema } from ${JSON.stringify(actual)};`
-      return { url: `data:text/javascript,${encodeURIComponent(proxy)}`, shortCircuit: true }
-    },
-    // Built profiles use plain Node; only the external fixtures need transpilation.
-    load(url, context, nextLoad) {
-      if (url !== sdkFixture && url !== chromiumFixture) return nextLoad(url, context)
-      return {
-        format: 'module',
-        source: ts.transpileModule(readFileSync(new URL(url), 'utf8'), {
-          compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
-        }).outputText,
-        shortCircuit: true,
+      const fixture = sources.get(specifier === '@puppeteer/browsers' ? chromiumFixture : specifier)
+      if (fixture !== undefined) return { url: fixture, shortCircuit: true }
+      const parentURL = parents.get(context.parentURL)
+      if (parentURL !== undefined) context = { ...context, parentURL }
+      const actual = nextResolve(specifier, context)
+      if (specifier !== '@browserbasehq/stagehand') {
+        // Relative fixture imports must share the same transpiled module identity.
+        const source = sources.get(actual.url)
+        return source === undefined ? actual : { url: source, shortCircuit: true }
       }
+      const proxy = `export * from ${JSON.stringify(sources.get(sdkFixture))}; export { StagehandClientCreateConfigSchema } from ${JSON.stringify(actual.url)};`
+      return { url: `data:text/javascript,${encodeURIComponent(proxy)}`, shortCircuit: true }
     },
   })
   return () => hooks.deregister()

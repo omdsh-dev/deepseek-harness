@@ -9,6 +9,8 @@
   disabled: true
 
 - id: agent-loop
+  # Configured agents need durable ownership before their constructor creates them.
+  inject: [sessionPersistence]
   config:
     agents:
       - id: main

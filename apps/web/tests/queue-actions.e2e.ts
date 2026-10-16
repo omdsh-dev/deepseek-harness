@@ -140,8 +140,10 @@ describe('web e2e: queue row actions', () => {
       await page.locator('[data-sidebar-collapsed="true"]').waitFor({ state: 'detached' })
     } finally {
       release.resolve(undefined)
+      // The owned response must settle even when an assertion in the held
+      // request scope fails; otherwise browser teardown leaves a rejection.
+      expect((await admitted).ok()).toBe(true)
     }
-    expect((await admitted).ok()).toBe(true)
     await expect.poll(() => page.getByRole('button', { name: 'Remove queued message' }).isEnabled()).toBe(true)
     expect(await page.locator('[data-queue-dock] [data-submission-echo]').count()).toBe(0)
     expect(await page.locator('[data-queue-dock]').getByRole('status').count()).toBe(0)

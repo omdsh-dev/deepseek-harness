@@ -143,6 +143,11 @@ export const ChatNodeSeat = memo(function ChatNodeSeat({
   // distribute an object containing a union into a union of objects itself.
   const routedOwner = { ...owner, node: routedNode } as RoutedChatNodeOwner
   const flowKey = groupPart === undefined || groupPart === 'response' ? routedNode.key : JSON.stringify([routedNode.key, groupPart])
+  const articleLabel = routedNode.kind === 'user' || routedNode.kind === 'steering'
+    ? t('message.user')
+    : routedNode.kind === 'assistant-step'
+      ? t('message.assistant')
+      : undefined
   return (
     <div
       ref={wrapperRef}
@@ -157,6 +162,8 @@ export const ChatNodeSeat = memo(function ChatNodeSeat({
       data-turn-process-member={processMember || undefined}
       data-turn-process-hidden={processHidden || undefined}
       data-turn-process-answer={compactAnswer || undefined}
+      role={articleLabel === undefined ? undefined : 'article'}
+      aria-label={articleLabel}
     >
       {renderSlot('conversation.chat.node', routedOwner, {
         entryKey: routedNode.kind,

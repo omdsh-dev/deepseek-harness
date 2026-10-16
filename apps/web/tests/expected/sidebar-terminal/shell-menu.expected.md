@@ -1,3 +1,3 @@
-- menu:
+- menu "Choose shell":
   - menuitem "bash"
   - menuitem "sh"

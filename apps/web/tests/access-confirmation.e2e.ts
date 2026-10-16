@@ -45,7 +45,15 @@ describe('web e2e: experimental Auto and Full access confirmation', () => {
     page = await browser.newPage({ viewport: { width: 1680, height: 1000 }, locale: ZH_BROWSER_LOCALE, colorScheme: 'light' })
     tripwire = watchConsole(page)
     await page.goto(scaffold.authenticatedUrl, { waitUntil: 'load' })
-    await page.waitForSelector('[class*="frame"]', { timeout: 30_000 })
+    try {
+      await page.waitForSelector('[class*="frame"]', { timeout: 30_000 })
+    } catch (error) {
+      const body = await page.locator('body').innerText().catch(() => '')
+      throw new Error(
+        `web frame did not mount; body=${JSON.stringify(body.slice(0, 500))}; pageErrors=${JSON.stringify(tripwire.pageErrors)}`,
+        { cause: error },
+      )
+    }
     await connectFreshWorkspaceZh(page, scaffold.workspaceCwd)
   }, 120_000)
 
@@ -63,7 +71,7 @@ describe('web e2e: experimental Auto and Full access confirmation', () => {
     await access.click()
     const currentMenu = page.getByRole('menu')
     await currentMenu.waitFor({ timeout: 10_000 })
-    expect(await currentMenu.getByRole('menuitem').allTextContents())
+    expect(await currentMenu.getByRole('menuitemradio').allTextContents())
       .toEqual(['仅可查看', '工作区内修改', '完全权限', 'Auto reviewEXP'])
     await captureAutoReviewState(page, 'experimental-current-session-picker')
     const currentSnapshot = await captureStableAria(page, '[role="menu"]', scaffold.workspaceCwd)
@@ -71,13 +79,17 @@ describe('web e2e: experimental Auto and Full access confirmation', () => {
 
     const currentTriggerBox = await access.boundingBox()
     const currentMenuBox = await currentMenu.boundingBox()
+    const currentMarkerBox = await currentMenu.locator('[role="menuitemradio"][aria-checked="true"] > [aria-hidden="true"] > svg').boundingBox()
     expect(currentTriggerBox).not.toBeNull()
     expect(currentMenuBox).not.toBeNull()
+    expect(currentMarkerBox).not.toBeNull()
+    expect(Math.abs(currentMarkerBox!.width - 14)).toBeLessThan(1)
+    expect(Math.abs(currentMarkerBox!.height - 14)).toBeLessThan(1)
     expect(Math.abs(currentMenuBox!.width - 144)).toBeLessThan(1)
     expect(currentMenuBox!.width).toBeGreaterThan(currentTriggerBox!.width)
     expect(Math.abs(currentTriggerBox!.y - currentMenuBox!.y - currentMenuBox!.height - 4)).toBeLessThan(1)
 
-    await currentMenu.getByRole('menuitem', { name: 'Auto review EXP' }).click()
+    await currentMenu.getByRole('menuitemradio', { name: 'Auto review EXP' }).click()
     const autoDialog = page.getByRole('dialog', { name: '确认启用 Auto review（实验）？' })
     await autoDialog.waitFor({ timeout: 10_000 })
     const autoEnable = autoDialog.getByRole('button', { name: '启用 Auto review' })
@@ -151,11 +163,28 @@ describe('web e2e: experimental Auto and Full access confirmation', () => {
     expect(await access.getAttribute('aria-label')).toBe('访问模式，当前：工作区内修改')
 
     await access.click()
-    await page.getByRole('menuitem', { name: '完全权限' }).click()
+    await page.getByRole('menuitemradio', { name: '完全权限' }).click()
     const dialog = page.getByRole('dialog', { name: '确认启用完全权限？' })
     await dialog.waitFor({ timeout: 10_000 })
     const enable = dialog.getByRole('button', { name: '启用完全权限' })
+    const acknowledgement = dialog.getByRole('checkbox', { name: '我已了解风险，并愿意继续' })
     expect(await enable.isDisabled()).toBe(true)
+    expect(await acknowledgement.evaluate(node => node.ownerDocument.activeElement === node)).toBe(true)
+    expect(await dialog.evaluate((node) => {
+      const id = node.getAttribute('aria-describedby')
+      return id === null ? '' : document.getElementById(id)?.textContent ?? ''
+    })).toContain('敏感操作')
+
+    // Cancel returns to the durable permission trigger, not the removed menu
+    // row. Reopen so the same assembled path also covers successful focus
+    // restoration after the command finishes and re-enables the trigger.
+    await dialog.getByRole('button', { name: '取消' }).click()
+    expect(await dialog.count()).toBe(0)
+    expect(await access.evaluate(node => node.ownerDocument.activeElement === node)).toBe(true)
+    await access.click()
+    await page.getByRole('menuitemradio', { name: '完全权限' }).click()
+    await dialog.waitFor({ timeout: 10_000 })
+    expect(await acknowledgement.evaluate(node => node.ownerDocument.activeElement === node)).toBe(true)
 
     // The modal is in this page's body (not a native/new window) and escapes
     // the sticky composer's stacking context.
@@ -163,12 +192,16 @@ describe('web e2e: experimental Auto and Full access confirmation', () => {
     const snapshot = await captureStableAria(page, '[role="dialog"]', scaffold.workspaceCwd)
     await compareOrRefreshGolden(UI_EXPECTED, snapshot, MODE)
 
-    await dialog.getByRole('checkbox', { name: '我已了解风险，并愿意继续' }).check()
+    await acknowledgement.check()
     expect(await enable.isEnabled()).toBe(true)
     await enable.click()
     await expect.poll(() => access.getAttribute('aria-label'), { timeout: 10_000 })
       .toBe('访问模式，当前：完全权限')
     expect(await dialog.count()).toBe(0)
+    await expect.poll(
+      () => access.evaluate(node => node.ownerDocument.activeElement === node),
+      { timeout: 5_000 },
+    ).toBe(true)
     expect(tripwire.pageErrors).toEqual([])
   }, 60_000)
 
@@ -240,14 +273,14 @@ describe('web e2e: experimental Auto and Full access confirmation', () => {
     expect(await slash.getByText('Auto review', { exact: true }).count()).toBe(0)
     await page.keyboard.press('Escape')
     await access.click()
-    await expect.poll(() => page.getByRole('menuitem').allTextContents())
+    await expect.poll(() => page.getByRole('menuitemradio').allTextContents())
       .toEqual(['仅可查看', '工作区内修改', '完全权限'])
     await captureAutoReviewState(page, 'uninstalled-current-session-picker')
     await page.keyboard.press('Escape')
     await entry.update({ disabled: false })
     await scaffold.ctx.loader.await()
     await access.click()
-    await expect.poll(() => page.getByRole('menuitem').allTextContents())
+    await expect.poll(() => page.getByRole('menuitemradio').allTextContents())
       .toEqual(['仅可查看', '工作区内修改', '完全权限', 'Auto reviewEXP'])
     expect(await access.getAttribute('aria-label')).toBe('访问模式，当前：完全权限')
     await captureAutoReviewState(page, 'reinstalled-current-session-picker')
@@ -291,7 +324,7 @@ describe('web e2e: default permission choices', () => {
   it('offers only the three standard modes in both pickers', async () => {
     const access = page.locator('button[aria-label^="访问模式"]').first()
     await access.click()
-    await expect.poll(() => page.getByRole('menuitem').allTextContents())
+    await expect.poll(() => page.getByRole('menuitemradio').allTextContents())
       .toEqual(['仅可查看', '工作区内修改', '完全权限'])
     await captureAutoReviewState(page, 'default-current-session-picker')
     await page.keyboard.press('Escape')

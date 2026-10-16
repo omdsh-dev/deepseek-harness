@@ -31,6 +31,7 @@ export function PreferenceRow({ title, description, value, selectedLabel, option
       className={css.selector}
       aria-haspopup="menu"
       aria-expanded={open}
+      aria-label={`${title}: ${selectedLabel}`}
       onClick={() => { setOpen(value => !value) }}
     >
       {selectedLabel}
@@ -47,7 +48,7 @@ export function PreferenceRow({ title, description, value, selectedLabel, option
       <Menu
         open={open}
         onClose={closeMenu}
-        items={options}
+        items={options.map(option => ({ ...option, selection: 'radio' as const }))}
         selectedId={value}
         onSelect={selectMode}
         align="end"

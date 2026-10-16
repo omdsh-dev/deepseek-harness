@@ -88,6 +88,8 @@ File chips and editable skill references share a whole-reference hover backgroun
 
 When another writer owns the Session, the send-error toast asks the user to quit other running DSH instances and retry.
 
+The composer Context Meter exposes its rounded occupancy in the trigger's accessible name and synchronizes `aria-expanded` with a stable `aria-controls` relationship. Its click-open breakdown is a named non-modal region, so opening it keeps focus on the trigger and does not falsely advertise dialog focus behavior. Provider capacity and total occupancy are authoritative; the system-prompt, tool, and message composition is explicitly heuristic.
+
 Two independent Escape presses in the focused Chat or Composer stop its current running turn and preserve queued messages. The interval comes from the shortcuts plugin’s `stopSequenceMs` configuration (500 ms by default). A menu, approval, modal, terminal, embedded webpage, composition, repeated key, changed input region, Session or turn breaks the sequence. The shortcut uses the same scoped cancellation as the Stop button. The plugin registers Stop as a fixed action in the `input` display group. Its registration reserves plain Escape against editable shortcuts and supplies the `Esc Esc` sequence shown in the Stop button’s hover and keyboard-focus tooltip.
 
 <a id="temporary-composer-entries"></a>

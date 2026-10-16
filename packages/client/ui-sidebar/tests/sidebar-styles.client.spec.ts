@@ -58,6 +58,12 @@ describe('SidebarRoot.module.css', () => {
     expect(css).toMatch(/@keyframes rail-fade-in\s*\{\s*from\s*\{\s*opacity: 0;\s*}\s*}/)
   })
 
+  it('disables the rail entry translation when the viewport is narrow', () => {
+    expect(css).toMatch(
+      /@media \(max-width: 600px\)[\s\S]*?\.railIn \.iconButton,[\s\S]*?animation: none;/,
+    )
+  })
+
   it('gives shell rail controls the same base anchor for their shared translation', () => {
     expect(declarations('.collapsed .logoRow')?.get('justify-content')).toBe('flex-start')
     expect(declarations('.collapsed .newSession')?.get('align-self')).toBe('flex-start')

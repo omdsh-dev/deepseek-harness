@@ -16,11 +16,17 @@ import AgentDefaultModelConfig from '@deepseek-ai/dsh-agent-default-model'
 import { LlmAttemptId, ToolCallId, createAssistantMessage, createToolResultMessage, type MessageId, type StreamChunk } from '@deepseek-ai/dsh-llm'
 import SessionStore from '@deepseek-ai/dsh-session'
 import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
-import type { Session, SessionId, UserMessage } from '@deepseek-ai/dsh-session'
+import type { Session, SessionId, TurnEndReason, UserMessage } from '@deepseek-ai/dsh-session'
 import { SessionQueryError } from '@deepseek-ai/dsh-session-query'
 import { createInboxStub } from '@deepseek-ai/dsh-agent-loop-testkit'
-import { apply, Config } from '../src/index.ts'
+import { apply, Config, HEADLESS_RESULT_SCHEMA_VERSION } from '../src/index.ts'
 import { internals } from '../src/runner-internals.ts'
+
+declare module '@deepseek-ai/dsh-session' {
+  interface TurnEndReasonMap {
+    'extension-stop': { kind: 'extension-stop' }
+  }
+}
 
 const originalInternals = { ...internals }
 afterEach(() => { Object.assign(internals, originalInternals) })
@@ -82,12 +88,39 @@ function emitChunk(agent: Agent, chunk: StreamChunk): void {
   agent.ctx.emit('agent/assistant-stream', { agent, frame })
 }
 
+function headlessConfig(overrides: Partial<Config> = {}): Config {
+  return {
+    task: 'do the thing',
+    accessibility: false,
+    outputFormat: 'text',
+    ...overrides,
+  }
+}
+
 function appendTurn(
   session: Session,
   turn: number,
   message: UserMessage,
   text: string | undefined,
   completed: boolean,
+): void {
+  appendTurnWithReason(
+    session,
+    turn,
+    message,
+    text,
+    completed
+      ? { kind: 'completed' }
+      : { kind: 'aborted', reason: { kind: 'user' } },
+  )
+}
+
+function appendTurnWithReason(
+  session: Session,
+  turn: number,
+  message: UserMessage,
+  text: string | undefined,
+  reason: TurnEndReason,
 ): void {
   session.append('turn/start', { turn })
   session.append('step/start', { turn, step: 1 })
@@ -104,12 +137,7 @@ function appendTurn(
     }, { surfaceOp: 'append' })
   }
   session.append('step/end', { turn, step: 1 })
-  session.append('turn/end', {
-    turn,
-    reason: completed
-      ? { kind: 'completed' }
-      : { kind: 'aborted', reason: { kind: 'user' } },
-  })
+  session.append('turn/end', { turn, reason })
 }
 
 /** Append the preset-selection event owned by dsh-agent-preset-registry. */
@@ -122,7 +150,7 @@ function selectPreset(session: Session, agentPreset: string): void {
 async function bench(script: Script, options: BenchOptions = {}): Promise<{
   ctx: Context
   output(): { out: string; err: string; order: string[] }
-  run(): Promise<{ code: number; out: string; err: string; order: string[] }>
+  run(config?: Partial<Config>): Promise<{ code: number; out: string; err: string; order: string[] }>
 }> {
   const ctx = new Context()
   if (options.filesystemCwd !== undefined) {
@@ -199,7 +227,7 @@ async function bench(script: Script, options: BenchOptions = {}): Promise<{
   return {
     ctx,
     output: () => ({ out, err, order: [...order] }),
-    run: async () => {
+    run: async (config = {}) => {
       ctx.on('session/flush', () => { order.push('flush') })
       internals.stdout = { write: (chunk: string) => { out += chunk; return true } }
       internals.stderr = { write: (chunk: string) => { err += chunk; return true } }
@@ -213,17 +241,31 @@ async function bench(script: Script, options: BenchOptions = {}): Promise<{
           meta: { cwd: process.cwd(), ...options.preliveMeta },
         })
       }
-      apply(ctx, {
-        ...options.useStdin === true ? {} : { task: options.task ?? 'do the thing' },
-        ...options.sessionId === undefined ? {} : { sessionId: options.sessionId },
-        ...options.json === undefined ? {} : { json: options.json },
-      })
+      const runConfig = headlessConfig(config)
+      if (options.useStdin === true) delete runConfig.task
+      else if (options.task !== undefined) runConfig.task = options.task
+      if (options.sessionId !== undefined) runConfig.sessionId = options.sessionId
+      if (options.json !== undefined) runConfig.json = options.json
+      apply(ctx, runConfig)
       return { code: await exited, out, err, order }
     },
   }
 }
 
 describe('headless runner', () => {
+  it('rejects conflicting JSON modes supplied directly by a profile overlay', async () => {
+    const test = await bench({ afterPrompt() { throw new Error('conflicting modes must not start a task') } })
+    try {
+      const result = await test.run({ json: true, outputFormat: 'json' })
+      expect(result.code).toBe(1)
+      const event: unknown = JSON.parse(result.out.trim())
+      expect(event).toEqual({ type: 'error', message: 'headless event streaming cannot be combined with final JSON output' })
+      expect(result.err).toBe('dsh: headless event streaming cannot be combined with final JSON output\n')
+    } finally {
+      await test.ctx.fiber.dispose()
+    }
+  })
+
   it('records a fresh Session in the filesystem provider working directory', async () => {
     const cwd = '/remote/workspace'
     const test = await bench({
@@ -421,6 +463,111 @@ describe('headless runner', () => {
     await test.ctx.fiber.dispose()
   })
 
+  it('uses bounded line-oriented output for assistive technology', async () => {
+    const test = await bench({
+      afterPrompt(session, message, agent) {
+        session.append('turn/start', { turn: 1 })
+        session.append('step/start', { turn: 1, step: 1 })
+        session.append('user/message', message, { surfaceOp: 'append' })
+        startFrames(agent)
+        emitChunk(agent, { type: 'reasoning-delta', index: 0, text: 'private token flood' })
+        session.append('assistant/message', {
+          turn: 1,
+          step: 1,
+          stream: [],
+          message: createAssistantMessage({
+            content: [{
+              type: 'text',
+              text: [
+                '\x1b[31mred\x1b[0m',
+                '\x1b]0;ignored title\x07',
+                '\x1bPignored dcs\x1b\\',
+                '\x1bXignored sos\x1b\\',
+                '\x1b^ignored pm\x1b\\',
+                '\x1b_ignored apc\x1b\\',
+                '\x1bc',
+                '\u009b2J',
+                '\u0090ignored dcs\u009c',
+                '\u0098ignored sos\u009c',
+                '\u009dignored osc\u009c',
+                '\u009eignored pm\u009c',
+                '\u009fignored apc\u009c',
+                '\rstandalone\n\tnext\x07\x08\x7f\x80',
+                '\x1b]unterminated',
+              ].join(''),
+            }],
+            source: { provider: 'test-provider', model: 'test-model' },
+          }),
+        }, { surfaceOp: 'append' })
+        session.append('step/end', { turn: 1, step: 1 })
+        session.append('turn/end', { turn: 1, reason: { kind: 'completed' } })
+      },
+    })
+    const result = await test.run({ accessibility: true })
+    expect(result).toEqual({
+      code: 0,
+      out: 'red\nstandalone\n\tnext\n',
+      err: 'dsh: task started\ndsh: task completed\n',
+      order: ['flush', 'exit'],
+    })
+    expect(result.err).not.toContain('private token flood')
+    expect(result.out + result.err).not.toContain('\x1b')
+    expect(result.out + result.err).not.toContain('\r')
+    expect(result.out + result.err).not.toContain('\x07')
+    expect(result.out + result.err).not.toContain('\x08')
+    await test.ctx.fiber.dispose()
+  })
+
+  it('discards a trailing incomplete escape without dropping preceding text', async () => {
+    const test = await bench({
+      afterPrompt(session, message) {
+        appendTurn(session, 1, message, 'safe\x1b', true)
+      },
+    })
+    expect(await test.run({ accessibility: true })).toMatchObject({
+      code: 0,
+      out: 'safe\n',
+      err: 'dsh: task started\ndsh: task completed\n',
+    })
+    await test.ctx.fiber.dispose()
+  })
+
+  it('prints one versioned JSON result and suppresses reasoning output', async () => {
+    const test = await bench({
+      afterPrompt(session, message, agent) {
+        session.append('turn/start', { turn: 1 })
+        session.append('step/start', { turn: 1, step: 1 })
+        session.append('user/message', message, { surfaceOp: 'append' })
+        startFrames(agent)
+        emitChunk(agent, { type: 'reasoning-delta', index: 0, text: 'do not print this' })
+        session.append('assistant/message', {
+          turn: 1,
+          step: 1,
+          stream: [],
+          message: createAssistantMessage({
+            content: [{ type: 'text', text: 'line one\nline two' }],
+            source: { provider: 'test-provider', model: 'test-model' },
+          }),
+        }, { surfaceOp: 'append' })
+        session.append('step/end', { turn: 1, step: 1 })
+        session.append('turn/end', { turn: 1, reason: { kind: 'completed' } })
+      },
+    })
+    const result = await test.run({ outputFormat: 'json' })
+    expect(result.code).toBe(0)
+    expect(result.err).toBe('')
+    expect(result.out.trimEnd().split('\n')).toHaveLength(1)
+    const parsed: unknown = JSON.parse(result.out)
+    expect(parsed).toEqual({
+      type: 'dsh-headless-result',
+      schemaVersion: HEADLESS_RESULT_SCHEMA_VERSION,
+      status: 'completed',
+      text: 'line one\nline two',
+      reason: { kind: 'completed' },
+    })
+    await test.ctx.fiber.dispose()
+  })
+
   it('exits 1 when the final turn does not complete', async () => {
     const test = await bench({
       afterPrompt(session, message) { appendTurn(session, 1, message, undefined, false) },
@@ -446,6 +593,24 @@ describe('headless runner', () => {
       code: 1,
       out: '\n',
       err: 'dsh: SERVER: provider unavailable\n',
+    })
+    await test.ctx.fiber.dispose()
+  })
+
+  it('announces one sanitized durable failure in accessibility mode', async () => {
+    const test = await bench({
+      afterPrompt(session, message) {
+        appendTurnWithReason(session, 1, message, undefined, {
+          kind: 'error',
+          error: { code: '\x1b[31mSERVER\x1b[0m', message: 'provider\r\nunavailable\x07' },
+        })
+      },
+    })
+    expect(await test.run({ accessibility: true })).toEqual({
+      code: 1,
+      out: '\n',
+      err: 'dsh: task started\ndsh: task failed: SERVER: provider unavailable\n',
+      order: ['flush', 'exit'],
     })
     await test.ctx.fiber.dispose()
   })
@@ -977,6 +1142,90 @@ describe('headless runner', () => {
     await test.ctx.fiber.dispose()
   })
 
+  it('projects every non-error durable stop into the versioned JSON result', async () => {
+    const cases: readonly {
+      source: TurnEndReason
+      expected: Record<string, string>
+    }[] = [
+      {
+        source: { kind: 'aborted', reason: { kind: 'user' } },
+        expected: { kind: 'aborted', cause: 'user' },
+      },
+      { source: { kind: 'blocked' }, expected: { kind: 'blocked' } },
+      { source: { kind: 'max-tokens' }, expected: { kind: 'max-tokens' } },
+      { source: { kind: 'interrupted' }, expected: { kind: 'interrupted' } },
+    ]
+    for (const scenario of cases) {
+      const test = await bench({
+        afterPrompt(session, message) {
+          appendTurnWithReason(session, 1, message, undefined, scenario.source)
+        },
+      })
+      const result = await test.run({ outputFormat: 'json' })
+      expect(result.code).toBe(1)
+      expect(result.err).toBe('')
+      const parsed: unknown = JSON.parse(result.out)
+      expect(parsed).toEqual({
+        type: 'dsh-headless-result',
+        schemaVersion: HEADLESS_RESULT_SCHEMA_VERSION,
+        status: 'failed',
+        text: '',
+        reason: scenario.expected,
+      })
+      await test.ctx.fiber.dispose()
+    }
+  })
+
+  it('reports a missing durable turn as incomplete JSON', async () => {
+    const test = await bench({ afterPrompt: () => {} })
+    const result = await test.run({ outputFormat: 'json' })
+    expect(result).toMatchObject({ code: 1, err: '' })
+    const parsed: unknown = JSON.parse(result.out)
+    expect(parsed).toEqual({
+      type: 'dsh-headless-result',
+      schemaVersion: HEADLESS_RESULT_SCHEMA_VERSION,
+      status: 'failed',
+      text: '',
+      reason: { kind: 'incomplete' },
+    })
+    await test.ctx.fiber.dispose()
+  })
+
+  it('announces each durable non-completed terminal state once', async () => {
+    const cases: readonly {
+      source?: TurnEndReason
+      terminal: string
+    }[] = [
+      {
+        source: { kind: 'aborted', reason: { kind: 'user' } },
+        terminal: 'dsh: task aborted: user',
+      },
+      { source: { kind: 'blocked' }, terminal: 'dsh: task blocked' },
+      { source: { kind: 'max-tokens' }, terminal: 'dsh: task stopped at the token limit' },
+      { source: { kind: 'interrupted' }, terminal: 'dsh: task interrupted' },
+      {
+        source: { kind: 'extension-stop' },
+        terminal: 'dsh: task failed: extension-stop',
+      },
+      { terminal: 'dsh: task ended without a durable result' },
+    ]
+    for (const scenario of cases) {
+      const test = await bench({
+        afterPrompt(session, message) {
+          if (scenario.source !== undefined) {
+            appendTurnWithReason(session, 1, message, undefined, scenario.source)
+          }
+        },
+      })
+      expect(await test.run({ accessibility: true })).toEqual({
+        code: 1,
+        out: '\n',
+        err: `dsh: task started\n${scenario.terminal}\n`,
+        order: ['flush', 'exit'],
+      })
+      await test.ctx.fiber.dispose()
+    }
+  })
   it('reports a direct Agent creation failure', async () => {
     const ctx = new Context()
     let err = ''
@@ -988,9 +1237,54 @@ describe('headless runner', () => {
     ctx.provide('agentDefaultModel', { currentSelection: () => ({ provider: 'p', model: 'm' }) } as never)
     ctx.provide('sessions', { flush: () => Promise.resolve(true) } as never)
     ctx.provide('agents', { create: () => Promise.reject(new Error('factory exploded')) } as never)
-    apply(ctx, { task: 't' })
+    apply(ctx, headlessConfig({ task: 't' }))
     expect(await exited).toBe(1)
     expect(err).toBe('dsh: factory exploded\n')
+    await ctx.fiber.dispose()
+  })
+
+  it('keeps a direct failure machine-readable in JSON mode', async () => {
+    const ctx = new Context()
+    let out = ''
+    let err = ''
+    internals.stdout = { write: (chunk: string) => { out += chunk; return true } }
+    internals.stderr = { write: (chunk: string) => { err += chunk; return true } }
+    const exited = new Promise<number>((resolve) => {
+      ctx.provide('appExit', resolve)
+    })
+    ctx.provide('agentDefaultModel', { currentSelection: () => ({ provider: 'p', model: 'm' }) } as never)
+    ctx.provide('sessions', { flush: () => Promise.resolve(true) } as never)
+    ctx.provide('agents', { create: () => Promise.reject(new Error('factory exploded')) } as never)
+    apply(ctx, headlessConfig({ task: 't', outputFormat: 'json' }))
+    expect(await exited).toBe(1)
+    expect(err).toBe('')
+    const parsed: unknown = JSON.parse(out)
+    expect(parsed).toEqual({
+      type: 'dsh-headless-result',
+      schemaVersion: HEADLESS_RESULT_SCHEMA_VERSION,
+      status: 'failed',
+      text: '',
+      reason: { kind: 'error', code: 'INTERNAL', message: 'factory exploded' },
+    })
+    await ctx.fiber.dispose()
+  })
+
+  it('announces a direct failure once in accessibility mode', async () => {
+    const ctx = new Context()
+    let out = ''
+    let err = ''
+    internals.stdout = { write: (chunk: string) => { out += chunk; return true } }
+    internals.stderr = { write: (chunk: string) => { err += chunk; return true } }
+    const exited = new Promise<number>((resolve) => {
+      ctx.provide('appExit', resolve)
+    })
+    ctx.provide('agentDefaultModel', { currentSelection: () => ({ provider: 'p', model: 'm' }) } as never)
+    ctx.provide('sessions', { flush: () => Promise.resolve(true) } as never)
+    ctx.provide('agents', { create: () => Promise.reject(new Error('factory\r\nexploded\x07')) } as never)
+    apply(ctx, headlessConfig({ task: 't', accessibility: true }))
+    expect(await exited).toBe(1)
+    expect(out).toBe('')
+    expect(err).toBe('dsh: task started\ndsh: task failed: INTERNAL: factory exploded\n')
     await ctx.fiber.dispose()
   })
 
@@ -1010,7 +1304,7 @@ describe('headless runner', () => {
       },
     }
     ctx.provide('agents', { create: () => rejected } as never)
-    apply(ctx, { task: 't' })
+    apply(ctx, headlessConfig({ task: 't' }))
     expect(await exited).toBe(1)
     expect(err).toBe('dsh: factory exploded\n')
     await ctx.fiber.dispose()
@@ -1031,7 +1325,7 @@ describe('headless runner', () => {
     let release: () => void
     const settlement = new Promise<void>((resolve) => { release = resolve })
     ctx.provide('loader', { await: () => settlement } as never)
-    apply(ctx, { task: 't' })
+    apply(ctx, headlessConfig({ task: 't' }))
     await services.dispose()
     release!()
     await new Promise(resolve => setTimeout(resolve, 10))
@@ -1041,12 +1335,13 @@ describe('headless runner', () => {
 
   it('fails loud without the launcher-provided exit request', () => {
     const ctx = new Context()
-    expect(() => { apply(ctx, { task: 't' }) }).toThrow('must provide ctx.appExit')
+    expect(() => { apply(ctx, headlessConfig({ task: 't' })) }).toThrow('must provide ctx.appExit')
   })
 
   it('validates config: the task and run options are optional', () => {
-    expect(new Config({})).toEqual({})
+    expect(new Config({})).toEqual({ accessibility: false, outputFormat: 'text' })
     expect(new Config({ task: 'x', sessionId: 'session-x', json: true }))
-      .toEqual({ task: 'x', sessionId: 'session-x', json: true })
+      .toEqual({ task: 'x', sessionId: 'session-x', json: true, accessibility: false, outputFormat: 'text' })
+    expect(() => new Config({ outputFormat: 'xml' } as never)).toThrow()
   })
 })

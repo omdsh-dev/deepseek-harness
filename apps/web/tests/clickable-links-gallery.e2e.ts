@@ -376,6 +376,7 @@ describe('web e2e: clickable links gallery', () => {
     const fetchSummaryLink = page.locator(`a[class*="fileLink"][href="${FETCH_URL}"]`)
     expect(await fetchSummaryLink.count()).toBe(1)
     expect(await fetchSummaryLink.getAttribute('target')).toBe('_blank')
+    expect(await fetchSummaryLink.evaluate(link => link.closest('[role="button"], button') === null)).toBe(true)
 
     await expandTurnProcesses(page)
     // Clicking the collapsed summary link opens the page without expanding the row.
@@ -393,8 +394,8 @@ describe('web e2e: clickable links gallery', () => {
     for (const row of [
       /^Search clickable link styles/,
       /^Fetch /,
-      /^Read docs\/guide\.md/,
-      /^Edit src\/tokens\.css/,
+      /^Read .*docs\/guide\.md/,
+      /^Edit .*src\/tokens\.css/,
       /^Grep linkColor/,
       /Run the lint gate|pnpm run lint/,
     ]) {
@@ -468,8 +469,8 @@ describe('web e2e: clickable links gallery', () => {
     await expect.poll(() => browserAddress.inputValue()).toBe(HTTP_URL)
 
     await openSettings(page, 'en')
-    await page.getByRole('button', { name: 'In-App Sidebar', exact: true }).click()
-    await page.getByRole('menuitem', { name: 'Default Browser', exact: true }).click()
+    await page.getByRole('button', { name: 'Open chat links in: In-App Sidebar', exact: true }).click()
+    await page.getByRole('menuitemradio', { name: 'Default Browser', exact: true }).click()
     await expect.poll(() => scaffold.ctx.settings.describe().find(row => row.ns === 'ui-chat')?.value).toMatchObject({ linkOpening: 'new-tab' })
     await page.keyboard.press('Escape')
     const popupPromise = page.waitForEvent('popup')
@@ -485,8 +486,8 @@ describe('web e2e: clickable links gallery', () => {
 
     await page.reload()
     await openSettings(page, 'en')
-    await page.getByRole('button', { name: 'Default Browser', exact: true }).click()
-    await page.getByRole('menuitem', { name: 'In-App Sidebar', exact: true }).click()
+    await page.getByRole('button', { name: 'Open chat links in: Default Browser', exact: true }).click()
+    await page.getByRole('menuitemradio', { name: 'In-App Sidebar', exact: true }).click()
     await expect.poll(() => scaffold.ctx.settings.describe().find(row => row.ns === 'ui-chat')?.value).toMatchObject({ linkOpening: 'sidebar' })
     await page.keyboard.press('Escape')
     await guideLink.click()

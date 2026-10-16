@@ -27,6 +27,22 @@ it('localizes reveal failures and accurately reports a directory-only action', (
 })
 
 
+it('keeps the preview and contributed native action independently focusable', () => {
+  const p = props()
+  const view = render(<PresentedFileCard {...p} />)
+  const preview = view.getByRole('button', { name: /out\/report.pdf/ })
+  const action = view.getByRole('button', { name: 'Native file action' })
+  preview.focus()
+  expect(document.activeElement).toBe(preview)
+  action.focus()
+  expect(document.activeElement).toBe(action)
+  expect(preview.contains(action)).toBe(false)
+  fireEvent.click(action)
+  expect(p.onPreview).not.toHaveBeenCalled()
+  fireEvent.click(preview)
+  expect(p.onPreview).toHaveBeenCalledOnce()
+})
+
 it('shows the basename while retaining the full location for hover and actions', () => {
   const p = props()
   const path = '/work/reports/result.pdf'

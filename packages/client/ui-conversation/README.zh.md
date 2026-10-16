@@ -88,6 +88,8 @@ Send 和 Stop 按钮禁用时不显示提示气泡，轮次结束后由 Stop 切
 
 当会话被其他写句柄占用时，发送失败的 toast 提示用户退出其他正在运行的 DSH 后重试。
 
+composer 的 Context Meter 会在触发器无障碍名称中公开取整后的占用率，并通过稳定的 `aria-controls` 关系同步 `aria-expanded`。点击展开的明细是具名的非模态 region，因此打开时焦点仍停留在触发器上，也不会错误宣称对话框焦点行为。提供方容量和总占用率属于权威数据；系统提示词、工具与消息的组成明确只是启发式估算。
+
 在获得焦点的 Chat 或 Composer 中连续独立按下两次 Esc，可停止当前运行轮次并保留排队消息。间隔由 shortcuts 插件的 `stopSequenceMs` 配置决定，默认 500 ms。菜单、审批、模态层、终端、内嵌网页、输入法、重复按键，以及输入区域、Session 或轮次变化会清空序列。快捷键与 Stop 按钮调用同一作用域取消操作。插件将 Stop 注册为 `input` 展示分组中的固定操作。该注册使普通 Esc 不能分配给可编辑快捷键，并为 Stop 按钮的悬停和键盘聚焦提示提供 `Esc Esc` 序列。
 
 <a id="temporary-composer-entries"></a>

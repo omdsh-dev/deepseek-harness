@@ -11,7 +11,7 @@
  * above the composer.
  */
 import { MenuGroup, MenuSurface, observeStickyMenuGroups } from '@deepseek-ai/dsh-client-ui-primitives'
-import { Fragment, useEffect, useMemo, useRef } from 'react'
+import { Fragment, useEffect, useId, useMemo, useRef } from 'react'
 import { useSyncExternalStore } from 'react'
 import clsx from 'clsx'
 import { IconCheckOutlineRegular, RiskConfirmation, useAnchoredMaxHeight } from '@deepseek-ai/dsh-client-ui-primitives'
@@ -46,6 +46,7 @@ export function PopupSelectView({ popup, t }: PopupSelectViewProps) {
   )
   const cardRef = useRef<HTMLDivElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
+  const listboxId = useId()
   const viewportRef = useRef<HTMLDivElement>(null)
   const rows = useMemo(() => filterOptions(state.options, state.search, state.searchMode),
     [state.options, state.search, state.searchMode])
@@ -90,6 +91,9 @@ export function PopupSelectView({ popup, t }: PopupSelectViewProps) {
   if (!state.open) return null
 
   const confirmation = state.confirming?.confirmation
+  const activeOptionId = active !== null && rows[active] !== undefined
+    ? `${listboxId}-option-${String(active)}`
+    : undefined
   const emptyLabel = state.searchLabels === null
     ? t('status.empty')
     : state.options.length === 0 ? state.searchLabels.empty : state.searchLabels.noResults
@@ -133,6 +137,7 @@ export function PopupSelectView({ popup, t }: PopupSelectViewProps) {
 
   const renderOption = (option: SelectOption, index: number) => (
     <div
+      id={`${listboxId}-option-${String(index)}`}
       key={option.id}
       role="option"
       aria-selected={index === state.active}
@@ -164,6 +169,11 @@ export function PopupSelectView({ popup, t }: PopupSelectViewProps) {
             ref={searchRef}
             className={css.search}
             type="text"
+            role="combobox"
+            aria-autocomplete="list"
+            aria-expanded={state.status === 'ready'}
+            aria-controls={state.status === 'ready' ? listboxId : undefined}
+            aria-activedescendant={activeOptionId}
             placeholder={state.searchLabels?.placeholder ?? t('search.placeholder')}
             aria-label={t('search.aria')}
             value={state.search}
@@ -178,11 +188,11 @@ export function PopupSelectView({ popup, t }: PopupSelectViewProps) {
               )}
             </div>
           )}
-          {state.status === 'pending' && <div className={css.status}>{t('status.loading')}</div>}
-          {state.submitting && <div className={css.status}>{t('status.applying')}</div>}
-          {state.status === 'ready' && rows.length === 0 && <div className={css.status}>{emptyLabel}</div>}
+          {state.status === 'pending' && <div className={css.status} role="status">{t('status.loading')}</div>}
+          {state.submitting && <div className={css.status} role="status">{t('status.applying')}</div>}
+          {state.status === 'ready' && rows.length === 0 && <div className={css.status} role="status">{emptyLabel}</div>}
           {state.status === 'ready' && (
-            <div ref={viewportRef} role="listbox" aria-label={t('listbox.aria', { command: String(state.command) })} className={css.viewport}>
+            <div id={listboxId} ref={viewportRef} role="listbox" aria-label={t('listbox.aria', { command: String(state.command) })} className={css.viewport}>
               {groups.map(({ group, rows: groupRows }) => group === undefined
                 ? <Fragment key="ungrouped">{groupRows.map(option => renderOption(option, optionIndex++))}</Fragment>
                 : <MenuGroup key={`group:${group.name}`} label={group.label}>

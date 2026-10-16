@@ -33,6 +33,8 @@ A pick submits the `/permission <preset>` command line. The argument-bearing for
 
 When the live catalog withdraws a preset, the composer closes its pending confirmation and shows the Session's current value instead of an unavailable optimistic pick. Every catalog invalidation — the payload-free notification or a connection-generation change — closes an open slash picker or its confirmation without consuming the draft, while publishing the result of a read the picker waits for leaves it open with its failure and retry state; reopening reads the current catalog. A submitted command remains busy until its response settles.
 
+Cancelling the composer's risk confirmation restores focus to its re-enabled permission trigger. After a submitted change, focus restoration waits for both admission settlement and the input shell to unlock.
+
 ### The Settings row
 
 The row derives its options from the host's dynamic `defaultPreset` enum, uses the same localized built-in labels as the current-session picker, and writes one settings mutation. Current-session-only contributions such as `auto` are absent. The value applies only when a later session is created; changing it never switches or rewrites the current session.

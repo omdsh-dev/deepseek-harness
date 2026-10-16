@@ -4,7 +4,7 @@
  * Renders nothing until a provider reports both pressure and a route
  * capacity. */
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { UseProjection } from '@deepseek-ai/dsh-api-session-controller/client'
 // Type-only: the `contextPressure` / `contextBreakdown` projection key merges.
@@ -56,6 +56,7 @@ export interface ContextMeterProps {
 export function ContextMeter({ useProjection, t }: ContextMeterProps) {
   const pressure = useProjection('contextPressure')
   const breakdown = useProjection('contextBreakdown')
+  const panelId = useId()
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLSpanElement | null>(null)
   const panelRef = useRef<HTMLDivElement | null>(null)
@@ -112,8 +113,8 @@ export function ContextMeter({ useProjection, t }: ContextMeterProps) {
           type="button"
           className={css.trigger}
           aria-label={t('context.aria', { percent: reading })}
-          aria-haspopup="dialog"
           aria-expanded={open}
+          aria-controls={panelId}
           onClick={() => { setOpen(!open) }}
         >
           <svg viewBox="0 0 14 14" width="14" height="14" aria-hidden>
@@ -132,10 +133,11 @@ export function ContextMeter({ useProjection, t }: ContextMeterProps) {
       </Tooltip>
       {open && createPortal(
         <div
+          id={panelId}
           ref={panelRef}
           className={css.panel}
           style={position ?? { visibility: 'hidden', left: 0, top: 0 }}
-          role="dialog"
+          role="region"
           aria-label={t('context.used')}
         >
           <div className={css.header}>

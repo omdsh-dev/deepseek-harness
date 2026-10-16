@@ -1,14 +1,16 @@
 // Button: token-styled button atom. Variants map to the --dsw-alias-button-*
 // fill families; no framework imports, all behavior via props.
 
-import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react'
+import { forwardRef } from 'react'
+import type { ButtonHTMLAttributes, ReactNode } from 'react'
 import clsx from 'clsx'
 import css from './Button.module.css'
 
 /** Visual variant, each backed by its --dsw-alias-button-* token family. */
 export type ButtonVariant = 'primary' | 'ghost' | 'outline' | 'toolbar'
 
-type ButtonProps = {
+/** Visual options and native attributes accepted by Button. */
+export type ButtonProps = {
   variant?: ButtonVariant
   size?: 'md' | 'sm'
   icon?: ReactNode

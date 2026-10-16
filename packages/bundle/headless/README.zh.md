@@ -39,13 +39,17 @@ agent 会完成该任务，把提供方的每个非空推理（reasoning）增�
 { echo "Summarize these changes:"; git diff --stat; } | dsh --profile headless
 ```
 
-任务与运行选项通过三个设置提供：
+任务与运行选项通过五个设置提供：
 
 | 字段 | 默认值 | 含义 |
 |---|---|---|
 | `task` | stdin | 任务文本；省略或传 `-` 时由 stdin 提供 |
 | `sessionId` | `session-<uuid>` | 要沿用的精确 Session 标识；未知 id 会失败 |
 | `json` | `false` | 把本次运行投影为 stdout 上的按行 JSON 事件 |
+| `accessibility` | `false` | 抑制推理增量并播报有界状态行 |
+| `outputFormat` | `text` | 选择最终文本或一个带版本的 JSON 结果 |
+
+`--accessibility` 提供低噪声文本输出，并移除最终答案中的终端控制字符。`--output-format json` 在 Session flush 后写出一个 schema 版本为 `1.0.0` 的 `dsh-headless-result` 对象。此最终结果模式会抑制推理，不能与独立的 `--json` 事件流组合使用。这些输出选项均保留 stdin 任务输入及 `--session-id` 恢复功能。
 
 生成的[配置目录](../../../docs/config-catalog.zh.md#deepseek-aidsh-headless)是所有受支持字段及其 JSDoc 的完整真源。
 
@@ -77,7 +81,7 @@ runner 是核心 API 载体之上的直接驱动器：它确定 Agent 标识—�
 
 ### 运行流程
 
-runner 等待整个应用结算（`ctx.get('loader')?.await()`），确保已组合的工具与适配器不会半挂载，读取共享的 [`agentDefaultModel`](../../core/agent-default-model/README.zh.md) 选择，从配置或 stdin 解析任务，然后确定 Agent 标识：默认是全新的 `session-<uuid>`，或是 `--session-id` 指名的持久化 Session——通过 [`sessionQuery`](../../session-query/session-query/README.zh.md) 沿用，日志不存在时拒绝。它把任务作为普通用户消息提交。不带 `--json` 时，它把该 Agent 的非空推理增量流式写入 stderr；带 `--json` 时改为投影本次运行。它等待完全停稳，然后对会话执行 flush，并把所属区间（从 `firstSeq` 起）折叠为最后一条非空 `assistant/message` 文本与最终 `turn/end` 原因。最后，它把最终文本写入 stdout（或 `final` 事件）并请求退出。
+runner 等待整个应用结算（`ctx.get('loader')?.await()`），确保已组合的工具与适配器不会半挂载，读取共享的 [`agentDefaultModel`](../../core/agent-default-model/README.zh.md) 选择，从配置或 stdin 解析任务，然后确定 Agent 标识：默认是全新的 `session-<uuid>`，或是 `--session-id` 指名的持久化 Session——通过 [`sessionQuery`](../../session-query/session-query/README.zh.md) 沿用，日志不存在时拒绝。它把任务作为普通用户消息提交。默认文本模式把该 Agent 的非空推理增量流式写入 stderr；无障碍与最终 JSON 模式抑制推理，`--json` 则把运行投影为事件。它等待完全停稳，然后对会话执行 flush，并把所属区间（从 `firstSeq` 起）折叠为最后一条非空 `assistant/message` 文本与最终 `turn/end` 原因。最后，它把最终文本写入 stdout（或 `final` 事件）并请求退出。
 
 ### 基于 base 的 patch 内容
 

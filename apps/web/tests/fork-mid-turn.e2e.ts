@@ -178,6 +178,17 @@ describe('web e2e: exact-boundary fork seeds branch closers and continues', () =
     })
     await branchAction.waitFor({ timeout: 10_000 })
     expect(await branchAction.isEnabled()).toBe(true)
+    // The current Step process includes its completed analysis even when the
+    // scripted continuation has no tool calls or reasoning blocks.
+    const process = flow.locator('[data-turn-process="2"]')
+    expect(await process.getAttribute('aria-expanded')).toBe('false')
+    await process.focus()
+    await process.press('Enter')
+    await flow.getByRole('button', { name: 'Analysis completed', exact: true }).waitFor()
+    expect(await process.getAttribute('aria-expanded')).toBe('true')
+    await process.press('Space')
+    await flow.getByRole('button', { name: 'Analysis completed', exact: true }).waitFor({ state: 'hidden' })
+    expect(await process.getAttribute('aria-expanded')).toBe('false')
     const snapshot = (await captureStableAria(page, '[data-chat-flow]', scaffold.workspaceCwd))
       .split(SEED_ID).join('{{seededId}}')
     await compareOrRefreshGolden(UI_EXPECTED, snapshot, MODE)

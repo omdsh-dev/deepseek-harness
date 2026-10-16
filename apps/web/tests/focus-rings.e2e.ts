@@ -92,7 +92,7 @@ async function ringCutBy(target: Locator): Promise<string[]> {
   })
 }
 
-it.each(['light', 'dark'] as const)('assembled app (%s): pointer keys stay silent; navigation and menu activation retain feedback', async (theme) => {
+it.each(['light', 'dark'] as const)('assembled app (%s): pointer-opened items suppress rings; keyboard navigation and dismissal retain feedback', async (theme) => {
   const scaffold = await launchWebScaffold()
   onTestFinished(() => scaffold.close())
   const browser = await chromium.launch({ headless: true })
@@ -107,17 +107,20 @@ it.each(['light', 'dark'] as const)('assembled app (%s): pointer keys stay silen
   expect((await paint(trigger)).focusColor).toBe(theme === 'dark' ? 'rgb(122, 170, 255)' : 'rgb(65, 118, 230)')
 
   await trigger.click()
-  await page.getByRole('menu').waitFor()
-  await expectSilent(trigger)
+  const menu = page.getByRole('menu')
+  await menu.waitFor()
+  const first = menu.getByRole('menuitemradio').first()
+  await expectSilent(first)
   await page.keyboard.press('Shift')
-  await expectSilent(trigger)
+  await expectSilent(first)
   await page.keyboard.press('Escape')
   await page.getByRole('menu').waitFor({ state: 'hidden' })
-  await expectSilent(trigger)
+  await expectFocusRing(trigger, 'shadow')
 
   for (const key of ['Home', 'End']) {
     await trigger.click()
-    await page.keyboard.press('Escape')
+    await trigger.click()
+    await menu.waitFor({ state: 'hidden' })
     await expectSilent(trigger)
     await page.keyboard.press(key)
     await expectFocusRing(trigger, 'shadow')
@@ -132,11 +135,15 @@ it.each(['light', 'dark'] as const)('assembled app (%s): pointer keys stay silen
   for (const key of ['Enter', 'Space']) {
     await page.keyboard.press(key)
     await page.getByRole('menu').waitFor()
-    await expectFocusRing(trigger, 'shadow')
-    const menu = page.getByRole('menu')
+    const entry = await paint(first)
+    expect(entry.active).toBe(true)
+    expect(entry.focusVisible).toBe(true)
+    expect(entry.modality).toBe('keyboard')
+    expect(entry.background).toBe(entry.hover)
+    expect(entry.background).not.toBe('rgba(0, 0, 0, 0)')
     for (const [navigation, index] of [['End', -1], ['Home', 0]] as const) {
       await page.keyboard.press(navigation)
-      const row = menu.getByRole('menuitem').nth(index)
+      const row = menu.getByRole('menuitemradio').nth(index)
       const state = await paint(row)
       expect(state.active).toBe(true)
       expect(state.focusVisible).toBe(true)

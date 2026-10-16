@@ -333,6 +333,7 @@ describe('web e2e: fresh round trip through the real assembly', () => {
       'web-context.expected.md',
       'ui.expected.md',
       'ui-expanded.expected.md',
+      'reloaded-expanded.expected.md',
     ])
   })
 })

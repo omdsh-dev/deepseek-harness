@@ -87,7 +87,7 @@ describe('web e2e: workspace recency', () => {
     const titles = () => page.locator('[role="treeitem"]:not([aria-expanded]) [class*="title"]').allTextContents()
     const pick = async (name: string): Promise<void> => {
       await page.getByRole('button', { name: 'View options' }).click()
-      await page.getByRole('menuitem', { name, exact: true }).click()
+      await page.getByRole('menuitemradio', { name, exact: true }).click()
     }
     const captureSidebar = async (): Promise<string> => {
       await page.getByRole('button', { name: 'View options' }).hover()

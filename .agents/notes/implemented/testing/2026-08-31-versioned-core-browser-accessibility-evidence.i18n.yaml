@@ -1,0 +1,19 @@
+# Bilingual-pair consistency record for 2026-08-31-versioned-core-browser-accessibility-evidence.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/testing/2026-08-31-versioned-core-browser-accessibility-evidence.md
+/agent-note-versioned-core-browser-accessibility-evidence:
+  en: 9903cfb9b69bbd4c
+  zh: 6780d850094147e9
+/agent-note-versioned-core-browser-accessibility-evidence/problem:
+  en: 0c7978e9e852bb26
+  zh: 451e63e237196954
+/agent-note-versioned-core-browser-accessibility-evidence/decision:
+  en: 2da2894707a929a5
+  zh: dd00bbe5f52588cc
+/agent-note-versioned-core-browser-accessibility-evidence/alternatives-considered:
+  en: 02bd9c8a4c487ff4
+  zh: 5fc71334f664cc3a
+/agent-note-versioned-core-browser-accessibility-evidence/consequences:
+  en: 31e6d7176e050664
+  zh: 3c19207be2c39b79

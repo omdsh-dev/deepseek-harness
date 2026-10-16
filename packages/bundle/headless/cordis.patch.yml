@@ -29,6 +29,8 @@
         task: !!js ctx.headlessStartup.task
         sessionId: !!js ctx.headlessStartup.sessionId
         json: !!js ctx.headlessStartup.json
+        accessibility: !!js ctx.headlessStartup.accessibility
+        outputFormat: !!js ctx.headlessStartup.outputFormat
 
 - id: hmr
   disabled: true

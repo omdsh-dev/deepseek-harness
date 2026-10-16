@@ -1,4 +1,6 @@
-import { useMemo, useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent } from 'react'
+import {
+  useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent,
+} from 'react'
 import { createPortal } from 'react-dom'
 import {
   type SessionProjectionMap, type SessionSummary,
@@ -45,6 +47,8 @@ interface CatalogRowsProps {
   refreshProjection: (parentSessionId: SessionId) => void
   toggleBranch: (childSessionId: SessionId) => void
   closeCatalog: () => void
+  tabStopId: SessionId | null
+  onClaimTabStop: (childSessionId: SessionId) => void
 }
 
 function treeItems(root: HTMLDivElement | null): HTMLElement[] {
@@ -200,7 +204,7 @@ function isKnownLeaf(catalog: SubagentCatalogSnapshot | undefined): boolean {
 /** Render one catalog level and recurse only through explicitly expanded rows. */
 function CatalogRows({
   parentSessionId, currentSessionId, catalog, catalogs, summaries, expanded, level,
-  openChild, openChildAside, refreshProjection, toggleBranch, closeCatalog, t,
+  openChild, openChildAside, refreshProjection, toggleBranch, closeCatalog, tabStopId, onClaimTabStop, t,
 }: CatalogRowsProps & { t: TranslateNS<typeof NS> }) {
   const [now, setNow] = useState(() => Date.now())
   const running = catalog.entries.some(entry => entry.activity === 'running')
@@ -295,6 +299,25 @@ function CatalogRows({
             event.preventDefault()
             event.stopPropagation()
             toggleBranch(entry.id)
+          } else if (event.key === 'ArrowRight' && !knownLeaf && isExpanded) {
+            const firstChild = event.currentTarget.parentElement?.querySelector<HTMLElement>(
+              ':scope > [role="group"] [role="treeitem"]:not([aria-disabled="true"])',
+            )
+            if (firstChild !== null && firstChild !== undefined) {
+              event.preventDefault()
+              event.stopPropagation()
+              firstChild.focus()
+            }
+          } else if (event.key === 'ArrowLeft') {
+            const group = event.currentTarget.parentElement?.parentElement
+            const parent = group?.getAttribute('role') === 'group'
+              ? group.parentElement?.querySelector<HTMLElement>(':scope > [role="treeitem"]')
+              : undefined
+            if (parent !== null && parent !== undefined) {
+              event.preventDefault()
+              event.stopPropagation()
+              parent.focus()
+            }
           }
         }
         const toggle = (event: MouseEvent<HTMLButtonElement>): void => {
@@ -307,13 +330,15 @@ function CatalogRows({
           <div key={entry.id} className={css.node}>
             <div
               role="treeitem"
-              tabIndex={0}
+              tabIndex={entry.id === tabStopId ? 0 : -1}
+              data-treeitem-id={entry.id}
               aria-level={level}
               aria-current={isCurrent || undefined}
               aria-label={[label, secondary, metrics].filter(value => value !== '').join(' ')}
               {...knownLeaf ? {} : { 'aria-expanded': isExpanded }}
               className={css.row}
               onClick={open}
+              onFocus={() => { onClaimTabStop(entry.id) }}
               onKeyDown={handleKey}
             >
               {knownLeaf
@@ -387,6 +412,8 @@ function CatalogRows({
                       refreshProjection={refreshProjection}
                       toggleBranch={toggleBranch}
                       closeCatalog={closeCatalog}
+                      tabStopId={tabStopId}
+                      onClaimTabStop={onClaimTabStop}
                       t={t}
                     />
                   )}
@@ -464,11 +491,18 @@ function CatalogDropdown({
   const [open, setOpen] = useState(false)
   const [menuPosition, setMenuPosition] = useState<CSSProperties>()
   const [expanded, setExpanded] = useState<ReadonlySet<SessionId>>(() => new Set())
+  const [tabStopId, setTabStopId] = useState<SessionId | null>(() => (
+    currentSessionId
+    ?? catalog?.entries[0]?.id
+    ?? null
+  ))
   const rootRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
+  const entryFocus = useRef<'first' | 'last' | null>(null)
   const hoverOpenTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const hoverCloseTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const treeId = useId()
   // A click-opened (pinned) menu ignores hover-out; only explicit dismissal closes it.
   const pinnedRef = useRef(false)
   const currentEntry = currentSessionId === undefined
@@ -509,6 +543,7 @@ function CatalogDropdown({
       setMenuPosition(catalogMenuPosition(trigger))
     }
     else {
+      entryFocus.current = null
       pinnedRef.current = false
       setOpen(false)
       setMenuPosition(undefined)
@@ -591,6 +626,28 @@ function CatalogDropdown({
     }
   }, [open])
 
+  // Keep exactly one visible enabled row in the page Tab sequence when a
+  // refresh or branch collapse removes the row that last held focus.
+  useEffect(() => {
+    if (!open) return
+    const items = treeItems(menuRef.current)
+    if (items.length === 0) return
+    const currentIsVisible = items.some(item => item.dataset['treeitemId'] === tabStopId)
+    if (!currentIsVisible) {
+      // CatalogRows authors data-treeitem-id on every enabled row returned by
+      // treeItems; the non-empty guard above therefore guarantees this id.
+      const first = items[0] as HTMLElement
+      setTabStopId(first.dataset['treeitemId'] as SessionId)
+    }
+  }, [open, tabStopId, expanded, presentedCatalog, catalogs])
+  useLayoutEffect(() => {
+    if (!open || entryFocus.current === null) return
+    const items = treeItems(menuRef.current)
+    const target = entryFocus.current === 'first' ? items[0] : items.at(-1)
+    if (target === undefined) return
+    entryFocus.current = null
+    target.focus()
+  }, [open, presentedCatalog, catalogs])
   useEffect(() => () => {
     cancelHoverOpen()
     cancelHoverClose()
@@ -657,6 +714,7 @@ function CatalogDropdown({
           : css.trigger}
         aria-haspopup="tree"
         aria-expanded={open}
+        aria-controls={treeId}
         aria-label={variant === 'switcher'
           ? t('switcher.aria', { title: switcherDisplayTitle })
           : t(
@@ -667,8 +725,9 @@ function CatalogDropdown({
           ? () => {
             cancelHoverOpen()
             cancelHoverClose()
-            pinnedRef.current = true
-            if (!open) changeOpen(true)
+            const closePinned = open && pinnedRef.current
+            pinnedRef.current = !closePinned
+            changeOpen(!closePinned)
           }
           : () => {
             cancelHoverOpen()
@@ -676,10 +735,14 @@ function CatalogDropdown({
             openTitle()
           }}
         onKeyDown={(event) => {
-          if (event.key !== 'ArrowDown') return
+          if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
           event.preventDefault()
-          if (!open) changeOpen(true)
-          queueMicrotask(() => { focusAt(0) })
+          event.stopPropagation()
+          if (open) focusAt(event.key === 'ArrowDown' ? 0 : treeItems(menuRef.current).length - 1)
+          else {
+            entryFocus.current = event.key === 'ArrowDown' ? 'first' : 'last'
+            changeOpen(true)
+          }
         }}
       >
         {variant === 'switcher'
@@ -706,7 +769,7 @@ function CatalogDropdown({
           onMouseEnter={cancelHoverClose}
           onMouseLeave={scheduleHoverClose}
         >
-          <div className={css.menuBody} role="tree" aria-label={t('tree.aria')}>
+          <div id={treeId} className={css.menuBody} role="tree" aria-label={t('tree.aria')}>
             <CatalogRows
               parentSessionId={rootSessionId}
               currentSessionId={currentSessionId}
@@ -720,6 +783,8 @@ function CatalogDropdown({
               refreshProjection={refreshProjection}
               toggleBranch={toggleBranch}
               closeCatalog={() => { changeOpen(false) }}
+              tabStopId={tabStopId}
+              onClaimTabStop={setTabStopId}
               t={t}
             />
           </div>

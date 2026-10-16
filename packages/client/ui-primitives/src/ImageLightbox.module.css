@@ -1,18 +1,16 @@
-.backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
+.dialog {
   display: grid;
   place-items: center;
-  padding: 40px;
-}
-
-/* Shared dimming mask below the preview and its controls. */
-.mask {
-  position: absolute;
-  inset: 0;
-  background: var(--dsw-alias-bg-mask-1);
-  backdrop-filter: var(--dsw-mask-blur);
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 16px;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .image {

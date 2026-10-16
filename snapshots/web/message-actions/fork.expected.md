@@ -1,5 +1,5 @@
 - tree "Sessions":
-  - treeitem "Ungrouped" [expanded]
-  - treeitem "Use the read tool twice (2) now"
-  - treeitem "Use the read tool twice (1) now" [selected]
-  - treeitem "Use the read tool twice 1min"
+  - treeitem "Ungrouped" [expanded] [level=1]
+  - treeitem "Use the read tool twice (2) now" [level=2]
+  - treeitem "Use the read tool twice (1) now" [level=2] [selected]
+  - treeitem "Use the read tool twice 1min" [level=2]

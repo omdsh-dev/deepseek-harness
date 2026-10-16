@@ -151,11 +151,12 @@ describe.skipIf(webSnapshotMode() === 'record').each([
         ? page.getByRole('group', { name: '模型与推理等级', exact: true })
         : page.locator('[aria-label="/model 选项"]')
       const viewport = entry === 'button'
-        ? surface.getByRole('menu', { name: '模型', exact: true })
+        ? surface.getByRole('listbox', { name: '模型', exact: true })
         : surface.getByRole('listbox')
       const search = entry === 'button'
-        ? page.getByRole('searchbox', { name: '搜索模型…', exact: true })
-        : page.getByRole('textbox', { name: '筛选选项', exact: true })
+        ? surface.getByRole('combobox', { name: '搜索模型…', exact: true })
+        : surface.getByRole('combobox', { name: '筛选选项', exact: true })
+      const highlighted = entry === 'button' ? '[data-highlighted]' : '[aria-selected="true"]'
       const open = async (): Promise<void> => {
         if (entry === 'button') {
           await page.getByRole('button', { name: /^选择模型/ }).click()
@@ -165,6 +166,8 @@ describe.skipIf(webSnapshotMode() === 'record').each([
           await page.getByRole('option', { name: /^模型/ }).click()
         }
         await expect.poll(() => readGroups(viewport)).toEqual(EXPECTED_GROUPS)
+        expect(await search.getAttribute('aria-controls')).toBe(await viewport.getAttribute('id'))
+        expect(await search.getAttribute('aria-expanded')).toBe('true')
         await expect.poll(() => search.evaluate(node => node === node.ownerDocument.activeElement)).toBe(true)
         await assertNoRectReads(page)
         await page.mouse.move(0, 0)
@@ -221,12 +224,12 @@ describe.skipIf(webSnapshotMode() === 'record').each([
           let observedPinnedHighlight = false
           for (let step = 0; step < steps; step++) {
             const rows = viewport.locator('[role="option"], [role="menuitemradio"]')
-            const before = await rows.evaluateAll(nodes => nodes.findIndex(node =>
-              node.hasAttribute('data-highlighted') || node.getAttribute('aria-selected') === 'true'))
+            const before = await rows.evaluateAll((nodes, selector) => nodes.findIndex(node => node.matches(selector)), highlighted)
             await search.press(key)
             const expected = (before + (key === 'ArrowDown' ? 1 : -1) + 30) % 30
-            await expect.poll(() => rows.evaluateAll(nodes => nodes.findIndex(node =>
-              node.hasAttribute('data-highlighted') || node.getAttribute('aria-selected') === 'true'))).toBe(expected)
+            await expect.poll(() => rows.evaluateAll(
+              (nodes, selector) => nodes.findIndex(node => node.matches(selector)), highlighted,
+            )).toBe(expected)
             await frames(page)
             await expect.poll(() => viewport.evaluate((node) => {
               const groups = [...node.querySelectorAll<HTMLElement>(':scope > [data-menu-group]')]
@@ -237,13 +240,13 @@ describe.skipIf(webSnapshotMode() === 'record').each([
                 return group.querySelector('[data-menu-group-heading]')!.hasAttribute('data-stuck') === shouldStick
               })
             })).toBe(true)
-            const highlight = await viewport.evaluate((node) => {
+            const highlight = await viewport.evaluate((node, selector) => {
               const groups = [...node.querySelectorAll<HTMLElement>(':scope > [data-menu-group]')]
-              const index = groups.findIndex(group => group.querySelector('[data-highlighted], [aria-selected="true"]') !== null)
+              const index = groups.findIndex(group => group.querySelector(selector) !== null)
               const group = groups[index]!
               return { index, above: group.offsetTop - groups[0]!.offsetTop < node.scrollTop,
                 stuck: group.querySelector('[data-menu-group-heading]')!.hasAttribute('data-stuck') }
-            })
+            }, highlighted)
             visited.add(highlight.index)
             if (highlight.above) {
               expect(highlight.stuck).toBe(true)

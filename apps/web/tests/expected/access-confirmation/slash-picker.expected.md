@@ -1,5 +1,4 @@
-- textbox "筛选选项":
-  - /placeholder: 搜索…
+- combobox "筛选选项" [expanded]
 - listbox "/permission 匹配项":
   - option "仅可查看"
   - option "工作区内修改" [selected]

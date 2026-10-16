@@ -21,6 +21,7 @@ const usePanelInfo: GlobalStandardProps['usePanelInfo'] = selector => selector({
 afterEach(() => {
   cleanup()
   vi.useRealTimers()
+  vi.unstubAllGlobals()
 })
 
 type Row = { id: string; order: number; label: string }
@@ -339,6 +340,32 @@ describe('SettingsPanel close paths', () => {
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'General' }))
   })
 
+  it('inerts the app, wraps Tab within settings, and restores the invoking control', () => {
+    const root = document.createElement('div')
+    root.id = 'root'
+    document.body.append(root)
+    const { view } = mount()
+    root.append(view.container)
+    try {
+      const trigger = openPanel()
+      const first = screen.getByRole('button', { name: 'General' })
+      const last = screen.getByRole('button', { name: 'Close' })
+      expect(root.inert).toBe(true)
+      expect(document.activeElement).toBe(first)
+      fireEvent.keyDown(first, { key: 'Tab', shiftKey: true })
+      expect(document.activeElement).toBe(last)
+      fireEvent.keyDown(last, { key: 'Tab' })
+      expect(document.activeElement).toBe(first)
+      fireEvent.keyDown(first, { key: 'Escape' })
+      expect(screen.queryByRole('dialog')).toBeNull()
+      expect(root.inert).not.toBe(true)
+      expect(document.activeElement).toBe(trigger)
+    } finally {
+      view.unmount()
+      root.remove()
+    }
+  })
+
   it('opens above an existing body modal and gives the visible settings panel keyboard ownership', () => {
     mount()
     const closeReference = vi.fn()
@@ -366,6 +393,32 @@ describe('SettingsPanel navigation', () => {
     expect(screen.getByRole('button', { name: 'General' }).getAttribute('aria-current')).toBe('true')
     expect(screen.getByRole('button', { name: 'Models' }).getAttribute('aria-current')).toBeNull()
     expect(screen.getByTestId('section-general')).toBeTruthy()
+  })
+
+  it('scrolls newly focused section content only while it retains focus', () => {
+    const frames: FrameRequestCallback[] = []
+    vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
+      frames.push(callback)
+      return frames.length
+    })
+    mount()
+    openPanel()
+    const section = screen.getByTestId('section-general')
+    const target = document.createElement('button')
+    target.textContent = 'Section control'
+    const scrollIntoView = vi.fn()
+    target.scrollIntoView = scrollIntoView
+    section.append(target)
+
+    target.focus()
+    frames.shift()?.(0)
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' })
+
+    screen.getByRole('button', { name: 'Close' }).focus()
+    target.focus()
+    screen.getByRole('button', { name: 'Close' }).focus()
+    frames.shift()?.(0)
+    expect(scrollIntoView).toHaveBeenCalledOnce()
   })
 
   it('gives every section a nav glyph, distinct for the ids the shell knows', () => {

@@ -162,6 +162,7 @@ export function AgentPresetSeat({
           const text = presetDisplayText(option, t)
           return {
             id: option.id,
+            selection: 'radio' as const,
             // Name and description together: the id alone never says what a
             // preset does, which is why the roster carries display copy.
             label: (
