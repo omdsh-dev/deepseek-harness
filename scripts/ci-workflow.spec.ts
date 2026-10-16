@@ -327,8 +327,8 @@ describe('CI workflow', () => {
     expect(serialGate).toBeDefined()
     expect(serialGate!.env).toMatchObject({ DSH_COVERAGE_TEST_TIMEOUT_MS: '90000' })
 
-    // windows-coverage is temporarily non-blocking while Windows ACP
-    // half-close tests are stabilized; observational stays out too.
+    // Native Windows coverage participates in the verdict; an ACL regression
+    // must not leave an "all checks passed" result. Observational stays out.
     expect(aggregate.needs).not.toContain('windows')
     expect(aggregate.needs).toContain('windows-build')
     // The benchmark lane is a required verdict input and runs alone so its
@@ -346,7 +346,7 @@ describe('CI workflow', () => {
       env: { DSH_GATE_VERBOSE: '1' },
       run: 'pnpm run check:ci:bench',
     })
-    expect(aggregate.needs).not.toContain('windows-coverage')
+    expect(aggregate.needs).toContain('windows-coverage')
     expect(aggregate.needs).toContain('windows-native-tests')
     expect(aggregate.needs).not.toContain('windows-observational')
     expect(aggregate.needs).not.toContain('serial-windows')
